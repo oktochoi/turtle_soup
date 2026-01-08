@@ -12,7 +12,6 @@ export default function CreateProblem() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [answer, setAnswer] = useState('');
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [tags, setTags] = useState<string[]>([]);
   const [author, setAuthor] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
@@ -46,7 +45,7 @@ export default function CreateProblem() {
           title: title.trim(),
           content: content.trim(),
           answer: answer.trim(),
-          difficulty,
+          difficulty: 'medium', // 하위 호환성을 위해 기본값 유지 (실제로는 사용 안 함)
           tags,
           author: author.trim(),
           admin_password: adminPassword.trim(),
@@ -131,48 +130,6 @@ export default function CreateProblem() {
             />
             <div className="text-right text-xs text-slate-500 mt-1">
               {answer.length} / 2000
-            </div>
-          </div>
-
-          {/* 난이도 */}
-          <div>
-            <label className="block text-sm font-medium mb-2 text-slate-300">
-              난이도
-            </label>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setDifficulty('easy')}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  difficulty === 'easy'
-                    ? 'bg-green-500 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                }`}
-              >
-                쉬움
-              </button>
-              <button
-                type="button"
-                onClick={() => setDifficulty('medium')}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  difficulty === 'medium'
-                    ? 'bg-yellow-500 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                }`}
-              >
-                중간
-              </button>
-              <button
-                type="button"
-                onClick={() => setDifficulty('hard')}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  difficulty === 'hard'
-                    ? 'bg-red-500 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                }`}
-              >
-                어려움
-              </button>
             </div>
           </div>
 

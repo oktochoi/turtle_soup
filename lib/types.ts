@@ -42,13 +42,26 @@ export type Problem = {
   title: string;
   content: string;
   answer: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: 'easy' | 'medium' | 'hard'; // 하위 호환성을 위해 유지, 실제로는 사용 안 함
   tags: string[];
   author: string;
   admin_password: string;
   like_count: number;
   comment_count: number;
   view_count: number;
+  created_at: string;
+  updated_at: string;
+  // 별점 관련 (계산된 값)
+  average_rating?: number;
+  rating_count?: number;
+  user_rating?: number; // 현재 사용자의 별점
+};
+
+export type ProblemDifficultyRating = {
+  id: string;
+  problem_id: string;
+  user_identifier: string;
+  rating: number; // 1-5점
   created_at: string;
   updated_at: string;
 };

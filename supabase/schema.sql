@@ -268,6 +268,60 @@ CREATE TRIGGER trigger_update_problem_comment_count
   FOR EACH ROW
   EXECUTE FUNCTION update_problem_comment_count();
 
+-- Problem Difficulty Ratings 테이블 (별점 투표)
+CREATE TABLE IF NOT EXISTS problem_difficulty_ratings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  problem_id UUID NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
+  user_identifier TEXT NOT NULL, -- LocalStorage ID 또는 session ID
+  rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5), -- 1-5점 별점
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  UNIQUE(problem_id, user_identifier)
+);
+
+-- 인덱스 생성
+CREATE INDEX IF NOT EXISTS idx_problem_difficulty_ratings_problem_id ON problem_difficulty_ratings(problem_id);
+CREATE INDEX IF NOT EXISTS idx_problem_difficulty_ratings_user_identifier ON problem_difficulty_ratings(user_identifier);
+
+-- RLS 정책 설정
+ALTER TABLE problem_difficulty_ratings ENABLE ROW LEVEL SECURITY;
+
+-- 모든 사용자가 problem_difficulty_ratings를 읽을 수 있도록 설정
+CREATE POLICY "Anyone can read problem_difficulty_ratings" ON problem_difficulty_ratings
+  FOR SELECT USING (true);
+
+-- 모든 사용자가 problem_difficulty_ratings를 생성할 수 있도록 설정
+CREATE POLICY "Anyone can create problem_difficulty_ratings" ON problem_difficulty_ratings
+  FOR INSERT WITH CHECK (true);
+
+-- 모든 사용자가 problem_difficulty_ratings를 업데이트할 수 있도록 설정
+CREATE POLICY "Anyone can update problem_difficulty_ratings" ON problem_difficulty_ratings
+  FOR UPDATE USING (true);
+
+-- 평균 별점을 계산하는 함수
+CREATE OR REPLACE FUNCTION get_problem_average_rating(problem_uuid UUID)
+RETURNS NUMERIC AS $$
+BEGIN
+  RETURN (
+    SELECT COALESCE(ROUND(AVG(rating)::NUMERIC, 2), 0)
+    FROM problem_difficulty_ratings
+    WHERE problem_id = problem_uuid
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+-- 별점 개수를 반환하는 함수
+CREATE OR REPLACE FUNCTION get_problem_rating_count(problem_uuid UUID)
+RETURNS INTEGER AS $$
+BEGIN
+  RETURN (
+    SELECT COUNT(*)
+    FROM problem_difficulty_ratings
+    WHERE problem_id = problem_uuid
+  );
+END;
+$$ LANGUAGE plpgsql;
+
 -- Realtime 활성화 (Supabase Realtime을 사용하기 위해 테이블을 publication에 추가)
 -- 참고: Supabase 대시보드에서도 설정할 수 있습니다.
 -- Database > Replication 메뉴에서 각 테이블의 Realtime을 활성화하세요.
@@ -278,4 +332,5 @@ ALTER PUBLICATION supabase_realtime ADD TABLE players;
 ALTER PUBLICATION supabase_realtime ADD TABLE problems;
 ALTER PUBLICATION supabase_realtime ADD TABLE problem_questions;
 ALTER PUBLICATION supabase_realtime ADD TABLE problem_comments;
+ALTER PUBLICATION supabase_realtime ADD TABLE problem_difficulty_ratings;
 
