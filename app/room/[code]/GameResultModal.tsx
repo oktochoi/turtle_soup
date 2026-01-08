@@ -103,6 +103,12 @@ export default function GameResultModal({ story, truth, questions, onRestart, ro
           </div>
 
           <div className="p-4 sm:p-6 border-t border-slate-700 flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <Link href="/" className="flex-1">
+              <button className="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap text-sm sm:text-base">
+                <i className="ri-home-line mr-2"></i>
+                홈으로 돌아가기
+              </button>
+            </Link>
             {isUserWon && onClose && (
               <button
                 onClick={onClose}
@@ -119,30 +125,6 @@ export default function GameResultModal({ story, truth, questions, onRestart, ro
               </button>
             </Link>
           </div>
-        </div>
-
-        <div className="p-4 sm:p-6 border-t border-slate-700 flex flex-col sm:flex-row gap-2 sm:gap-3">
-          <Link href="/" className="flex-1">
-            <button className="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap text-sm sm:text-base">
-              <i className="ri-home-line mr-2"></i>
-              홈으로 돌아가기
-            </button>
-          </Link>
-          {isUserWon && onClose && (
-            <button
-              onClick={onClose}
-              className="flex-1 bg-slate-600 hover:bg-slate-500 text-white font-semibold py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap text-sm sm:text-base"
-            >
-              <i className="ri-close-line mr-2"></i>
-              계속하기
-            </button>
-          )}
-          <Link href="/create-room" className="flex-1">
-            <button className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap text-sm sm:text-base">
-              <i className="ri-add-circle-line mr-2"></i>
-              새 방 만들기
-            </button>
-          </Link>
         </div>
       </div>
     </div>

@@ -42,17 +42,28 @@ CREATE TABLE IF NOT EXISTS guesses (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
+-- Room Chats 테이블 (잡담 채팅)
+CREATE TABLE IF NOT EXISTS room_chats (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  room_code TEXT NOT NULL REFERENCES rooms(code) ON DELETE CASCADE,
+  nickname TEXT NOT NULL,
+  message TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+);
+
 -- 인덱스 생성
 CREATE INDEX IF NOT EXISTS idx_rooms_code ON rooms(code);
 CREATE INDEX IF NOT EXISTS idx_players_room_code ON players(room_code);
 CREATE INDEX IF NOT EXISTS idx_questions_room_code ON questions(room_code);
 CREATE INDEX IF NOT EXISTS idx_guesses_room_code ON guesses(room_code);
+CREATE INDEX IF NOT EXISTS idx_room_chats_room_code ON room_chats(room_code);
 
 -- RLS (Row Level Security) 정책 설정
 ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE guesses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE room_chats ENABLE ROW LEVEL SECURITY;
 
 -- 모든 사용자가 rooms를 읽을 수 있도록 설정
 CREATE POLICY "Anyone can read rooms" ON rooms
@@ -97,6 +108,18 @@ CREATE POLICY "Anyone can create guesses" ON guesses
 -- 모든 사용자가 guesses를 업데이트할 수 있도록 설정 (실제로는 호스트만 가능하도록 애플리케이션 레벨에서 처리)
 CREATE POLICY "Anyone can update guesses" ON guesses
   FOR UPDATE USING (true);
+
+-- 모든 사용자가 room_chats를 읽을 수 있도록 설정
+CREATE POLICY "Anyone can read room_chats" ON room_chats
+  FOR SELECT USING (true);
+
+-- 모든 사용자가 room_chats를 생성할 수 있도록 설정
+CREATE POLICY "Anyone can create room_chats" ON room_chats
+  FOR INSERT WITH CHECK (true);
+
+-- PostgREST가 테이블을 인식하도록 권한 부여
+GRANT SELECT, INSERT ON public.room_chats TO anon;
+GRANT SELECT, INSERT ON public.room_chats TO authenticated;
 
 -- rooms 삭제 정책 추가 (트리거에서 사용)
 CREATE POLICY "Anyone can delete rooms" ON rooms
@@ -329,6 +352,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE rooms;
 ALTER PUBLICATION supabase_realtime ADD TABLE questions;
 ALTER PUBLICATION supabase_realtime ADD TABLE guesses;
 ALTER PUBLICATION supabase_realtime ADD TABLE players;
+ALTER PUBLICATION supabase_realtime ADD TABLE room_chats;
 ALTER PUBLICATION supabase_realtime ADD TABLE problems;
 ALTER PUBLICATION supabase_realtime ADD TABLE problem_questions;
 ALTER PUBLICATION supabase_realtime ADD TABLE problem_comments;

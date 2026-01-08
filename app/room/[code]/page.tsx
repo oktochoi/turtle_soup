@@ -11,6 +11,7 @@ import HostAnswerButtons from './HostAnswerButtons';
 import GuessInput from './GuessInput';
 import HostAnswerInbox from './HostAnswerInbox';
 import GameResultModal from './GameResultModal';
+import ChatPanel from './ChatPanel';
 
 type LocalQuestion = {
   id: string;
@@ -1099,6 +1100,9 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
           </div>
 
           <div className="space-y-4">
+            {/* 채팅 패널 */}
+            <ChatPanel roomCode={roomCode} nickname={nickname} />
+
             {!isHost && !gameEnded && (
               <GuessInput 
                 onSubmit={handleSubmitGuess} 
@@ -1113,7 +1117,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
                   <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl p-4 border border-purple-500/30">
                     <button
                       onClick={handleEndGame}
-                      className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 text-sm sm:text-base"
+                      className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 text-sm sm:text-base touch-manipulation"
                     >
                       <i className="ri-stop-circle-line mr-2"></i>
                       게임 종료 (전체 공개)
