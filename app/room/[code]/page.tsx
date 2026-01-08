@@ -887,7 +887,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
       textArea.select();
       document.execCommand('copy');
       document.body.removeChild(textArea);
-      alert('방 코드가 복사되었습니다!');
+      alert('방 링크가 복사되었습니다!');
     }
   };
 
