@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "바다거북스프게임",
+  title: "온라인 멀티 바다거북스프게임",
   description: "추리와 질문으로 진실을 밝혀내는 바다거북스프 게임",
   verification: {
     google: "4j3cTkVACL2lF9s0CFfg6x9kHsVdndQdbKI5atxdBGQ",
