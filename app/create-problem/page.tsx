@@ -5,7 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
-const AVAILABLE_TAGS = ['공포', '추리', '개그', '역사', '과학', '일상', '판타지', '미스터리'];
+const AVAILABLE_TAGS = [
+  '공포', '추리', '개그', '역사', '과학', '일상', '판타지', '미스터리',
+  '로맨스', '액션', '스릴러', '코미디', '드라마', 'SF', '호러', '범죄',
+  '심리', '철학', '종교', '정치', '경제', '스포츠', '음악', '예술',
+  '문학', '동물', '자연', '우주', '시간여행', '초능력', '좀비', '뱀파이어',
+  '마법', '전쟁', '모험', '서바이벌', '의학', '법률', '교육', '직업'
+];
 
 export default function CreateProblem() {
   const router = useRouter();

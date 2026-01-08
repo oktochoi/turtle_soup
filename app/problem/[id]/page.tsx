@@ -35,6 +35,10 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
   const [editAnswer, setEditAnswer] = useState('');
   const [editDifficulty, setEditDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [editTags, setEditTags] = useState<string[]>([]);
+  const [averageRating, setAverageRating] = useState<number>(0);
+  const [ratingCount, setRatingCount] = useState<number>(0);
+  const [userRating, setUserRating] = useState<number | null>(null);
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
 
   useEffect(() => {
     loadProblem();
@@ -42,6 +46,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
     loadComments();
     checkLike();
     loadLocalQuestions();
+    loadRating();
   }, [problemId]);
 
   const loadLocalQuestions = () => {
@@ -162,6 +167,84 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
       setIsLiked(!!data);
     } catch (error) {
       // 좋아요가 없으면 에러가 발생할 수 있음 (정상)
+    }
+  };
+
+  const loadRating = async () => {
+    try {
+      const userIdentifier = localStorage.getItem('user_id') || 'anonymous';
+      
+      // 평균 별점과 개수 계산
+      const { data: ratings, error: ratingsError } = await supabase
+        .from('problem_difficulty_ratings')
+        .select('rating')
+        .eq('problem_id', problemId);
+
+      if (ratingsError) throw ratingsError;
+
+      if (ratings && ratings.length > 0) {
+        const sum = ratings.reduce((acc, r) => acc + r.rating, 0);
+        const avg = sum / ratings.length;
+        setAverageRating(Number(avg.toFixed(2)));
+        setRatingCount(ratings.length);
+      } else {
+        setAverageRating(0);
+        setRatingCount(0);
+      }
+
+      // 사용자 별점 확인
+      const { data: userRatingData } = await supabase
+        .from('problem_difficulty_ratings')
+        .select('rating')
+        .eq('problem_id', problemId)
+        .eq('user_identifier', userIdentifier)
+        .single();
+
+      setUserRating(userRatingData?.rating || null);
+    } catch (error) {
+      console.error('별점 로드 오류:', error);
+    }
+  };
+
+  const handleRatingClick = async (rating: number) => {
+    try {
+      const userIdentifier = localStorage.getItem('user_id') || 'anonymous';
+      
+      // 기존 별점이 있으면 업데이트, 없으면 생성
+      const { data: existing } = await supabase
+        .from('problem_difficulty_ratings')
+        .select('id')
+        .eq('problem_id', problemId)
+        .eq('user_identifier', userIdentifier)
+        .single();
+
+      if (existing) {
+        // 업데이트
+        const { error } = await supabase
+          .from('problem_difficulty_ratings')
+          .update({ rating, updated_at: new Date().toISOString() })
+          .eq('problem_id', problemId)
+          .eq('user_identifier', userIdentifier);
+
+        if (error) throw error;
+      } else {
+        // 생성
+        const { error } = await supabase
+          .from('problem_difficulty_ratings')
+          .insert({
+            problem_id: problemId,
+            user_identifier: userIdentifier,
+            rating,
+          });
+
+        if (error) throw error;
+      }
+
+      setUserRating(rating);
+      await loadRating(); // 평균 별점 다시 계산
+    } catch (error) {
+      console.error('별점 투표 오류:', error);
+      alert('별점 투표에 실패했습니다.');
     }
   };
 
@@ -300,20 +383,54 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
             user_identifier: userIdentifier,
           });
 
-        if (error) throw error;
+        if (error) {
+          // UNIQUE 제약 조건 위반 (이미 좋아요가 있는 경우)
+          if (error.code === '23505') {
+            // 이미 좋아요가 있으므로 상태만 업데이트
+            setIsLiked(true);
+            return;
+          }
+          throw error;
+        }
       } else {
         // 좋아요 취소
-        const { error } = await supabase
+        const { error: deleteError } = await supabase
           .from('problem_likes')
           .delete()
           .eq('problem_id', problemId)
           .eq('user_identifier', userIdentifier);
 
-        if (error) throw error;
+        if (deleteError) throw deleteError;
+
+        // 트리거가 비동기적으로 작동할 수 있으므로, 수동으로 카운트를 감소시킴
+        const { error: updateError } = await supabase
+          .from('problems')
+          .update({ like_count: Math.max((problem.like_count || 0) - 1, 0) })
+          .eq('id', problemId);
+
+        if (updateError) {
+          console.error('좋아요 개수 업데이트 오류:', updateError);
+          // 에러가 나도 계속 진행 (트리거가 처리할 수 있음)
+        }
       }
 
       // 트리거가 자동으로 카운트를 업데이트하지만, 확실하게 하기 위해 다시 로드
-      await loadProblem();
+      // 약간의 지연을 두어 트리거가 완료될 시간을 줌
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const { data: updatedProblem, error: loadError } = await supabase
+        .from('problems')
+        .select('*')
+        .eq('id', problemId)
+        .single();
+
+      if (loadError) throw loadError;
+      
+      if (updatedProblem) {
+        setProblem(updatedProblem);
+        // 최신 좋아요 개수로 UI 업데이트
+        setProblem(prev => prev ? { ...prev, like_count: updatedProblem.like_count } : null);
+      }
     } catch (error) {
       console.error('좋아요 오류:', error);
       // 실패 시 롤백
@@ -407,15 +524,28 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
     );
   };
 
-  const AVAILABLE_TAGS = ['공포', '추리', '개그', '역사', '과학', '일상', '판타지', '미스터리'];
+  const AVAILABLE_TAGS = [
+    '공포', '추리', '개그', '역사', '과학', '일상', '판타지', '미스터리',
+    '로맨스', '액션', '스릴러', '코미디', '드라마', 'SF', '호러', '범죄',
+    '심리', '철학', '종교', '정치', '경제', '스포츠', '음악', '예술',
+    '문학', '동물', '자연', '우주', '시간여행', '초능력', '좀비', '뱀파이어',
+    '마법', '전쟁', '모험', '서바이벌', '의학', '법률', '교육', '직업'
+  ];
 
-  const getDifficultyBadge = (difficulty: string) => {
-    const badges = {
-      easy: { text: '쉬움', color: 'bg-green-500', emoji: '🟢' },
-      medium: { text: '보통', color: 'bg-yellow-500', emoji: '🟡' },
-      hard: { text: '어려움', color: 'bg-red-500', emoji: '🔴' },
-    };
-    return badges[difficulty as keyof typeof badges] || badges.medium;
+  const getDifficultyFromRating = (rating: number): { text: string; color: string; emoji: string } => {
+    if (rating === 0) {
+      return { text: '평가 없음', color: 'bg-slate-500', emoji: '⚪' };
+    } else if (rating < 2) {
+      return { text: '매우 쉬움', color: 'bg-green-500', emoji: '🟢' };
+    } else if (rating < 3) {
+      return { text: '쉬움', color: 'bg-green-400', emoji: '🟢' };
+    } else if (rating < 4) {
+      return { text: '보통', color: 'bg-yellow-500', emoji: '🟡' };
+    } else if (rating < 4.5) {
+      return { text: '어려움', color: 'bg-orange-500', emoji: '🟠' };
+    } else {
+      return { text: '매우 어려움', color: 'bg-red-500', emoji: '🔴' };
+    }
   };
 
   const getAnswerBadge = (answer: string | null) => {
@@ -453,7 +583,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
     );
   }
 
-  const difficultyBadge = getDifficultyBadge(problem.difficulty);
+  const difficultyBadge = getDifficultyFromRating(averageRating);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
@@ -486,10 +616,16 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
               )}
               <div className="flex items-center gap-3 flex-wrap text-sm text-slate-400">
                 <span>출제자: {problem.author}</span>
-                <span className="flex items-center gap-1">
-                  {difficultyBadge.emoji} {difficultyBadge.text}
-                </span>
-
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1">
+                    {difficultyBadge.emoji} {difficultyBadge.text}
+                  </span>
+                  {averageRating > 0 && (
+                    <span className="text-xs">
+                      ⭐ {averageRating.toFixed(1)} ({ratingCount}명)
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -536,6 +672,43 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                 <i className="ri-chat-3-line"></i>
                 <span>{problem.comment_count}</span>
               </div>
+            </div>
+          </div>
+
+          {/* 별점 투표 */}
+          <div className="mb-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+            <div className="flex items-center gap-4 flex-wrap">
+              <span className="text-sm text-slate-300 font-medium">난이도 평가:</span>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((star) => {
+                  const displayRating = hoverRating !== null ? hoverRating : userRating;
+                  const isFilled = displayRating !== null && star <= displayRating;
+                  return (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => handleRatingClick(star)}
+                      onMouseEnter={() => setHoverRating(star)}
+                      onMouseLeave={() => setHoverRating(null)}
+                      className={`text-2xl transition-all ${
+                        isFilled
+                          ? 'text-yellow-400 hover:text-yellow-300'
+                          : 'text-slate-600 hover:text-yellow-400'
+                      }`}
+                    >
+                      <i className={`ri-star-${isFilled ? 'fill' : 'line'}`}></i>
+                    </button>
+                  );
+                })}
+              </div>
+              {averageRating > 0 && (
+                <span className="text-sm text-slate-400">
+                  평균: ⭐ {averageRating.toFixed(1)} ({ratingCount}명 평가)
+                </span>
+              )}
+              {averageRating === 0 && (
+                <span className="text-sm text-slate-500">아직 평가가 없습니다</span>
+              )}
             </div>
           </div>
 

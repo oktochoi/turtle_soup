@@ -20,7 +20,13 @@ export default function ProblemsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('latest');
 
-  const AVAILABLE_TAGS = ['공포', '추리', '개그', '역사', '과학', '일상', '판타지', '미스터리'];
+  const AVAILABLE_TAGS = [
+    '공포', '추리', '개그', '역사', '과학', '일상', '판타지', '미스터리',
+    '로맨스', '액션', '스릴러', '코미디', '드라마', 'SF', '호러', '범죄',
+    '심리', '철학', '종교', '정치', '경제', '스포츠', '음악', '예술',
+    '문학', '동물', '자연', '우주', '시간여행', '초능력', '좀비', '뱀파이어',
+    '마법', '전쟁', '모험', '서바이벌', '의학', '법률', '교육', '직업'
+  ];
 
   useEffect(() => {
     loadProblems();
@@ -38,7 +44,33 @@ export default function ProblemsPage() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProblems(data || []);
+      
+      // 각 문제의 평균 별점 계산
+      const problemsWithRatings = await Promise.all(
+        (data || []).map(async (problem) => {
+          const { data: ratings } = await supabase
+            .from('problem_difficulty_ratings')
+            .select('rating')
+            .eq('problem_id', problem.id);
+
+          let averageRating = 0;
+          let ratingCount = 0;
+          
+          if (ratings && ratings.length > 0) {
+            const sum = ratings.reduce((acc, r) => acc + r.rating, 0);
+            averageRating = Number((sum / ratings.length).toFixed(2));
+            ratingCount = ratings.length;
+          }
+
+          return {
+            ...problem,
+            average_rating: averageRating,
+            rating_count: ratingCount,
+          };
+        })
+      );
+
+      setProblems(problemsWithRatings);
     } catch (error) {
       console.error('문제 로드 오류:', error);
       alert('문제를 불러올 수 없습니다.');
@@ -50,9 +82,15 @@ export default function ProblemsPage() {
   const filterAndSortProblems = () => {
     let filtered = [...problems];
 
-    // 난이도 필터
+    // 난이도 필터 (별점 기반으로 변경)
     if (difficultyFilter !== 'all') {
-      filtered = filtered.filter(p => p.difficulty === difficultyFilter);
+      filtered = filtered.filter(p => {
+        const rating = (p as any).average_rating || 0;
+        if (difficultyFilter === 'easy') return rating < 3;
+        if (difficultyFilter === 'medium') return rating >= 3 && rating < 4;
+        if (difficultyFilter === 'hard') return rating >= 4;
+        return true;
+      });
     }
 
     // 해시태그 필터
@@ -82,23 +120,31 @@ export default function ProblemsPage() {
         );
         break;
       case 'difficulty':
-        const difficultyOrder = { easy: 1, medium: 2, hard: 3 };
-        filtered.sort((a, b) => 
-          difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty]
-        );
+        filtered.sort((a, b) => {
+          const ratingA = (a as any).average_rating || 0;
+          const ratingB = (b as any).average_rating || 0;
+          return ratingA - ratingB;
+        });
         break;
     }
 
     setFilteredProblems(filtered);
   };
 
-  const getDifficultyBadge = (difficulty: string) => {
-    const badges = {
-      easy: { text: '쉬움', color: 'bg-green-500', emoji: '🟢' },
-      medium: { text: '중간', color: 'bg-yellow-500', emoji: '🟡' },
-      hard: { text: '어려움', color: 'bg-red-500', emoji: '🔴' },
-    };
-    return badges[difficulty as keyof typeof badges] || badges.medium;
+  const getDifficultyFromRating = (rating: number): { text: string; color: string; emoji: string } => {
+    if (rating === 0) {
+      return { text: '평가 없음', color: 'bg-slate-500', emoji: '⚪' };
+    } else if (rating < 2) {
+      return { text: '매우 쉬움', color: 'bg-green-500', emoji: '🟢' };
+    } else if (rating < 3) {
+      return { text: '쉬움', color: 'bg-green-400', emoji: '🟢' };
+    } else if (rating < 4) {
+      return { text: '보통', color: 'bg-yellow-500', emoji: '🟡' };
+    } else if (rating < 4.5) {
+      return { text: '어려움', color: 'bg-orange-500', emoji: '🟠' };
+    } else {
+      return { text: '매우 어려움', color: 'bg-red-500', emoji: '🔴' };
+    }
   };
 
   const truncateText = (text: string, maxLength: number) => {
@@ -269,7 +315,9 @@ export default function ProblemsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredProblems.map(problem => {
-              const difficultyBadge = getDifficultyBadge(problem.difficulty);
+              const averageRating = (problem as any).average_rating || 0;
+              const ratingCount = (problem as any).rating_count || 0;
+              const difficultyBadge = getDifficultyFromRating(averageRating);
               return (
                 <div
                   key={problem.id}
@@ -279,9 +327,16 @@ export default function ProblemsPage() {
                     <h3 className="text-lg sm:text-xl font-bold text-white flex-1 pr-2">
                       {problem.title}
                     </h3>
-                    <span className={`px-2 py-1 rounded text-xs font-semibold ${difficultyBadge.color} text-white whitespace-nowrap`}>
-                      {difficultyBadge.text}
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className={`px-2 py-1 rounded text-xs font-semibold ${difficultyBadge.color} text-white whitespace-nowrap`}>
+                        {difficultyBadge.emoji} {difficultyBadge.text}
+                      </span>
+                      {averageRating > 0 && (
+                        <span className="text-xs text-slate-400">
+                          ⭐ {averageRating.toFixed(1)} ({ratingCount})
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <p className="text-sm text-slate-300 mb-4 line-clamp-3">
