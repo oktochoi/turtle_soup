@@ -103,12 +103,6 @@ export default function GameResultModal({ story, truth, questions, onRestart, ro
           </div>
 
           <div className="p-4 sm:p-6 border-t border-slate-700 flex flex-col sm:flex-row gap-2 sm:gap-3">
-            <Link href="/" className="flex-1">
-              <button className="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap text-sm sm:text-base">
-                <i className="ri-home-line mr-2"></i>
-                홈으로 돌아가기
-              </button>
-            </Link>
             {isUserWon && onClose && (
               <button
                 onClick={onClose}

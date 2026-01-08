@@ -873,6 +873,24 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     }
   };
 
+  const handleShareRoom = async () => {
+    try {
+      const roomUrl = `${window.location.origin}/room/${roomCode}`;
+      await navigator.clipboard.writeText(roomUrl);
+      alert('방 링크가 복사되었습니다!');
+    } catch (err) {
+      // 복사 실패 시 대체 방법
+      const roomUrl = `${window.location.origin}/room/${roomCode}`;
+      const textArea = document.createElement('textarea');
+      textArea.value = roomUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert('방 코드가 복사되었습니다!');
+    }
+  };
+
   const handleSetNickname = async (name: string) => {
     if (!name.trim()) return;
 
@@ -999,6 +1017,13 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
                 title="방 코드 복사"
               >
                 <i className="ri-file-copy-line text-teal-400 text-sm"></i>
+              </button>
+              <button
+                onClick={handleShareRoom}
+                className="ml-2 p-1.5 hover:bg-slate-700 rounded-lg transition-colors"
+                title="방 링크 공유하기"
+              >
+                <i className="ri-share-line text-teal-400 text-sm"></i>
               </button>
             </div>
             {isHost && (
