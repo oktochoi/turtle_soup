@@ -21,39 +21,65 @@ export default function Home() {
           </p>
         </header>
 
-        <div className="space-y-4">
-          <Link href="/create-room">
-            <button className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-teal-500/50 whitespace-nowrap">
-              <i className="ri-add-circle-line mr-2"></i>
-              새 방 만들기
-            </button>
-          </Link>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-700"></div>
+        <div className="space-y-6">
+          {/* 멀티플레이어 섹션 */}
+          <div className="bg-slate-800/50 rounded-xl p-5 sm:p-6 border border-slate-700">
+            <div className="flex items-center gap-2 mb-3">
+              <i className="ri-group-line text-teal-400 text-xl"></i>
+              <h2 className="text-lg font-semibold text-teal-400">멀티플레이어</h2>
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-slate-900 text-slate-500">또는</span>
+            <p className="text-xs sm:text-sm text-slate-400 mb-4">친구들과 함께 실시간으로 게임을 즐기세요</p>
+            
+            <div className="space-y-3">
+              <Link href="/create-room">
+                <button className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-teal-500/50 whitespace-nowrap">
+                  <i className="ri-add-circle-line mr-2"></i>
+                  새 방 만들기
+                </button>
+              </Link>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-600"></div>
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="px-3 bg-slate-800/50 text-slate-500">또는</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="방 코드 입력"
+                  value={roomCode}
+                  onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                  className="w-full bg-slate-900 border-2 border-slate-600 hover:border-teal-500/50 focus:border-teal-500 rounded-xl px-4 py-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 text-center text-lg tracking-wider transition-all duration-200"
+                  maxLength={6}
+                />
+                <Link href={roomCode ? `/room/${roomCode}` : '#'}>
+                  <button 
+                    disabled={!roomCode}
+                    className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-cyan-500/50 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap disabled:hover:shadow-none"
+                  >
+                    <i className="ri-login-box-line mr-2"></i>
+                    방 참여하기
+                  </button>
+                </Link>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-3">
-            <input
-              type="text"
-              placeholder="방 코드 입력"
-              value={roomCode}
-              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-center text-lg tracking-wider"
-              maxLength={6}
-            />
-            <Link href={roomCode ? `/room/${roomCode}` : '#'}>
-              <button 
-                disabled={!roomCode}
-                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-4 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                <i className="ri-login-box-line mr-2"></i>
-                방 참여하기
+          {/* 오프라인 섹션 */}
+          <div className="bg-slate-800/50 rounded-xl p-5 sm:p-6 border border-slate-700">
+            <div className="flex items-center gap-2 mb-3">
+              <i className="ri-user-line text-purple-400 text-xl"></i>
+              <h2 className="text-lg font-semibold text-purple-400">오프라인</h2>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-400 mb-4">혼자서 문제를 풀어보세요</p>
+            <Link href="/problems">
+              <button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-purple-500/50 whitespace-nowrap">
+                <i className="ri-question-answer-line mr-2"></i>
+                게임 시작하기
               </button>
             </Link>
           </div>

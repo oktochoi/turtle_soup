@@ -123,6 +123,151 @@ CREATE TRIGGER trigger_delete_room_when_done
   WHEN (NEW.status = 'done' AND (OLD.status IS NULL OR OLD.status != 'done'))
   EXECUTE FUNCTION delete_room_when_done();
 
+-- Problems 테이블 (사용자가 만든 문제)
+CREATE TABLE IF NOT EXISTS problems (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  answer TEXT NOT NULL,
+  difficulty TEXT CHECK (difficulty IN ('easy', 'medium', 'hard')) DEFAULT 'medium' NOT NULL,
+  tags TEXT[] DEFAULT '{}' NOT NULL,
+  author TEXT NOT NULL,
+  admin_password TEXT NOT NULL,
+  like_count INTEGER DEFAULT 0 NOT NULL,
+  comment_count INTEGER DEFAULT 0 NOT NULL,
+  view_count INTEGER DEFAULT 0 NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+);
+
+-- Problem Questions 테이블 (문제에 대한 질문들)
+CREATE TABLE IF NOT EXISTS problem_questions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  problem_id UUID NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
+  nickname TEXT NOT NULL,
+  text TEXT NOT NULL,
+  answer TEXT CHECK (answer IN ('yes', 'no', 'irrelevant', 'decisive')) NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+);
+
+-- Problem Comments 테이블 (문제에 대한 댓글)
+CREATE TABLE IF NOT EXISTS problem_comments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  problem_id UUID NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
+  nickname TEXT NOT NULL,
+  text TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+);
+
+-- Problem Likes 테이블 (좋아요)
+CREATE TABLE IF NOT EXISTS problem_likes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  problem_id UUID NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
+  user_identifier TEXT NOT NULL, -- IP 주소나 쿠키 등으로 사용자 식별
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  UNIQUE(problem_id, user_identifier)
+);
+
+-- 인덱스 생성
+CREATE INDEX IF NOT EXISTS idx_problems_tags ON problems USING GIN(tags);
+CREATE INDEX IF NOT EXISTS idx_problems_difficulty ON problems(difficulty);
+CREATE INDEX IF NOT EXISTS idx_problems_created_at ON problems(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_problem_questions_problem_id ON problem_questions(problem_id);
+CREATE INDEX IF NOT EXISTS idx_problem_comments_problem_id ON problem_comments(problem_id);
+CREATE INDEX IF NOT EXISTS idx_problem_likes_problem_id ON problem_likes(problem_id);
+
+-- RLS 정책 설정
+ALTER TABLE problems ENABLE ROW LEVEL SECURITY;
+ALTER TABLE problem_questions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE problem_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE problem_likes ENABLE ROW LEVEL SECURITY;
+
+-- 모든 사용자가 problems를 읽을 수 있도록 설정
+CREATE POLICY "Anyone can read problems" ON problems
+  FOR SELECT USING (true);
+
+-- 모든 사용자가 problems를 생성할 수 있도록 설정
+CREATE POLICY "Anyone can create problems" ON problems
+  FOR INSERT WITH CHECK (true);
+
+-- 비밀번호를 알고 있는 사용자만 problems를 업데이트/삭제할 수 있도록 설정 (애플리케이션 레벨에서 처리)
+CREATE POLICY "Anyone can update problems" ON problems
+  FOR UPDATE USING (true);
+
+CREATE POLICY "Anyone can delete problems" ON problems
+  FOR DELETE USING (true);
+
+-- 모든 사용자가 problem_questions를 읽을 수 있도록 설정
+CREATE POLICY "Anyone can read problem_questions" ON problem_questions
+  FOR SELECT USING (true);
+
+-- 모든 사용자가 problem_questions를 생성할 수 있도록 설정
+CREATE POLICY "Anyone can create problem_questions" ON problem_questions
+  FOR INSERT WITH CHECK (true);
+
+-- 모든 사용자가 problem_questions를 업데이트할 수 있도록 설정
+CREATE POLICY "Anyone can update problem_questions" ON problem_questions
+  FOR UPDATE USING (true);
+
+-- 모든 사용자가 problem_comments를 읽을 수 있도록 설정
+CREATE POLICY "Anyone can read problem_comments" ON problem_comments
+  FOR SELECT USING (true);
+
+-- 모든 사용자가 problem_comments를 생성할 수 있도록 설정
+CREATE POLICY "Anyone can create problem_comments" ON problem_comments
+  FOR INSERT WITH CHECK (true);
+
+-- 모든 사용자가 problem_likes를 읽을 수 있도록 설정
+CREATE POLICY "Anyone can read problem_likes" ON problem_likes
+  FOR SELECT USING (true);
+
+-- 모든 사용자가 problem_likes를 생성할 수 있도록 설정
+CREATE POLICY "Anyone can create problem_likes" ON problem_likes
+  FOR INSERT WITH CHECK (true);
+
+-- 좋아요 수를 자동으로 업데이트하는 트리거 함수
+CREATE OR REPLACE FUNCTION update_problem_like_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE problems SET like_count = like_count + 1 WHERE id = NEW.problem_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE problems SET like_count = GREATEST(like_count - 1, 0) WHERE id = OLD.problem_id;
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 댓글 수를 자동으로 업데이트하는 트리거 함수
+CREATE OR REPLACE FUNCTION update_problem_comment_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE problems SET comment_count = comment_count + 1 WHERE id = NEW.problem_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE problems SET comment_count = GREATEST(comment_count - 1, 0) WHERE id = OLD.problem_id;
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 트리거 생성
+DROP TRIGGER IF EXISTS trigger_update_problem_like_count ON problem_likes;
+CREATE TRIGGER trigger_update_problem_like_count
+  AFTER INSERT OR DELETE ON problem_likes
+  FOR EACH ROW
+  EXECUTE FUNCTION update_problem_like_count();
+
+DROP TRIGGER IF EXISTS trigger_update_problem_comment_count ON problem_comments;
+CREATE TRIGGER trigger_update_problem_comment_count
+  AFTER INSERT OR DELETE ON problem_comments
+  FOR EACH ROW
+  EXECUTE FUNCTION update_problem_comment_count();
+
 -- Realtime 활성화 (Supabase Realtime을 사용하기 위해 테이블을 publication에 추가)
 -- 참고: Supabase 대시보드에서도 설정할 수 있습니다.
 -- Database > Replication 메뉴에서 각 테이블의 Realtime을 활성화하세요.
@@ -130,4 +275,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE rooms;
 ALTER PUBLICATION supabase_realtime ADD TABLE questions;
 ALTER PUBLICATION supabase_realtime ADD TABLE guesses;
 ALTER PUBLICATION supabase_realtime ADD TABLE players;
+ALTER PUBLICATION supabase_realtime ADD TABLE problems;
+ALTER PUBLICATION supabase_realtime ADD TABLE problem_questions;
+ALTER PUBLICATION supabase_realtime ADD TABLE problem_comments;
 
