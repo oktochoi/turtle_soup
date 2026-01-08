@@ -67,12 +67,18 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
           .single();
 
         if (roomError) {
-          if (roomError.code === 'PGRST116') {
-            setError('방을 찾을 수 없습니다.');
+          // 방을 찾을 수 없으면 삭제된 것으로 간주 (게임 종료됨)
+          if (roomError.code === 'PGRST116' || roomError.message?.includes('No rows')) {
+            console.log('✅ 방이 삭제되었습니다 - 게임 종료 상태로 간주');
+            setGameEnded(true);
+            // 게임 종료 모달을 표시하기 위해 최소한의 데이터 설정
+            setStory('게임이 종료되었습니다');
+            setTruth('게임이 종료되었습니다');
+            setIsLoading(false);
+            return;
           } else {
             throw roomError;
           }
-          return;
         }
 
         if (room) {
@@ -80,7 +86,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
           setTruth(room.truth);
           // 999999는 무제한을 의미
           setMaxQuestions(room.max_questions >= 999999 ? null : room.max_questions);
-          setGameEnded(room.game_ended);
+          setGameEnded(room.game_ended || room.status === 'done');
         }
       } catch (err) {
         console.error('방 로드 오류:', err);
@@ -93,7 +99,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     loadRoom();
   }, [roomCode]);
 
-  // URL 파라미터에서 호스트 여부와 닉네임 확인
+  // URL 파라미터에서 호스트 여부와 닉네임 확인, localStorage에서 닉네임 불러오기
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
@@ -102,13 +108,29 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
       
       setIsHost(hostParam);
       
+      // localStorage에서 저장된 닉네임 확인 (같은 방 코드인 경우만)
+      const savedNickname = localStorage.getItem(`nickname_${roomCode}`);
+      const savedRoomCode = localStorage.getItem(`roomCode_${roomCode}`);
+      
       if (nicknameParam) {
-        setNickname(decodeURIComponent(nicknameParam));
+        // URL 파라미터가 있으면 우선 사용
+        const decodedNickname = decodeURIComponent(nicknameParam);
+        setNickname(decodedNickname);
         setShowNicknameModal(false);
-        joinRoom(decodeURIComponent(nicknameParam), hostParam);
+        // localStorage에 저장
+        localStorage.setItem(`nickname_${roomCode}`, decodedNickname);
+        localStorage.setItem(`roomCode_${roomCode}`, roomCode);
+        joinRoom(decodedNickname, hostParam);
+      } else if (savedNickname && savedRoomCode === roomCode) {
+        // localStorage에 저장된 닉네임이 있고 같은 방이면 사용
+        console.log('💾 저장된 닉네임 불러오기:', savedNickname);
+        setNickname(savedNickname);
+        setShowNicknameModal(false);
+        joinRoom(savedNickname, hostParam);
       }
+      // 둘 다 없으면 닉네임 모달 표시
     }
-  }, []);
+  }, [roomCode]);
 
   // 방 참여 함수
   const joinRoom = async (playerNickname: string, isHostPlayer: boolean) => {
@@ -416,7 +438,15 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
           .eq('code', roomCode)
           .single();
         
-        if (roomRes.data) {
+        if (roomRes.error) {
+          // 방을 찾을 수 없으면 삭제된 것으로 간주 (게임 종료됨)
+          if (roomRes.error.code === 'PGRST116' || roomRes.error.message?.includes('No rows')) {
+            console.log('✅ 방이 삭제되었습니다 - 게임 종료 상태로 간주');
+            setGameEnded(true);
+          } else {
+            console.error('방 로드 오류:', roomRes.error);
+          }
+        } else if (roomRes.data) {
           const room = roomRes.data as Room;
           console.log('📊 초기 방 상태:', {
             status: room.status,
@@ -508,6 +538,12 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
           .single();
         
         if (error) {
+          // 방을 찾을 수 없으면 삭제된 것으로 간주 (게임 종료됨)
+          if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
+            console.log('🔄 Polling: 방이 삭제되었습니다 - 게임 종료 상태로 간주');
+            setGameEnded(true);
+            return;
+          }
           console.error('방 상태 확인 오류:', error);
           return;
         }
@@ -517,9 +553,15 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
             console.log('🔄 Polling: 게임 종료 상태 감지 - 모든 사용자에게 모달 표시');
             setGameEnded(true);
           }
+        } else {
+          // 방 데이터가 없으면 삭제된 것으로 간주
+          console.log('🔄 Polling: 방 데이터가 없습니다 - 게임 종료 상태로 간주');
+          setGameEnded(true);
         }
       } catch (err) {
         console.error('방 상태 Polling 오류:', err);
+        // 오류 발생 시에도 게임 종료로 간주 (방이 삭제되었을 가능성)
+        setGameEnded(true);
       }
     };
 
@@ -837,6 +879,13 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     const trimmedName = name.trim();
     setNickname(trimmedName);
     setShowNicknameModal(false);
+    
+    // localStorage에 닉네임 저장
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`nickname_${roomCode}`, trimmedName);
+      localStorage.setItem(`roomCode_${roomCode}`, roomCode);
+      console.log('💾 닉네임 저장됨:', trimmedName);
+    }
     
     // 방 참여
     await joinRoom(trimmedName, false);
