@@ -5,31 +5,31 @@ import Link from 'next/link';
 export default function TutorialPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-5xl">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-5xl">
         {/* 히어로 섹션 */}
-        <div className="text-center mb-12">
-          <div className="inline-block mb-6">
-            <div className="text-6xl sm:text-8xl mb-4 animate-bounce">🐢</div>
-            <div className="text-4xl sm:text-6xl font-black bg-gradient-to-r from-teal-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent mb-2">
+        <div className="text-center mb-8 sm:mb-10 lg:mb-12">
+          <div className="inline-block mb-4 sm:mb-6">
+            <div className="text-5xl sm:text-6xl lg:text-8xl mb-3 sm:mb-4 animate-bounce">🐢</div>
+            <div className="text-3xl sm:text-4xl lg:text-6xl font-black bg-gradient-to-r from-teal-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent mb-2">
               바다거북스프
             </div>
           </div>
-          <p className="text-xl sm:text-2xl text-slate-300 font-light">
+          <p className="text-lg sm:text-xl lg:text-2xl text-slate-300 font-light">
             예/아니오로 풀어가는 추리 게임의 정석
           </p>
         </div>
 
         {/* 소개 섹션 */}
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-8 sm:p-10 mb-8 border border-slate-700/50 shadow-2xl">
-          <div className="flex items-start gap-4 mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
-              <i className="ri-question-answer-line text-3xl text-white"></i>
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 lg:p-10 mb-6 sm:mb-8 border border-slate-700/50 shadow-2xl">
+          <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
+              <i className="ri-question-answer-line text-2xl sm:text-3xl text-white"></i>
             </div>
             <div className="flex-1">
-              <h2 className="text-2xl sm:text-3xl font-bold mb-3 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 sm:mb-3 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
                 바다거북스프란?
               </h2>
-              <p className="text-lg sm:text-xl text-slate-300 leading-relaxed">
+              <p className="text-sm sm:text-base lg:text-xl text-slate-300 leading-relaxed">
                 호스트가 제시한 <span className="text-teal-400 font-semibold">미스터리한 상황</span>을 
                 <span className="text-cyan-400 font-semibold"> "예/아니오" 질문</span>만으로 추리하여 
                 <span className="text-blue-400 font-semibold"> 진실을 밝혀내는</span> 두뇌 게임입니다.
@@ -39,32 +39,32 @@ export default function TutorialPage() {
         </div>
 
         {/* 클래식 예시 */}
-        <div className="bg-gradient-to-br from-teal-900/40 via-cyan-900/40 to-blue-900/40 rounded-2xl p-8 sm:p-10 mb-8 border border-teal-500/30 shadow-xl relative overflow-hidden">
+        <div className="bg-gradient-to-br from-teal-900/40 via-cyan-900/40 to-blue-900/40 rounded-2xl p-4 sm:p-6 lg:p-10 mb-6 sm:mb-8 border border-teal-500/30 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
           <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-teal-500/20 rounded-xl flex items-center justify-center">
-                <i className="ri-lightbulb-flash-line text-2xl text-teal-400"></i>
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-teal-500/20 rounded-xl flex items-center justify-center">
+                <i className="ri-lightbulb-flash-line text-xl sm:text-2xl text-teal-400"></i>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-teal-400">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-teal-400">
                 클래식 예시
               </h2>
             </div>
-            <div className="bg-slate-900/60 backdrop-blur-sm rounded-xl p-6 sm:p-8 border border-slate-700/50 shadow-inner">
-              <div className="flex items-start gap-4">
-                <div className="text-4xl flex-shrink-0">💭</div>
+            <div className="bg-slate-900/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 lg:p-8 border border-slate-700/50 shadow-inner">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="text-3xl sm:text-4xl flex-shrink-0">💭</div>
                 <div className="flex-1">
-                  <p className="text-lg sm:text-xl text-white leading-relaxed font-medium mb-3">
+                  <p className="text-base sm:text-lg lg:text-xl text-white leading-relaxed font-medium mb-2 sm:mb-3">
                     한 남자가 바다거북 수프를 한 수저 먹고 집에 가서 자살했다.
                   </p>
-                  <p className="text-base sm:text-lg text-slate-400 italic">
+                  <p className="text-sm sm:text-base lg:text-lg text-slate-400 italic">
                     왜일까요?
                   </p>
                 </div>
               </div>
             </div>
-            <div className="mt-6 p-4 bg-teal-500/10 rounded-lg border border-teal-500/30">
-              <p className="text-sm text-teal-300">
+            <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-teal-500/10 rounded-lg border border-teal-500/30">
+              <p className="text-xs sm:text-sm text-teal-300">
                 💡 <span className="font-semibold">힌트:</span> 수프의 맛이나 독이 문제가 아닙니다. 
                 남자의 과거와 관련이 있을까요?
               </p>
@@ -73,43 +73,43 @@ export default function TutorialPage() {
         </div>
 
         {/* 게임 진행 방식 */}
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-8 sm:p-10 mb-8 border border-slate-700/50 shadow-2xl">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
-              <i className="ri-gamepad-line text-2xl text-white"></i>
+        <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 lg:p-10 mb-6 sm:mb-8 border border-slate-700/50 shadow-2xl">
+          <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+              <i className="ri-gamepad-line text-xl sm:text-2xl text-white"></i>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
               게임 진행 방식
             </h2>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-br from-teal-900/30 to-cyan-900/30 rounded-xl p-6 border border-teal-500/30 hover:border-teal-500/60 transition-all hover:shadow-lg hover:shadow-teal-500/20">
-              <div className="w-14 h-14 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4 shadow-lg">
-                <span className="text-2xl font-black text-white">1</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="bg-gradient-to-br from-teal-900/30 to-cyan-900/30 rounded-xl p-4 sm:p-6 border border-teal-500/30 hover:border-teal-500/60 transition-all hover:shadow-lg hover:shadow-teal-500/20">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center mb-3 sm:mb-4 shadow-lg">
+                <span className="text-xl sm:text-2xl font-black text-white">1</span>
               </div>
-              <h3 className="font-bold text-lg mb-2 text-teal-400">문제 제시</h3>
-              <p className="text-slate-300 text-sm leading-relaxed">
+              <h3 className="font-bold text-base sm:text-lg mb-2 text-teal-400">문제 제시</h3>
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
                 호스트가 미스터리한 상황을 제시합니다. 표면적으로는 설명되지 않는 이상한 사건이 벌어집니다.
               </p>
             </div>
             
-            <div className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 rounded-xl p-6 border border-purple-500/30 hover:border-purple-500/60 transition-all hover:shadow-lg hover:shadow-purple-500/20">
-              <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4 shadow-lg">
-                <span className="text-2xl font-black text-white">2</span>
+            <div className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 rounded-xl p-4 sm:p-6 border border-purple-500/30 hover:border-purple-500/60 transition-all hover:shadow-lg hover:shadow-purple-500/20">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-3 sm:mb-4 shadow-lg">
+                <span className="text-xl sm:text-2xl font-black text-white">2</span>
               </div>
-              <h3 className="font-bold text-lg mb-2 text-purple-400">질문과 답변</h3>
-              <p className="text-slate-300 text-sm leading-relaxed">
+              <h3 className="font-bold text-base sm:text-lg mb-2 text-purple-400">질문과 답변</h3>
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
                 플레이어들은 "예/아니오"로만 답변 가능한 질문을 통해 단서를 수집하고 추리를 진행합니다.
               </p>
             </div>
             
-            <div className="bg-gradient-to-br from-blue-900/30 to-indigo-900/30 rounded-xl p-6 border border-blue-500/30 hover:border-blue-500/60 transition-all hover:shadow-lg hover:shadow-blue-500/20">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center mb-4 shadow-lg">
-                <span className="text-2xl font-black text-white">3</span>
+            <div className="bg-gradient-to-br from-blue-900/30 to-indigo-900/30 rounded-xl p-4 sm:p-6 border border-blue-500/30 hover:border-blue-500/60 transition-all hover:shadow-lg hover:shadow-blue-500/20">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center mb-3 sm:mb-4 shadow-lg">
+                <span className="text-xl sm:text-2xl font-black text-white">3</span>
               </div>
-              <h3 className="font-bold text-lg mb-2 text-blue-400">정답 확인</h3>
-              <p className="text-slate-300 text-sm leading-relaxed">
+              <h3 className="font-bold text-base sm:text-lg mb-2 text-blue-400">정답 확인</h3>
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
                 충분한 단서를 모았다고 생각하면 정답을 추측하고, 호스트가 진실을 공개합니다.
               </p>
             </div>
@@ -269,21 +269,21 @@ export default function TutorialPage() {
         </div>
 
         {/* 시작하기 버튼 */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <Link href="/create-room" className="flex-1 group">
-            <button className="w-full bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 hover:from-teal-600 hover:via-cyan-600 hover:to-blue-600 text-white font-bold py-4 rounded-xl transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-teal-500/50 transform hover:scale-105">
+            <button className="w-full bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 hover:from-teal-600 hover:via-cyan-600 hover:to-blue-600 text-white font-bold py-3 sm:py-4 rounded-xl transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-teal-500/50 transform hover:scale-105 text-sm sm:text-base touch-manipulation">
               <i className="ri-gamepad-line mr-2"></i>
               멀티플레이 게임 시작
             </button>
           </Link>
           <Link href="/problems" className="flex-1 group">
-            <button className="w-full bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 hover:from-purple-600 hover:via-pink-600 hover:to-rose-600 text-white font-bold py-4 rounded-xl transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-purple-500/50 transform hover:scale-105">
+            <button className="w-full bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 hover:from-purple-600 hover:via-pink-600 hover:to-rose-600 text-white font-bold py-3 sm:py-4 rounded-xl transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-purple-500/50 transform hover:scale-105 text-sm sm:text-base touch-manipulation">
               <i className="ri-play-line mr-2"></i>
               오프라인 게임 시작
             </button>
           </Link>
           <Link href="/create-problem" className="flex-1 group">
-            <button className="w-full bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white font-bold py-4 rounded-xl transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-orange-500/50 transform hover:scale-105">
+            <button className="w-full bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white font-bold py-3 sm:py-4 rounded-xl transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-orange-500/50 transform hover:scale-105 text-sm sm:text-base touch-manipulation">
               <i className="ri-edit-box-line mr-2"></i>
               문제 만들기
             </button>

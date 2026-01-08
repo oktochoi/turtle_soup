@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 
 export default function Header() {
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => {
     if (path === '/') {
@@ -12,6 +14,13 @@ export default function Header() {
     }
     return pathname?.startsWith(path);
   };
+
+  const navLinks = [
+    { href: '/create-room', label: '멀티 플레이', activeColor: 'bg-teal-500' },
+    { href: '/problems', label: '게임 시작', activeColor: 'bg-purple-500' },
+    { href: '/create-problem', label: '게임 만들기', activeColor: 'bg-pink-500' },
+    { href: '/tutorial', label: '게임 설명', activeColor: 'bg-cyan-500' },
+  ];
 
   return (
     <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-50">
@@ -24,53 +33,57 @@ export default function Header() {
             </span>
           </Link>
           
-          <nav className="flex items-center gap-2 sm:gap-3">
-            <Link href="/create-room">
-              <button
-                className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-                  isActive('/create-room')
-                    ? 'bg-teal-500 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                멀티 플레이
-              </button>
-            </Link>
-            <Link href="/problems">
-              <button
-                className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-                  isActive('/problems')
-                    ? 'bg-purple-500 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                게임 시작
-              </button>
-            </Link>
-            <Link href="/create-problem">
-              <button
-                className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-                  isActive('/create-problem')
-                    ? 'bg-pink-500 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                게임 만들기
-              </button>
-            </Link>
-            <Link href="/tutorial">
-              <button
-                className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-                  isActive('/tutorial')
-                    ? 'bg-cyan-500 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                게임 설명
-              </button>
-            </Link>
+          {/* 데스크톱 네비게이션 */}
+          <nav className="hidden md:flex items-center gap-2 lg:gap-3">
+            {navLinks.map((link) => (
+              <Link key={link.href} href={link.href}>
+                <button
+                  className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all ${
+                    isActive(link.href)
+                      ? `${link.activeColor} text-white`
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  {link.label}
+                </button>
+              </Link>
+            ))}
           </nav>
+
+          {/* 모바일 햄버거 버튼 */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all"
+            aria-label="메뉴 열기"
+          >
+            <i className={`ri-${isMobileMenuOpen ? 'close' : 'menu'}-line text-xl`}></i>
+          </button>
         </div>
+
+        {/* 모바일 메뉴 */}
+        {isMobileMenuOpen && (
+          <nav className="md:hidden mt-4 pb-2 border-t border-slate-700 pt-4">
+            <div className="flex flex-col gap-2">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <button
+                    className={`w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left ${
+                      isActive(link.href)
+                        ? `${link.activeColor} text-white`
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    }`}
+                  >
+                    {link.label}
+                  </button>
+                </Link>
+              ))}
+            </div>
+          </nav>
+        )}
       </div>
     </header>
   );

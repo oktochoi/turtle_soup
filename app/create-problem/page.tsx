@@ -71,26 +71,26 @@ export default function CreateProblem() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-3xl">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-3xl">
         <div className="mb-4 sm:mb-6">
           <Link href="/">
-            <button className="text-slate-400 hover:text-white transition-colors whitespace-nowrap text-sm sm:text-base">
+            <button className="text-slate-400 hover:text-white transition-colors text-xs sm:text-sm">
               <i className="ri-arrow-left-line mr-2"></i>
               돌아가기
             </button>
           </Link>
         </div>
 
-        <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+        <div className="text-center mb-4 sm:mb-6 lg:mb-8">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
             문제 만들기
           </h1>
         </div>
 
-        <div className="space-y-5 sm:space-y-6">
+        <div className="space-y-4 sm:space-y-5 lg:space-y-6">
           {/* 제목 */}
           <div>
-            <label className="block text-sm font-medium mb-2 text-slate-300">
+            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
               제목
             </label>
             <input
@@ -98,14 +98,14 @@ export default function CreateProblem() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="문제 제목을 입력하세요"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm sm:text-base"
               maxLength={100}
             />
           </div>
 
           {/* 내용 */}
           <div>
-            <label className="block text-sm font-medium mb-2 text-slate-300">
+            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
               내용
             </label>
             <p className="text-xs text-slate-400 mb-2">문제의 배경과 상황을 자세히 설명해주세요.</p>
@@ -113,7 +113,7 @@ export default function CreateProblem() {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="문제의 배경과 상황을 자세히 설명해주세요."
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-40 resize-none text-sm"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-32 sm:h-40 resize-none text-sm sm:text-base"
               maxLength={2000}
             />
             <div className="text-right text-xs text-slate-500 mt-1">
@@ -123,7 +123,7 @@ export default function CreateProblem() {
 
           {/* 정답 */}
           <div>
-            <label className="block text-sm font-medium mb-2 text-slate-300">
+            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
               정답
             </label>
             <p className="text-xs text-slate-400 mb-2">문제의 정답과 해설을 작성해주세요.</p>
@@ -131,7 +131,7 @@ export default function CreateProblem() {
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
               placeholder="문제의 정답과 해설을 작성해주세요."
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-40 resize-none text-sm"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-32 sm:h-40 resize-none text-sm sm:text-base"
               maxLength={2000}
             />
             <div className="text-right text-xs text-slate-500 mt-1">
@@ -141,7 +141,7 @@ export default function CreateProblem() {
 
           {/* 해시태그 */}
           <div>
-            <label className="block text-sm font-medium mb-2 text-slate-300">
+            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
               해시태그
             </label>
             <p className="text-xs text-slate-400 mb-3">문제의 주제나 분야를 나타내는 해시태그를 추가해주세요.</p>
@@ -151,7 +151,7 @@ export default function CreateProblem() {
                   key={tag}
                   type="button"
                   onClick={() => toggleTag(tag)}
-                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     tags.includes(tag)
                       ? 'bg-teal-500 text-white'
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -164,7 +164,7 @@ export default function CreateProblem() {
             {tags.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {tags.map(tag => (
-                  <span key={tag} className="px-3 py-1 bg-teal-500/20 text-teal-400 rounded-lg text-xs">
+                  <span key={tag} className="px-2 sm:px-3 py-1 bg-teal-500/20 text-teal-400 rounded-lg text-xs">
                     #{tag}
                   </span>
                 ))}
@@ -174,7 +174,7 @@ export default function CreateProblem() {
 
           {/* 작성자 */}
           <div>
-            <label className="block text-sm font-medium mb-2 text-slate-300">
+            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
               작성자
             </label>
             <input
@@ -182,14 +182,14 @@ export default function CreateProblem() {
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
               placeholder="작성자 이름을 입력하세요"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm sm:text-base"
               maxLength={50}
             />
           </div>
 
           {/* 관리 비밀번호 */}
           <div>
-            <label className="block text-sm font-medium mb-2 text-slate-300">
+            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
               관리 비밀번호
             </label>
             <p className="text-xs text-slate-400 mb-2">문제를 나중에 수정하거나 삭제할 때 사용할 비밀번호를 입력하세요.</p>
@@ -198,14 +198,14 @@ export default function CreateProblem() {
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
               placeholder="관리 비밀번호를 입력하세요"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm sm:text-base"
             />
           </div>
 
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-teal-500/50 mt-6 sm:mt-8 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+            className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-teal-500/50 mt-4 sm:mt-6 lg:mt-8 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base touch-manipulation"
           >
             <i className="ri-add-circle-line mr-2"></i>
             {isSubmitting ? '문제 생성 중...' : '문제 만들기'}

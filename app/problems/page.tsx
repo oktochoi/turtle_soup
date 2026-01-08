@@ -154,15 +154,15 @@ export default function ProblemsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-6xl">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-6xl">
         {/* 헤더 */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+        <div className="mb-4 sm:mb-6 lg:mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
               문제 목록
             </h1>
             <Link href="/create-problem">
-              <button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold px-4 py-2 rounded-xl transition-all duration-200 whitespace-nowrap text-sm sm:text-base">
+              <button className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold px-3 sm:px-4 py-2 rounded-xl transition-all duration-200 text-sm sm:text-base touch-manipulation">
                 <i className="ri-add-circle-line mr-2"></i>
                 문제 만들기
               </button>
@@ -171,27 +171,27 @@ export default function ProblemsPage() {
         </div>
 
         {/* 필터 및 검색 */}
-        <div className="bg-slate-800 rounded-xl p-4 sm:p-6 mb-6 border border-slate-700">
-          <div className="space-y-4">
+        <div className="bg-slate-800 rounded-xl p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 border border-slate-700">
+          <div className="space-y-3 sm:space-y-4">
             {/* 검색 */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-slate-300">검색:</label>
+              <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">검색:</label>
               <input
                 type="text"
                 placeholder="제목 검색..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm sm:text-base"
               />
             </div>
 
             {/* 난이도 필터 */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-slate-300">난이도:</label>
+              <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">난이도:</label>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setDifficultyFilter('all')}
-                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     difficultyFilter === 'all'
                       ? 'bg-teal-500 text-white'
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -201,7 +201,7 @@ export default function ProblemsPage() {
                 </button>
                 <button
                   onClick={() => setDifficultyFilter('easy')}
-                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     difficultyFilter === 'easy'
                       ? 'bg-green-500 text-white'
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -211,7 +211,7 @@ export default function ProblemsPage() {
                 </button>
                 <button
                   onClick={() => setDifficultyFilter('medium')}
-                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     difficultyFilter === 'medium'
                       ? 'bg-yellow-500 text-white'
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -221,7 +221,7 @@ export default function ProblemsPage() {
                 </button>
                 <button
                   onClick={() => setDifficultyFilter('hard')}
-                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     difficultyFilter === 'hard'
                       ? 'bg-red-500 text-white'
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -234,11 +234,11 @@ export default function ProblemsPage() {
 
             {/* 해시태그 필터 */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-slate-300">해시태그:</label>
+              <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">해시태그:</label>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setTagFilter('all')}
-                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     tagFilter === 'all'
                       ? 'bg-teal-500 text-white'
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -250,7 +250,7 @@ export default function ProblemsPage() {
                   <button
                     key={tag}
                     onClick={() => setTagFilter(tagFilter === tag ? 'all' : tag)}
-                    className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                    className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                       tagFilter === tag
                         ? 'bg-teal-500 text-white'
                         : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -264,11 +264,11 @@ export default function ProblemsPage() {
 
             {/* 정렬 */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-slate-300">정렬:</label>
+              <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">정렬:</label>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSortOption('latest')}
-                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     sortOption === 'latest'
                       ? 'bg-teal-500 text-white'
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -278,7 +278,7 @@ export default function ProblemsPage() {
                 </button>
                 <button
                   onClick={() => setSortOption('popular')}
-                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     sortOption === 'popular'
                       ? 'bg-teal-500 text-white'
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -288,7 +288,7 @@ export default function ProblemsPage() {
                 </button>
                 <button
                   onClick={() => setSortOption('difficulty')}
-                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     sortOption === 'difficulty'
                       ? 'bg-teal-500 text-white'
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -303,17 +303,17 @@ export default function ProblemsPage() {
 
         {/* 문제 목록 */}
         {isLoading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
-            <p className="text-slate-400">문제를 불러오는 중...</p>
+          <div className="text-center py-8 sm:py-12">
+            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
+            <p className="text-xs sm:text-sm text-slate-400">문제를 불러오는 중...</p>
           </div>
         ) : filteredProblems.length === 0 ? (
-          <div className="text-center py-12 bg-slate-800 rounded-xl border border-slate-700">
-            <i className="ri-inbox-line text-5xl text-slate-500 mb-4"></i>
-            <p className="text-slate-400">문제가 없습니다.</p>
+          <div className="text-center py-8 sm:py-12 bg-slate-800 rounded-xl border border-slate-700">
+            <i className="ri-inbox-line text-4xl sm:text-5xl text-slate-500 mb-4"></i>
+            <p className="text-sm sm:text-base text-slate-400">문제가 없습니다.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
             {filteredProblems.map(problem => {
               const averageRating = (problem as any).average_rating || 0;
               const ratingCount = (problem as any).rating_count || 0;
@@ -321,13 +321,13 @@ export default function ProblemsPage() {
               return (
                 <div
                   key={problem.id}
-                  className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-700 hover:border-teal-500/50 transition-all duration-200"
+                  className="bg-slate-800 rounded-xl p-3 sm:p-4 lg:p-6 border border-slate-700 hover:border-teal-500/50 transition-all duration-200"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-lg sm:text-xl font-bold text-white flex-1 pr-2">
+                  <div className="flex items-start justify-between mb-2 sm:mb-3 gap-2">
+                    <h3 className="text-base sm:text-lg lg:text-xl font-bold text-white flex-1 break-words">
                       {problem.title}
                     </h3>
-                    <div className="flex flex-col items-end gap-1">
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
                       <span className={`px-2 py-1 rounded text-xs font-semibold ${difficultyBadge.color} text-white whitespace-nowrap`}>
                         {difficultyBadge.emoji} {difficultyBadge.text}
                       </span>
@@ -339,12 +339,12 @@ export default function ProblemsPage() {
                     </div>
                   </div>
 
-                  <p className="text-sm text-slate-300 mb-4 line-clamp-3">
+                  <p className="text-xs sm:text-sm text-slate-300 mb-3 sm:mb-4 line-clamp-3">
                     {truncateText(problem.content, 100)}
                   </p>
 
                   {problem.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-4">
+                    <div className="flex flex-wrap gap-1 mb-3 sm:mb-4">
                       {problem.tags.slice(0, 3).map(tag => (
                         <span key={tag} className="px-2 py-0.5 bg-teal-500/20 text-teal-400 rounded text-xs">
                           #{tag}
@@ -353,9 +353,9 @@ export default function ProblemsPage() {
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between mb-4 text-sm text-slate-400">
-                    <span>작성자: {problem.author}</span>
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3 sm:mb-4 text-xs sm:text-sm text-slate-400">
+                    <span className="break-words">작성자: {problem.author}</span>
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <span className="flex items-center gap-1">
                         <i className="ri-heart-line"></i>
                         {problem.like_count}
@@ -368,7 +368,7 @@ export default function ProblemsPage() {
                   </div>
 
                   <Link href={`/problem/${problem.id}`}>
-                    <button className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2 rounded-lg transition-all duration-200">
+                    <button className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2 sm:py-2.5 rounded-lg transition-all duration-200 text-sm sm:text-base touch-manipulation">
                       풀어보기
                     </button>
                   </Link>
@@ -380,7 +380,7 @@ export default function ProblemsPage() {
 
         {/* 결과 개수 */}
         {!isLoading && (
-          <div className="mt-6 text-center text-sm text-slate-400">
+          <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-slate-400">
             총 {filteredProblems.length}개의 문제
           </div>
         )}

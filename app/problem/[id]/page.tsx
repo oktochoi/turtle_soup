@@ -587,10 +587,10 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-4xl">
-        <div className="mb-6">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-4xl">
+        <div className="mb-4 sm:mb-6">
           <Link href="/">
-            <button className="text-slate-400 hover:text-white transition-colors text-sm">
+            <button className="text-slate-400 hover:text-white transition-colors text-xs sm:text-sm">
               <i className="ri-arrow-left-line mr-2"></i>
               돌아가기
             </button>
@@ -598,25 +598,25 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
         </div>
 
         {/* 문제 헤더 */}
-        <div className="bg-slate-800 rounded-xl p-6 sm:p-8 mb-6 border border-slate-700">
-          <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
-            <div className="flex-1">
+        <div className="bg-slate-800 rounded-xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 border border-slate-700">
+          <div className="flex flex-col sm:flex-row items-start justify-between mb-4 gap-3">
+            <div className="flex-1 w-full sm:w-auto">
               {isEditing ? (
                 <input
                   type="text"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full text-2xl sm:text-3xl font-bold mb-3 bg-transparent border-b-2 border-purple-500 text-white focus:outline-none pb-2"
+                  className="w-full text-xl sm:text-2xl lg:text-3xl font-bold mb-3 bg-transparent border-b-2 border-purple-500 text-white focus:outline-none pb-2"
                   maxLength={100}
                 />
               ) : (
-                <h1 className="text-2xl sm:text-3xl font-bold mb-3 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-3 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent break-words">
                   {problem.title}
                 </h1>
               )}
-              <div className="flex items-center gap-3 flex-wrap text-sm text-slate-400">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-400">
                 <span>출제자: {problem.author}</span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="flex items-center gap-1">
                     {difficultyBadge.emoji} {difficultyBadge.text}
                   </span>
@@ -628,10 +628,10 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 flex-wrap w-full sm:w-auto">
               {isAdmin && (
-                <div className="flex items-center gap-2">
-                  <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 px-3 py-2 rounded-lg border border-purple-500/50">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-purple-500/50">
                     <span className="text-purple-400 text-xs font-semibold">
                       <i className="ri-vip-crown-line mr-1"></i>
                       관리자
@@ -640,10 +640,10 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                   {!isEditing && (
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-all text-xs sm:text-sm"
+                      className="px-2 sm:px-3 py-1.5 sm:py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-all text-xs sm:text-sm"
                     >
                       <i className="ri-edit-line mr-1"></i>
-                      수정
+                      <span className="hidden sm:inline">수정</span>
                     </button>
                   )}
                 </div>
@@ -651,15 +651,15 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
               {!isAdmin && (
                 <button
                   onClick={() => setShowAdminModal(true)}
-                  className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-all text-xs sm:text-sm"
+                  className="px-2 sm:px-3 py-1.5 sm:py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-all text-xs sm:text-sm"
                 >
                   <i className="ri-settings-3-line mr-1"></i>
-                  관리자 모드
+                  <span className="hidden sm:inline">관리자 모드</span>
                 </button>
               )}
               <button
                 onClick={handleLike}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-all text-xs sm:text-sm ${
                   isLiked
                     ? 'bg-red-500/20 text-red-400 border border-red-500/50'
                     : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -668,7 +668,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                 <i className={`ri-heart-${isLiked ? 'fill' : 'line'}`}></i>
                 <span>{problem.like_count}</span>
               </button>
-              <div className="flex items-center gap-2 text-slate-400">
+              <div className="flex items-center gap-1 sm:gap-2 text-slate-400 text-xs sm:text-sm">
                 <i className="ri-chat-3-line"></i>
                 <span>{problem.comment_count}</span>
               </div>
@@ -676,10 +676,10 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
           </div>
 
           {/* 별점 투표 */}
-          <div className="mb-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-            <div className="flex items-center gap-4 flex-wrap">
-              <span className="text-sm text-slate-300 font-medium">난이도 평가:</span>
-              <div className="flex items-center gap-1">
+          <div className="mb-4 p-3 sm:p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+              <span className="text-xs sm:text-sm text-slate-300 font-medium whitespace-nowrap">난이도 평가:</span>
+              <div className="flex items-center gap-0.5 sm:gap-1">
                 {[1, 2, 3, 4, 5].map((star) => {
                   const displayRating = hoverRating !== null ? hoverRating : userRating;
                   const isFilled = displayRating !== null && star <= displayRating;
@@ -690,7 +690,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                       onClick={() => handleRatingClick(star)}
                       onMouseEnter={() => setHoverRating(star)}
                       onMouseLeave={() => setHoverRating(null)}
-                      className={`text-2xl transition-all ${
+                      className={`text-xl sm:text-2xl transition-all touch-manipulation ${
                         isFilled
                           ? 'text-yellow-400 hover:text-yellow-300'
                           : 'text-slate-600 hover:text-yellow-400'
@@ -702,12 +702,12 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                 })}
               </div>
               {averageRating > 0 && (
-                <span className="text-sm text-slate-400">
+                <span className="text-xs sm:text-sm text-slate-400">
                   평균: ⭐ {averageRating.toFixed(1)} ({ratingCount}명 평가)
                 </span>
               )}
               {averageRating === 0 && (
-                <span className="text-sm text-slate-500">아직 평가가 없습니다</span>
+                <span className="text-xs sm:text-sm text-slate-500">아직 평가가 없습니다</span>
               )}
             </div>
           </div>
@@ -850,15 +850,15 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
         </div>
 
         {/* 질문하기 섹션 */}
-        <div className="bg-slate-800 rounded-xl p-6 sm:p-8 mb-6 border border-slate-700">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+        <div className="bg-slate-800 rounded-xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 border border-slate-700">
+          <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 flex items-center gap-2">
             <i className="ri-question-line text-teal-400"></i>
             질문하기
           </h2>
-          <p className="text-sm text-slate-400 mb-4">예/아니오로 답변 가능한 질문을 입력하세요. 질문을 제출하면 AI가 자동으로 답변을 제안합니다:</p>
+          <p className="text-xs sm:text-sm text-slate-400 mb-3 sm:mb-4">예/아니오로 답변 가능한 질문을 입력하세요. 질문을 제출하면 AI가 자동으로 답변을 제안합니다:</p>
           
           <div className="space-y-3 mb-4">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 placeholder="질문을 입력하세요..."
@@ -877,13 +877,13 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                     }
                   }
                 }}
-                className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm sm:text-base"
               />
               {!suggestedAnswer && (
                 <button
                   onClick={handleAnalyzeBeforeSubmit}
                   disabled={!questionText.trim() || isAnalyzing}
-                  className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap text-sm"
+                  className="px-3 sm:px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap text-sm sm:text-base touch-manipulation"
                   title="AI 답변 제안 받기"
                 >
                   {isAnalyzing ? '분석 중...' : '🔧'}
@@ -893,12 +893,12 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
             
             {/* AI 제안 답변 표시 및 수정 */}
             {suggestedAnswer && (
-              <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
+              <div className="bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm text-slate-300">AI 제안 답변:</p>
+                  <p className="text-xs sm:text-sm text-slate-300">AI 제안 답변:</p>
                   <button
                     onClick={() => setSuggestedAnswer(null)}
-                    className="text-xs text-slate-400 hover:text-slate-300"
+                    className="text-xs text-slate-400 hover:text-slate-300 touch-manipulation"
                   >
                     다시 분석
                   </button>
@@ -907,16 +907,16 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                   {(() => {
                     const badge = getAnswerBadge(suggestedAnswer);
                     return badge ? (
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${badge.color}`}>
+                      <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border ${badge.color}`}>
                         {badge.text}
                       </span>
                     ) : null;
                   })()}
                 </div>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     onClick={() => setSuggestedAnswer('yes')}
-                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                       suggestedAnswer === 'yes'
                         ? 'bg-green-500 text-white'
                         : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -926,7 +926,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                   </button>
                   <button
                     onClick={() => setSuggestedAnswer('no')}
-                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                       suggestedAnswer === 'no'
                         ? 'bg-red-500 text-white'
                         : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -936,7 +936,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                   </button>
                   <button
                     onClick={() => setSuggestedAnswer('irrelevant')}
-                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                       suggestedAnswer === 'irrelevant'
                         ? 'bg-yellow-500 text-white'
                         : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -946,7 +946,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                   </button>
                   <button
                     onClick={() => setSuggestedAnswer('decisive')}
-                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                       suggestedAnswer === 'decisive'
                         ? 'bg-purple-500 text-white'
                         : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -961,7 +961,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
             <button
               onClick={handleSubmitQuestion}
               disabled={!questionText.trim() || isAnalyzing}
-              className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2.5 sm:py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base touch-manipulation"
             >
               질문하기
             </button>
@@ -969,18 +969,18 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
 
           {/* 로컬 질문 내역 */}
           {localQuestions.length > 0 && (
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-semibold">질문 내역</h3>
+            <div className="mt-4 sm:mt-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-3">
+                <h3 className="text-base sm:text-lg font-semibold">질문 내역</h3>
                 <button
                   onClick={clearLocalQuestions}
-                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-all text-xs sm:text-sm"
+                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-all text-xs sm:text-sm touch-manipulation"
                 >
                   <i className="ri-delete-bin-line mr-1"></i>
                   질문내역 지우기
                 </button>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {localQuestions.map((q, index) => {
                   const answerColor = q.answer === '예' ? 'text-green-400' :
                                      q.answer === '아니오' ? 'text-red-400' :
@@ -990,16 +990,16 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                   return (
                     <div 
                       key={index} 
-                      className="bg-slate-900 rounded-lg p-4 border border-slate-700"
+                      className="bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700"
                     >
                       <div className="space-y-2">
                         <div className="flex items-start gap-2">
-                          <span className="text-sm font-semibold text-cyan-400">Q:</span>
-                          <p className="text-sm text-white flex-1">{q.question}</p>
+                          <span className="text-xs sm:text-sm font-semibold text-cyan-400 flex-shrink-0">Q:</span>
+                          <p className="text-xs sm:text-sm text-white flex-1 break-words">{q.question}</p>
                         </div>
                         <div className="flex items-start gap-2">
-                          <span className="text-sm font-semibold text-teal-400">A:</span>
-                          <p className={`text-sm font-semibold ${answerColor}`}>{q.answer}</p>
+                          <span className="text-xs sm:text-sm font-semibold text-teal-400 flex-shrink-0">A:</span>
+                          <p className={`text-xs sm:text-sm font-semibold ${answerColor}`}>{q.answer}</p>
                         </div>
                       </div>
                     </div>
@@ -1056,10 +1056,10 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
           )}
 
           {/* 정답 확인하기 버튼 */}
-          <div className="mt-6 pt-6 border-t border-slate-700">
+          <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
             <button
               onClick={() => setShowAnswer(!showAnswer)}
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2.5 sm:py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation"
             >
               {showAnswer ? (
                 <>
@@ -1076,17 +1076,17 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
 
             {/* 정답 */}
             {showAnswer && (
-              <div className="mt-4 bg-gradient-to-br from-purple-900/30 to-pink-900/30 rounded-lg p-4 sm:p-6 border border-purple-500/50">
-                <h3 className="font-semibold mb-3 text-purple-400">정답</h3>
-                <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{problem.answer}</p>
+              <div className="mt-3 sm:mt-4 bg-gradient-to-br from-purple-900/30 to-pink-900/30 rounded-lg p-3 sm:p-4 lg:p-6 border border-purple-500/50">
+                <h3 className="font-semibold mb-2 sm:mb-3 text-purple-400 text-sm sm:text-base">정답</h3>
+                <p className="text-xs sm:text-sm lg:text-base leading-relaxed whitespace-pre-wrap break-words">{problem.answer}</p>
               </div>
             )}
           </div>
         </div>
 
         {/* 댓글 섹션 */}
-        <div className="bg-slate-800 rounded-xl p-6 sm:p-8 border border-slate-700">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+        <div className="bg-slate-800 rounded-xl p-4 sm:p-6 lg:p-8 border border-slate-700">
+          <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 flex items-center gap-2">
             <i className="ri-chat-3-line text-teal-400"></i>
             댓글
           </h2>
@@ -1096,39 +1096,39 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
               placeholder="닉네임"
               value={commentNickname}
               onChange={(e) => setCommentNickname(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm sm:text-base"
               maxLength={20}
             />
             <textarea
               placeholder="댓글을 입력하세요..."
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 h-24 resize-none text-sm"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 h-24 resize-none text-sm sm:text-base"
               maxLength={500}
             />
             <button
               onClick={handleSubmitComment}
               disabled={!commentText.trim() || !commentNickname.trim()}
-              className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2.5 sm:py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base touch-manipulation"
             >
               댓글 작성
             </button>
           </div>
 
           {/* 댓글 목록 */}
-          <div className="space-y-3 mt-6">
+          <div className="space-y-2 sm:space-y-3 mt-4 sm:mt-6">
             {comments.length === 0 ? (
-              <p className="text-slate-400 text-sm">아직 댓글이 없습니다.</p>
+              <p className="text-slate-400 text-xs sm:text-sm">아직 댓글이 없습니다.</p>
             ) : (
               comments.map(comment => (
-                <div key={comment.id} className="bg-slate-900 rounded-lg p-4 border border-slate-700">
-                  <div className="flex items-start justify-between mb-2">
-                    <span className="text-sm font-semibold text-cyan-400">{comment.nickname}</span>
-                    <span className="text-xs text-slate-500">
+                <div key={comment.id} className="bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700">
+                  <div className="flex items-start justify-between mb-2 gap-2">
+                    <span className="text-xs sm:text-sm font-semibold text-cyan-400 break-words">{comment.nickname}</span>
+                    <span className="text-xs text-slate-500 flex-shrink-0">
                       {new Date(comment.created_at).toLocaleDateString('ko-KR')}
                     </span>
                   </div>
-                  <p className="text-sm text-white">{comment.text}</p>
+                  <p className="text-xs sm:text-sm text-white break-words">{comment.text}</p>
                 </div>
               ))
             )}
@@ -1139,9 +1139,9 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
       {/* 관리자 모드 로그인 모달 */}
       {showAdminModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl p-6 sm:p-8 max-w-md w-full border border-slate-700">
-            <h3 className="text-xl font-bold mb-4 text-white">관리자 모드</h3>
-            <p className="text-sm text-slate-400 mb-4">관리 비밀번호를 입력하세요.</p>
+          <div className="bg-slate-800 rounded-xl p-4 sm:p-6 lg:p-8 max-w-md w-full border border-slate-700">
+            <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-white">관리자 모드</h3>
+            <p className="text-xs sm:text-sm text-slate-400 mb-3 sm:mb-4">관리 비밀번호를 입력하세요.</p>
             <input
               type="password"
               placeholder="관리 비밀번호"
@@ -1152,12 +1152,12 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                   handleAdminLogin();
                 }
               }}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4 text-sm"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 mb-3 sm:mb-4 text-sm sm:text-base"
             />
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <button
                 onClick={handleAdminLogin}
-                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2 rounded-lg transition-all"
+                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2.5 sm:py-3 rounded-lg transition-all text-sm sm:text-base touch-manipulation"
               >
                 로그인
               </button>
@@ -1166,7 +1166,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                   setShowAdminModal(false);
                   setAdminPassword('');
                 }}
-                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-lg transition-all"
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 sm:py-3 rounded-lg transition-all text-sm sm:text-base touch-manipulation"
               >
                 취소
               </button>
