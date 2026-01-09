@@ -104,66 +104,130 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     loadRoom();
   }, [roomCode]);
 
+  // 호스트 여부를 URL 파라미터에서 먼저 확인 (즉시 설정)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const hostParam = urlParams.get('host') === 'true';
+    
+    // URL에 host=true가 있으면 즉시 호스트로 설정
+    if (hostParam) {
+      console.log('✅ 호스트로 접속 감지, isHost를 true로 설정');
+      setIsHost(true);
+    }
+  }, []); // 컴포넌트 마운트 시 한 번만 실행
+
   // URL 파라미터에서 호스트 여부와 닉네임 확인, localStorage에서 닉네임 불러오기
   useEffect(() => {
-    if (typeof window !== 'undefined' && !isLoading && roomPassword !== null) {
-      const urlParams = new URLSearchParams(window.location.search);
-      const hostParam = urlParams.get('host') === 'true';
-      const nicknameParam = urlParams.get('nickname');
-      const passwordParam = urlParams.get('password');
-      
-      setIsHost(hostParam);
-      
-      // 호스트는 비밀번호 체크 불필요
-      if (hostParam) {
-        if (nicknameParam) {
-          const decodedNickname = decodeURIComponent(nicknameParam);
-          setNickname(decodedNickname);
-          setShowNicknameModal(false);
-          localStorage.setItem(`nickname_${roomCode}`, decodedNickname);
-          localStorage.setItem(`roomCode_${roomCode}`, roomCode);
-          joinRoom(decodedNickname, hostParam);
-        }
-        return;
-      }
-      
-      // 비밀번호가 있는 방인 경우
-      if (roomPassword) {
-        // URL에 비밀번호가 있으면 체크
-        if (passwordParam && passwordParam === roomPassword) {
-          // 비밀번호가 맞으면 진행
-        } else {
-          // 비밀번호가 없거나 틀리면 비밀번호 모달 표시
-          const savedNickname = localStorage.getItem(`nickname_${roomCode}`);
-          if (savedNickname) {
-            setNickname(savedNickname);
-          }
-          setShowPasswordModal(true);
-          return;
-        }
-      }
-      
-      // localStorage에서 저장된 닉네임 확인 (같은 방 코드인 경우만)
-      const savedNickname = localStorage.getItem(`nickname_${roomCode}`);
-      const savedRoomCode = localStorage.getItem(`roomCode_${roomCode}`);
+    if (typeof window === 'undefined' || isLoading) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const hostParam = urlParams.get('host') === 'true';
+    const nicknameParam = urlParams.get('nickname');
+    const passwordParam = urlParams.get('password');
+    
+    // 호스트 여부를 먼저 설정 (roomPassword 로딩과 관계없이)
+    // URL 파라미터에서 호스트 여부 확인
+    if (hostParam) {
+      console.log('✅ 호스트로 접속:', hostParam);
+      setIsHost(true);
+      console.log('✅ isHost 상태 설정됨:', true);
       
       if (nicknameParam) {
-        // URL 파라미터가 있으면 우선 사용
         const decodedNickname = decodeURIComponent(nicknameParam);
         setNickname(decodedNickname);
         setShowNicknameModal(false);
-        // localStorage에 저장
         localStorage.setItem(`nickname_${roomCode}`, decodedNickname);
         localStorage.setItem(`roomCode_${roomCode}`, roomCode);
+        joinRoom(decodedNickname, true);
+      } else {
+        // 호스트인데 닉네임이 없으면 localStorage에서 가져오기
+        const savedNickname = localStorage.getItem(`nickname_${roomCode}`);
+        if (savedNickname) {
+          setNickname(savedNickname);
+          setShowNicknameModal(false);
+          joinRoom(savedNickname, true);
+        } else {
+          setShowNicknameModal(true);
+        }
+      }
+      return;
+    }
+    
+    // 호스트가 아닌 경우, 데이터베이스에서 실제 호스트 여부 확인
+    const checkHostStatus = async () => {
+      if (nicknameParam) {
+        const { data: playerData } = await supabase
+          .from('players')
+          .select('is_host')
+          .eq('room_code', roomCode)
+          .eq('nickname', decodeURIComponent(nicknameParam))
+          .single();
+        
+        if (playerData) {
+          setIsHost(playerData.is_host || false);
+        }
+      }
+    };
+    
+    checkHostStatus();
+    
+    // 비밀번호가 아직 로드되지 않았으면 대기
+    if (roomPassword === null) return;
+    
+    // URL에 닉네임이 이미 있으면 (rooms 페이지에서 설정한 경우)
+    if (nicknameParam) {
+      const decodedNickname = decodeURIComponent(nicknameParam);
+      setNickname(decodedNickname);
+      setShowNicknameModal(false); // 닉네임 모달 표시하지 않음
+      // localStorage에 저장
+      localStorage.setItem(`nickname_${roomCode}`, decodedNickname);
+      localStorage.setItem(`roomCode_${roomCode}`, roomCode);
+      
+      // 비밀번호가 있는 방인 경우 체크
+      if (roomPassword) {
+        // URL에 비밀번호가 없거나 틀리면 비밀번호 모달 표시
+        if (!passwordParam || passwordParam !== roomPassword) {
+          setShowPasswordModal(true);
+          return;
+        }
+        // 비밀번호가 맞으면 방 참여
         joinRoom(decodedNickname, hostParam);
-      } else if (savedNickname && savedRoomCode === roomCode) {
-        // localStorage에 저장된 닉네임이 있고 같은 방이면 사용
-        console.log('💾 저장된 닉네임 불러오기:', savedNickname);
-        setNickname(savedNickname);
-        setShowNicknameModal(false);
+      } else {
+        // 비밀번호가 없으면 바로 방 참여
+        joinRoom(decodedNickname, hostParam);
+      }
+      return;
+    }
+    
+    // URL에 닉네임이 없는 경우 (직접 URL로 접근한 경우)
+    // localStorage에서 저장된 닉네임 확인 (같은 방 코드인 경우만)
+    const savedNickname = localStorage.getItem(`nickname_${roomCode}`);
+    const savedRoomCode = localStorage.getItem(`roomCode_${roomCode}`);
+    
+    if (savedNickname && savedRoomCode === roomCode) {
+      // localStorage에 저장된 닉네임이 있고 같은 방이면 사용
+      console.log('💾 저장된 닉네임 불러오기:', savedNickname);
+      setNickname(savedNickname);
+      setShowNicknameModal(false);
+      
+      // 비밀번호가 있는 방인 경우 체크
+      if (roomPassword) {
+        // URL에 비밀번호가 없거나 틀리면 비밀번호 모달 표시
+        if (!passwordParam || passwordParam !== roomPassword) {
+          setShowPasswordModal(true);
+          return;
+        }
+        // 비밀번호가 맞으면 방 참여
+        joinRoom(savedNickname, hostParam);
+      } else {
+        // 비밀번호가 없으면 바로 방 참여
         joinRoom(savedNickname, hostParam);
       }
+    } else {
       // 둘 다 없으면 닉네임 모달 표시
+      setShowNicknameModal(true);
     }
   }, [roomCode, isLoading, roomPassword]);
 
@@ -931,7 +995,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
 
     const trimmedName = name.trim();
     setNickname(trimmedName);
-    setShowNicknameModal(false);
+      setShowNicknameModal(false);
     
     // localStorage에 닉네임 저장
     if (typeof window !== 'undefined') {
@@ -942,12 +1006,20 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     
     // 비밀번호가 있는 방인 경우 비밀번호 모달 표시
     if (roomPassword) {
-      setShowPasswordModal(true);
-      return;
+      // URL에 비밀번호가 이미 있으면 체크하지 않음
+      const urlParams = new URLSearchParams(window.location.search);
+      const passwordParam = urlParams.get('password');
+      if (passwordParam && passwordParam === roomPassword) {
+        // 비밀번호가 이미 맞으면 바로 참여
+        await joinRoom(trimmedName, false);
+      } else {
+        // 비밀번호 모달 표시
+        setShowPasswordModal(true);
+      }
+    } else {
+      // 비밀번호가 없으면 바로 방 참여
+      await joinRoom(trimmedName, false);
     }
-    
-    // 방 참여
-    await joinRoom(trimmedName, false);
   };
 
   const handlePasswordSubmit = async () => {
@@ -956,7 +1028,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
       return;
     }
 
-    if (enteredPassword !== roomPassword) {
+    if (!roomPassword || enteredPassword !== roomPassword) {
       setError('비밀번호가 올바르지 않습니다.');
       setEnteredPassword('');
       return;
@@ -965,10 +1037,14 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     setShowPasswordModal(false);
     setError('');
     
-    // 비밀번호가 맞으면 방 참여
-    if (nickname.trim()) {
-      await joinRoom(nickname.trim(), false);
+    // 닉네임이 없으면 닉네임 모달 표시
+    if (!nickname.trim()) {
+      setShowNicknameModal(true);
+      return;
     }
+    
+    // 비밀번호가 맞으면 방 참여
+    await joinRoom(nickname.trim(), false);
   };
 
   // 방 삭제 로직 제거 - 게임 종료 후에도 방은 유지
@@ -1226,28 +1302,31 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
               />
             )}
 
+            {/* 호스트 전용: 게임 종료 버튼 */}
+            {(() => {
+              console.log('🔍 게임 종료 버튼 체크:', { isHost, gameEnded, nickname });
+              return isHost && !gameEnded && (
+                <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl p-4 border border-purple-500/30 mb-4">
+                  <button
+                    onClick={handleEndGame}
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 text-sm sm:text-base touch-manipulation"
+                  >
+                    <i className="ri-stop-circle-line mr-2"></i>
+                    게임 종료 (전체 공개)
+                  </button>
+                  <p className="text-xs text-slate-400 mt-2 text-center">
+                    게임을 종료하면 모든 참여자에게 진실이 공개됩니다
+                  </p>
+                </div>
+              );
+            })()}
+
             {isHost && (
-              <>
-                {!gameEnded && (
-                  <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl p-4 border border-purple-500/30">
-                    <button
-                      onClick={handleEndGame}
-                      className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 text-sm sm:text-base touch-manipulation"
-                    >
-                      <i className="ri-stop-circle-line mr-2"></i>
-                      게임 종료 (전체 공개)
-                    </button>
-                    <p className="text-xs text-slate-400 mt-2 text-center">
-                      게임을 종료하면 모든 참여자에게 진실이 공개됩니다
-                    </p>
-                  </div>
-                )}
               <HostAnswerInbox
                 guesses={guesses}
                 onJudge={handleJudgeGuess}
                 gameEnded={gameEnded}
               />
-              </>
             )}
           </div>
         </div>

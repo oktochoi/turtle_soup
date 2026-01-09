@@ -1,11 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 
 export default function Home() {
-  const [roomCode, setRoomCode] = useState('');
-
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12 max-w-md lg:max-w-lg">
@@ -27,42 +24,12 @@ export default function Home() {
             </div>
             <p className="text-xs sm:text-sm text-slate-400 mb-4">친구들과 함께 실시간으로 게임을 즐기세요</p>
             
-            <div className="space-y-3">
-              <Link href="/create-room">
-                <button className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-teal-500/50 text-sm sm:text-base">
-                  <i className="ri-add-circle-line mr-2"></i>
-                  새 방 만들기
-                </button>
-              </Link>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-600"></div>
-                </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="px-3 bg-slate-800/50 text-slate-500">또는</span>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="방 코드 입력"
-                  value={roomCode}
-                  onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                  className="w-full bg-slate-900 border-2 border-slate-600 hover:border-teal-500/50 focus:border-teal-500 rounded-xl px-4 py-3 sm:py-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 text-center text-base sm:text-lg tracking-wider transition-all duration-200"
-                  maxLength={6}
-                />
-                <div className="mt-4">
-                  <Link href="/rooms">
-                    <button className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-cyan-500/50 text-sm sm:text-base">
-                      <i className="ri-login-box-line mr-2"></i>
-                      방 참여하기
-                    </button>
-                  </Link>
-                </div>
-              </div>
-            </div>
+            <Link href="/rooms">
+              <button className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-teal-500/50 text-sm sm:text-base">
+                <i className="ri-group-line mr-2"></i>
+                멀티 플레이
+              </button>
+            </Link>
           </div>
 
           {/* 오프라인 섹션 */}

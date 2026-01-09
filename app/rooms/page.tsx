@@ -18,12 +18,14 @@ type Room = {
 export default function RoomsPage() {
   const router = useRouter();
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [filteredRooms, setFilteredRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
   const [password, setPassword] = useState('');
-  const [nickname, setNickname] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [privacyFilter, setPrivacyFilter] = useState<'all' | 'public' | 'private'>('all');
+  const [minPlayers, setMinPlayers] = useState<number>(0);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
@@ -76,19 +78,20 @@ export default function RoomsPage() {
       // 각 방의 플레이어 수 가져오기
       const roomsWithPlayerCount = await Promise.all(
         (roomsData || []).map(async (room) => {
-          const { data: playersData } = await supabase
+          const { count } = await supabase
             .from('players')
-            .select('id', { count: 'exact', head: true })
+            .select('*', { count: 'exact', head: true })
             .eq('room_code', room.code);
 
           return {
             ...room,
-            player_count: playersData?.length || 0,
+            player_count: count || 0,
           };
         })
       );
 
       setRooms(roomsWithPlayerCount);
+      setFilteredRooms(roomsWithPlayerCount);
     } catch (error) {
       console.error('방 리스트 로드 오류:', error);
       setError('방 리스트를 불러올 수 없습니다.');
@@ -97,100 +100,60 @@ export default function RoomsPage() {
     }
   };
 
-  const handleJoinRoom = (roomCode: string, hasPassword: boolean) => {
-    if (!nickname.trim()) {
-      setShowNicknameModal(true);
-      setSelectedRoom(roomCode);
-      return;
+  // 검색 및 필터링
+  useEffect(() => {
+    let filtered = [...rooms];
+
+    // 검색 필터
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(room => 
+        room.code.toLowerCase().includes(query) ||
+        room.story.toLowerCase().includes(query) ||
+        room.host_nickname.toLowerCase().includes(query)
+      );
     }
 
+    // 공개/비공개 필터
+    if (privacyFilter === 'public') {
+      filtered = filtered.filter(room => !room.password);
+    } else if (privacyFilter === 'private') {
+      filtered = filtered.filter(room => !!room.password);
+    }
+
+    // 최소 인원수 필터
+    if (minPlayers > 0) {
+      filtered = filtered.filter(room => room.player_count >= minPlayers);
+    }
+
+    setFilteredRooms(filtered);
+  }, [searchQuery, privacyFilter, minPlayers, rooms]);
+
+  const handleJoinRoom = (roomCode: string, hasPassword: boolean) => {
     if (hasPassword) {
       setSelectedRoom(roomCode);
       setShowPasswordModal(true);
     } else {
-      joinRoom(roomCode, '');
-    }
-  };
-
-  const joinRoom = async (roomCode: string, enteredPassword: string) => {
-    try {
-      // 방 정보 가져오기
-      const { data: room, error: roomError } = await supabase
-        .from('rooms')
-        .select('code, password')
-        .eq('code', roomCode)
-        .single();
-
-      if (roomError) throw roomError;
-
-      // 비밀번호 체크
-      if (room.password && room.password !== enteredPassword) {
-        setError('비밀번호가 올바르지 않습니다.');
-        return;
-      }
-
-      // 닉네임이 없으면 입력받기
-      if (!nickname.trim()) {
-        setShowNicknameModal(true);
-        return;
-      }
-
-      // 방 참여
-      const { error: joinError } = await supabase
-        .from('players')
-        .insert({
-          room_code: roomCode,
-          nickname: nickname.trim(),
-          is_host: false,
-        });
-
-      if (joinError) {
-        // 이미 참여한 경우나 다른 에러
-        if (joinError.code === '23505') {
-          // 이미 참여한 경우
-          router.push(`/room/${roomCode}?nickname=${encodeURIComponent(nickname.trim())}`);
-          return;
-        }
-        throw joinError;
-      }
-
-      // localStorage에 닉네임 저장
-      localStorage.setItem(`nickname_${roomCode}`, nickname.trim());
-      localStorage.setItem(`roomCode_${roomCode}`, roomCode);
-
-      // 방으로 이동
-      router.push(`/room/${roomCode}?nickname=${encodeURIComponent(nickname.trim())}`);
-    } catch (error) {
-      console.error('방 참여 오류:', error);
-      setError('방 참여에 실패했습니다.');
+      // 비밀번호가 없으면 바로 방으로 이동 (닉네임은 room 페이지에서 입력받음)
+      router.push(`/room/${roomCode}`);
     }
   };
 
   const handleSubmitPassword = () => {
     if (!selectedRoom) return;
-    setError('');
-    joinRoom(selectedRoom, password);
-    setShowPasswordModal(false);
-    setPassword('');
-  };
-
-  const handleSubmitNickname = () => {
-    if (!nickname.trim()) {
-      setError('닉네임을 입력해주세요.');
+    if (!password.trim()) {
+      setError('비밀번호를 입력해주세요.');
       return;
     }
-    setShowNicknameModal(false);
-    setError('');
     
-    if (selectedRoom) {
-      // 비밀번호가 필요한 방인지 확인
-      const room = rooms.find(r => r.code === selectedRoom);
-      if (room?.password) {
-        setShowPasswordModal(true);
-      } else {
-        joinRoom(selectedRoom, '');
-      }
-    }
+    setError('');
+    // 비밀번호를 URL에 포함하여 방으로 이동 (닉네임은 room 페이지에서 입력받음)
+    const urlParams = new URLSearchParams({
+      password: password.trim(),
+    });
+    router.push(`/room/${selectedRoom}?${urlParams.toString()}`);
+    setShowPasswordModal(false);
+    setPassword('');
   };
 
   if (isLoading) {
@@ -243,10 +206,126 @@ export default function RoomsPage() {
         </div>
 
         <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
-            방 목록
-          </h1>
-          <p className="text-slate-400 text-xs sm:text-sm">참여 가능한 방을 선택하세요</p>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+                방 목록
+              </h1>
+              <p className="text-slate-400 text-xs sm:text-sm">참여 가능한 방을 선택하세요</p>
+            </div>
+            <Link href="/create-room">
+              <button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-lg hover:shadow-teal-500/50 text-sm sm:text-base whitespace-nowrap">
+                <i className="ri-add-circle-line mr-2"></i>
+                새 방 생성하기
+              </button>
+            </Link>
+          </div>
+        </div>
+
+        {/* 검색 입력 */}
+        <div className="mb-4">
+          <div className="relative">
+            <i className="ri-search-line absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input
+              type="text"
+              placeholder="방 코드, 스토리, 호스트명으로 검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+              >
+                <i className="ri-close-line"></i>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 필터 */}
+        <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* 공개/비공개 필터 */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-2">공개 설정</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPrivacyFilter('all')}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                  privacyFilter === 'all'
+                    ? 'bg-teal-500 text-white'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                }`}
+              >
+                전체
+              </button>
+              <button
+                onClick={() => setPrivacyFilter('public')}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                  privacyFilter === 'public'
+                    ? 'bg-green-500 text-white'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                }`}
+              >
+                <i className="ri-global-line mr-1"></i>
+                공개
+              </button>
+              <button
+                onClick={() => setPrivacyFilter('private')}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                  privacyFilter === 'private'
+                    ? 'bg-yellow-500 text-white'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                }`}
+              >
+                <i className="ri-lock-line mr-1"></i>
+                비공개
+              </button>
+            </div>
+          </div>
+
+          {/* 최소 인원수 필터 */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-2">최소 인원수</label>
+            <div className="flex gap-2 items-center">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={minPlayers}
+                onChange={(e) => setMinPlayers(Math.max(0, parseInt(e.target.value) || 0))}
+                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="0"
+              />
+              <button
+                onClick={() => setMinPlayers(0)}
+                className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                  minPlayers === 0
+                    ? 'bg-slate-700 text-slate-400'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                }`}
+                disabled={minPlayers === 0}
+              >
+                <i className="ri-close-line"></i>
+              </button>
+            </div>
+          </div>
+
+          {/* 필터 초기화 */}
+          <div className="flex items-end">
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setPrivacyFilter('all');
+                setMinPlayers(0);
+              }}
+              className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-lg transition-all"
+            >
+              <i className="ri-refresh-line mr-2"></i>
+              필터 초기화
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -255,21 +334,66 @@ export default function RoomsPage() {
           </div>
         )}
 
-        {rooms.length === 0 ? (
+        {/* 필터 결과 개수 */}
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-sm text-slate-400">
+            {filteredRooms.length > 0 ? (
+              <>
+                총 <span className="font-semibold text-teal-400">{filteredRooms.length}</span>개의 방
+                {rooms.length !== filteredRooms.length && (
+                  <span className="text-slate-500 ml-2">
+                    (전체 {rooms.length}개 중)
+                  </span>
+                )}
+              </>
+            ) : (
+              <span>검색 결과가 없습니다</span>
+            )}
+          </p>
+          {(searchQuery || privacyFilter !== 'all' || minPlayers > 0) && (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setPrivacyFilter('all');
+                setMinPlayers(0);
+              }}
+              className="text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1"
+            >
+              <i className="ri-filter-off-line"></i>
+              필터 해제
+            </button>
+          )}
+        </div>
+
+        {filteredRooms.length === 0 ? (
           <div className="text-center py-12">
             <div className="mb-4">
               <i className="ri-door-open-line text-6xl text-slate-600"></i>
             </div>
-            <p className="text-slate-400 mb-4">현재 참여 가능한 방이 없습니다.</p>
-            <Link href="/create-room">
-              <button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold px-6 py-3 rounded-xl transition-all">
-                새 방 만들기
-              </button>
-            </Link>
+            {searchQuery ? (
+              <>
+                <p className="text-slate-400 mb-4">검색 결과가 없습니다.</p>
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-6 py-3 rounded-xl transition-all"
+                >
+                  검색 초기화
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-slate-400 mb-4">현재 참여 가능한 방이 없습니다.</p>
+                <Link href="/create-room">
+                  <button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold px-6 py-3 rounded-xl transition-all">
+                    새 방 만들기
+                  </button>
+                </Link>
+              </>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {rooms.map((room) => (
+            {filteredRooms.map((room) => (
               <div
                 key={room.code}
                 className="bg-slate-800/50 rounded-xl p-4 sm:p-5 border border-slate-700 hover:border-teal-500/50 transition-all"
@@ -313,48 +437,6 @@ export default function RoomsPage() {
           </div>
         )}
       </div>
-
-      {/* 닉네임 입력 모달 */}
-      {showNicknameModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl p-6 max-w-md w-full border border-slate-700">
-            <h3 className="text-lg font-bold mb-4 text-white">닉네임 입력</h3>
-            <input
-              type="text"
-              placeholder="닉네임을 입력하세요"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleSubmitNickname();
-                }
-              }}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-4"
-              maxLength={20}
-              autoFocus
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={handleSubmitNickname}
-                className="flex-1 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2.5 rounded-lg transition-all"
-              >
-                확인
-              </button>
-              <button
-                onClick={() => {
-                  setShowNicknameModal(false);
-                  setNickname('');
-                  setSelectedRoom(null);
-                  setError('');
-                }}
-                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 rounded-lg transition-all"
-              >
-                취소
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 비밀번호 입력 모달 */}
       {showPasswordModal && (
