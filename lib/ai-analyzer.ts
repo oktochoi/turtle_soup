@@ -369,3 +369,75 @@ export function releaseModel(): void {
 export function clearCache(): void {
   embeddingCache.clear();
 }
+
+/**
+ * 정답 유사도 계산 (0 ~ 100% 반환)
+ * @param userAnswer 사용자가 입력한 정답
+ * @param correctAnswer 실제 정답
+ * @returns 유사도 퍼센트 (0 ~ 100)
+ */
+export async function calculateAnswerSimilarity(
+  userAnswer: string,
+  correctAnswer: string
+): Promise<number> {
+  if (!userAnswer.trim() || !correctAnswer.trim()) {
+    return 0;
+  }
+
+  try {
+    // 두 텍스트를 임베딩으로 변환
+    const userEmbedding = await getEmbedding(userAnswer.trim());
+    const correctEmbedding = await getEmbedding(correctAnswer.trim());
+
+    // Cosine similarity 계산 (0 ~ 1 범위)
+    const similarity = cosineSimilarity(userEmbedding, correctEmbedding);
+
+    // 0 ~ 1 범위를 0 ~ 100%로 변환 (음수는 0으로 처리)
+    const percentage = Math.max(0, Math.min(100, (similarity * 100)));
+
+    return Math.round(percentage * 10) / 10; // 소수점 첫째 자리까지
+  } catch (error) {
+    console.error('정답 유사도 계산 오류:', error);
+    // 오류 발생 시 간단한 문자열 매칭으로 폴백
+    return calculateSimpleMatch(userAnswer, correctAnswer);
+  }
+}
+
+/**
+ * 간단한 문자열 매칭 (폴백용)
+ * @param userAnswer 사용자 정답
+ * @param correctAnswer 실제 정답
+ * @returns 유사도 퍼센트 (0 ~ 100)
+ */
+function calculateSimpleMatch(userAnswer: string, correctAnswer: string): number {
+  const userWords = userAnswer.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+  const correctWords = correctAnswer.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+
+  if (correctWords.length === 0) {
+    return 0;
+  }
+
+  // 단어 매칭 비율
+  const matchedWords = userWords.filter(word => 
+    correctWords.some(correctWord => 
+      correctWord.includes(word) || word.includes(correctWord)
+    )
+  ).length;
+
+  const wordMatchRatio = matchedWords / correctWords.length;
+
+  // 부분 문자열 매칭
+  const userLower = userAnswer.toLowerCase();
+  const correctLower = correctAnswer.toLowerCase();
+  let substringMatch = 0;
+
+  // 사용자 정답이 실제 정답에 포함되는 비율
+  if (correctLower.includes(userLower) || userLower.includes(correctLower)) {
+    substringMatch = 0.5;
+  }
+
+  // 최종 유사도 (단어 매칭 70% + 부분 문자열 30%)
+  const similarity = (wordMatchRatio * 0.7 + substringMatch * 0.3) * 100;
+
+  return Math.round(similarity * 10) / 10;
+}

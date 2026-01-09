@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS rooms (
   truth TEXT NOT NULL,
   max_questions INTEGER DEFAULT 30 NOT NULL,
   host_nickname TEXT NOT NULL,
+  password TEXT NULL, -- 방 비밀번호 (NULL이면 공개방)
   game_ended BOOLEAN DEFAULT FALSE NOT NULL,
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'done')) NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL

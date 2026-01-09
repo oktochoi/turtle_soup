@@ -17,7 +17,7 @@ export default function Header() {
 
   const navLinks = [
     { href: '/create-room', label: '멀티 플레이', activeColor: 'bg-teal-500' },
-    { href: '/problems', label: '게임 시작', activeColor: 'bg-purple-500' },
+    { href: '/problems', label: '문제 풀기', activeColor: 'bg-purple-500' },
     { href: '/create-problem', label: '게임 만들기', activeColor: 'bg-pink-500' },
     { href: '/tutorial', label: '게임 설명', activeColor: 'bg-cyan-500' },
   ];

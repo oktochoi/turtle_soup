@@ -10,9 +10,6 @@ export default function Home() {
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12 max-w-md lg:max-w-lg">
         <header className="text-center mb-8 sm:mb-12 pt-4 sm:pt-6 lg:pt-8">
-          <div className="mb-4 sm:mb-6" aria-hidden="true">
-            <i className="ri-question-line text-5xl sm:text-6xl lg:text-7xl text-teal-400"></i>
-          </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 sm:mb-3 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
             바다거북스프
           </h1>
@@ -56,15 +53,14 @@ export default function Home() {
                   className="w-full bg-slate-900 border-2 border-slate-600 hover:border-teal-500/50 focus:border-teal-500 rounded-xl px-4 py-3 sm:py-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 text-center text-base sm:text-lg tracking-wider transition-all duration-200"
                   maxLength={6}
                 />
-                <Link href={roomCode ? `/room/${roomCode}` : '#'}>
-                  <button 
-                    disabled={!roomCode}
-                    className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-cyan-500/50 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base disabled:hover:shadow-none"
-                  >
-                    <i className="ri-login-box-line mr-2"></i>
-                    방 참여하기
-                  </button>
-                </Link>
+                <div className="mt-4">
+                  <Link href="/rooms">
+                    <button className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-cyan-500/50 text-sm sm:text-base">
+                      <i className="ri-login-box-line mr-2"></i>
+                      방 참여하기
+                    </button>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

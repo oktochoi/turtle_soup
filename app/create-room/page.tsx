@@ -11,6 +11,8 @@ export default function CreateRoom() {
   const [truth, setTruth] = useState('');
   const [maxQuestions, setMaxQuestions] = useState<number | null>(30);
   const [nickname, setNickname] = useState('');
+  const [password, setPassword] = useState('');
+  const [usePassword, setUsePassword] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   const generateRoomCode = () => {
@@ -65,6 +67,7 @@ export default function CreateRoom() {
           truth: truth.trim(),
           max_questions: maxQuestions || 999999, // null이면 매우 큰 값으로 설정 (무제한)
           host_nickname: nickname.trim(),
+          password: usePassword && password.trim() ? password.trim() : null,
           game_ended: false,
           status: 'active',
         })
@@ -158,6 +161,42 @@ export default function CreateRoom() {
             />
             <div className="text-right text-xs text-slate-500 mt-1">
               {truth.length} / 500
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+              <i className="ri-lock-line mr-1"></i>
+              방 비밀번호 (선택)
+            </label>
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={usePassword}
+                  onChange={(e) => {
+                    setUsePassword(e.target.checked);
+                    if (!e.target.checked) {
+                      setPassword('');
+                    }
+                  }}
+                  className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-teal-500 focus:ring-teal-500"
+                />
+                <span className="text-xs sm:text-sm text-slate-400">비밀번호 설정</span>
+              </label>
+              {usePassword && (
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="방 비밀번호 입력"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                  maxLength={20}
+                />
+              )}
+              {usePassword && (
+                <p className="text-xs text-slate-500">비밀번호가 설정된 방은 비밀번호를 입력해야 참여할 수 있습니다.</p>
+              )}
             </div>
           </div>
 

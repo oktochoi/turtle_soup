@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import type { Problem, ProblemQuestion, ProblemComment } from '@/lib/types';
-import { analyzeQuestion } from '@/lib/ai-analyzer';
+import { analyzeQuestion, calculateAnswerSimilarity, initializeModel } from '@/lib/ai-analyzer';
 import ProblemAdminButtons from './ProblemAdminButtons';
 
 export default function ProblemPage({ params }: { params: Promise<{ id: string }> }) {
@@ -21,7 +21,6 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
   const [commentNickname, setCommentNickname] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [suggestedAnswer, setSuggestedAnswer] = useState<'yes' | 'no' | 'irrelevant' | 'decisive' | null>(null);
-  const [showAnswer, setShowAnswer] = useState(false);
   const [localQuestions, setLocalQuestions] = useState<Array<{ question: string; answer: string; timestamp: number }>>([]);
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,6 +38,10 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
   const [ratingCount, setRatingCount] = useState<number>(0);
   const [userRating, setUserRating] = useState<number | null>(null);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
+  const [userGuess, setUserGuess] = useState('');
+  const [similarityScore, setSimilarityScore] = useState<number | null>(null);
+  const [isCalculatingSimilarity, setIsCalculatingSimilarity] = useState(false);
+  const [showAnswer, setShowAnswer] = useState(false);
 
   useEffect(() => {
     loadProblem();
@@ -47,6 +50,11 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
     checkLike();
     loadLocalQuestions();
     loadRating();
+    
+    // AI 모델을 백그라운드에서 미리 로드 (첫 질문 속도 개선)
+    initializeModel().catch(err => {
+      console.error('AI 모델 사전 로딩 실패 (첫 질문 시 자동 로드됨):', err);
+    });
   }, [problemId]);
 
   const loadLocalQuestions = () => {
@@ -563,7 +571,33 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
+          <div className="mb-6 relative w-24 h-24 mx-auto">
+            {/* 거북이 애니메이션 */}
+            <svg 
+              className="w-full h-full animate-turtle-float"
+              viewBox="0 0 100 100" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {/* 거북이 몸통 */}
+              <ellipse cx="50" cy="55" rx="30" ry="20" fill="#14b8a6" />
+              {/* 거북이 등껍질 */}
+              <ellipse cx="50" cy="50" rx="25" ry="18" fill="#0d9488" />
+              {/* 등껍질 패턴 */}
+              <path d="M 50 35 Q 45 40 50 45 Q 55 40 50 35" stroke="#0f766e" strokeWidth="1.5" fill="none" />
+              <path d="M 35 50 Q 40 45 45 50 Q 40 55 35 50" stroke="#0f766e" strokeWidth="1.5" fill="none" />
+              <path d="M 65 50 Q 60 45 55 50 Q 60 55 65 50" stroke="#0f766e" strokeWidth="1.5" fill="none" />
+              {/* 머리 */}
+              <ellipse cx="50" cy="30" rx="8" ry="10" fill="#14b8a6" />
+              {/* 눈 */}
+              <circle cx="47" cy="28" r="1.5" fill="white" />
+              <circle cx="53" cy="28" r="1.5" fill="white" />
+              {/* 다리들 */}
+              <ellipse cx="35" cy="60" rx="5" ry="8" fill="#14b8a6" />
+              <ellipse cx="65" cy="60" rx="5" ry="8" fill="#14b8a6" />
+              <ellipse cx="30" cy="70" rx="6" ry="5" fill="#14b8a6" />
+              <ellipse cx="70" cy="70" rx="6" ry="5" fill="#14b8a6" />
+            </svg>
+          </div>
           <p className="text-slate-400">문제를 불러오는 중...</p>
         </div>
       </div>
@@ -969,7 +1003,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
 
           {/* 로컬 질문 내역 */}
           {localQuestions.length > 0 && (
-            <div className="mt-4 sm:mt-6">
+            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-3">
                 <h3 className="text-base sm:text-lg font-semibold">질문 내역</h3>
                 <button
@@ -1008,6 +1042,140 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
               </div>
             </div>
           )}
+
+          {/* 정답 입력 칸 */}
+          <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
+            <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
+              <i className="ri-checkbox-circle-line text-purple-400"></i>
+              정답 제출하기
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-400 mb-3 sm:mb-4">내가 생각하는 정답을 입력하면 실제 정답과 얼마나 일치하는지 알려드립니다.</p>
+            
+            <div className="space-y-3">
+              <textarea
+                placeholder="정답을 입력하세요..."
+                value={userGuess}
+                onChange={(e) => {
+                  setUserGuess(e.target.value);
+                  setSimilarityScore(null); // 입력 변경 시 유사도 초기화
+                }}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 h-24 sm:h-32 resize-none text-sm sm:text-base"
+                maxLength={500}
+              />
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-slate-500">{userGuess.length} / 500</span>
+                <button
+                  onClick={async () => {
+                    if (!userGuess.trim() || !problem) {
+                      alert('정답을 입력해주세요.');
+                      return;
+                    }
+
+                    setIsCalculatingSimilarity(true);
+                    try {
+                      const similarity = await calculateAnswerSimilarity(userGuess.trim(), problem.answer);
+                      setSimilarityScore(similarity);
+                    } catch (error) {
+                      console.error('유사도 계산 오류:', error);
+                      alert('유사도 계산에 실패했습니다.');
+                    } finally {
+                      setIsCalculatingSimilarity(false);
+                    }
+                  }}
+                  disabled={!userGuess.trim() || isCalculatingSimilarity}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 sm:px-6 py-2 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm whitespace-nowrap touch-manipulation"
+                >
+                  {isCalculatingSimilarity ? (
+                    <>
+                      <i className="ri-loader-4-line animate-spin mr-1"></i>
+                      계산 중...
+                    </>
+                  ) : (
+                    <>
+                      <i className="ri-checkbox-circle-line mr-1"></i>
+                      정답 제출하기
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* 유사도 결과 표시 */}
+              {similarityScore !== null && (
+                <div className={`mt-3 rounded-lg p-4 border ${
+                  similarityScore >= 80
+                    ? 'bg-green-500/10 border-green-500/50'
+                    : similarityScore >= 60
+                    ? 'bg-yellow-500/10 border-yellow-500/50'
+                    : 'bg-red-500/10 border-red-500/50'
+                }`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-sm sm:text-base flex items-center gap-2">
+                      {similarityScore >= 80 ? (
+                        <>
+                          <i className="ri-checkbox-circle-fill text-green-400"></i>
+                          <span className="text-green-400">높은 일치도</span>
+                        </>
+                      ) : similarityScore >= 60 ? (
+                        <>
+                          <i className="ri-alert-line text-yellow-400"></i>
+                          <span className="text-yellow-400">보통 일치도</span>
+                        </>
+                      ) : (
+                        <>
+                          <i className="ri-close-circle-line text-red-400"></i>
+                          <span className="text-red-400">낮은 일치도</span>
+                        </>
+                      )}
+                    </h4>
+                    <span className={`text-xl sm:text-2xl font-bold ${
+                      similarityScore >= 80
+                        ? 'text-green-400'
+                        : similarityScore >= 60
+                        ? 'text-yellow-400'
+                        : 'text-red-400'
+                    }`}>
+                      {similarityScore}%
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-300 mt-2">
+                    {similarityScore >= 80
+                      ? '정답과 매우 유사합니다! 거의 정확한 답변입니다.'
+                      : similarityScore >= 60
+                      ? '정답과 어느 정도 유사합니다. 조금 더 생각해보세요.'
+                      : '정답과 차이가 있습니다. 다시 한번 생각해보세요.'}
+                  </p>
+                </div>
+              )}
+
+              {/* 정답 확인하기 버튼 */}
+              <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
+                <button
+                  onClick={() => setShowAnswer(!showAnswer)}
+                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2.5 sm:py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation"
+                >
+                  {showAnswer ? (
+                    <>
+                      <i className="ri-eye-off-line"></i>
+                      정답 숨기기
+                    </>
+                  ) : (
+                    <>
+                      <i className="ri-eye-line"></i>
+                      정답 확인하기
+                    </>
+                  )}
+                </button>
+
+                {/* 정답 */}
+                {showAnswer && problem && (
+                  <div className="mt-3 sm:mt-4 bg-gradient-to-br from-purple-900/30 to-pink-900/30 rounded-lg p-3 sm:p-4 lg:p-6 border border-purple-500/50">
+                    <h3 className="font-semibold mb-2 sm:mb-3 text-purple-400 text-sm sm:text-base">정답</h3>
+                    <p className="text-xs sm:text-sm lg:text-base leading-relaxed whitespace-pre-wrap break-words">{problem.answer}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* DB 질문 목록 (관리자용) */}
           {isAdmin && questions.length > 0 && (
@@ -1054,34 +1222,6 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
               />
             </div>
           )}
-
-          {/* 정답 확인하기 버튼 */}
-          <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
-            <button
-              onClick={() => setShowAnswer(!showAnswer)}
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2.5 sm:py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation"
-            >
-              {showAnswer ? (
-                <>
-                  <i className="ri-eye-off-line"></i>
-                  정답 숨기기
-                </>
-              ) : (
-                <>
-                  <i className="ri-eye-line"></i>
-                  정답 확인하기
-                </>
-              )}
-            </button>
-
-            {/* 정답 */}
-            {showAnswer && (
-              <div className="mt-3 sm:mt-4 bg-gradient-to-br from-purple-900/30 to-pink-900/30 rounded-lg p-3 sm:p-4 lg:p-6 border border-purple-500/50">
-                <h3 className="font-semibold mb-2 sm:mb-3 text-purple-400 text-sm sm:text-base">정답</h3>
-                <p className="text-xs sm:text-sm lg:text-base leading-relaxed whitespace-pre-wrap break-words">{problem.answer}</p>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* 댓글 섹션 */}

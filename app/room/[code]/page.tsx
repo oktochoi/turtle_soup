@@ -49,6 +49,9 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   const [showNicknameModal, setShowNicknameModal] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [roomPassword, setRoomPassword] = useState<string | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [enteredPassword, setEnteredPassword] = useState('');
 
   // Supabase에서 방 정보 로드
   useEffect(() => {
@@ -88,6 +91,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
           // 999999는 무제한을 의미
           setMaxQuestions(room.max_questions >= 999999 ? null : room.max_questions);
           setGameEnded(room.game_ended || room.status === 'done');
+          setRoomPassword(room.password);
         }
       } catch (err) {
         console.error('방 로드 오류:', err);
@@ -102,12 +106,42 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
 
   // URL 파라미터에서 호스트 여부와 닉네임 확인, localStorage에서 닉네임 불러오기
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !isLoading && roomPassword !== null) {
       const urlParams = new URLSearchParams(window.location.search);
       const hostParam = urlParams.get('host') === 'true';
       const nicknameParam = urlParams.get('nickname');
+      const passwordParam = urlParams.get('password');
       
       setIsHost(hostParam);
+      
+      // 호스트는 비밀번호 체크 불필요
+      if (hostParam) {
+        if (nicknameParam) {
+          const decodedNickname = decodeURIComponent(nicknameParam);
+          setNickname(decodedNickname);
+          setShowNicknameModal(false);
+          localStorage.setItem(`nickname_${roomCode}`, decodedNickname);
+          localStorage.setItem(`roomCode_${roomCode}`, roomCode);
+          joinRoom(decodedNickname, hostParam);
+        }
+        return;
+      }
+      
+      // 비밀번호가 있는 방인 경우
+      if (roomPassword) {
+        // URL에 비밀번호가 있으면 체크
+        if (passwordParam && passwordParam === roomPassword) {
+          // 비밀번호가 맞으면 진행
+        } else {
+          // 비밀번호가 없거나 틀리면 비밀번호 모달 표시
+          const savedNickname = localStorage.getItem(`nickname_${roomCode}`);
+          if (savedNickname) {
+            setNickname(savedNickname);
+          }
+          setShowPasswordModal(true);
+          return;
+        }
+      }
       
       // localStorage에서 저장된 닉네임 확인 (같은 방 코드인 경우만)
       const savedNickname = localStorage.getItem(`nickname_${roomCode}`);
@@ -131,7 +165,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
       }
       // 둘 다 없으면 닉네임 모달 표시
     }
-  }, [roomCode]);
+  }, [roomCode, isLoading, roomPassword]);
 
   // 방 참여 함수
   const joinRoom = async (playerNickname: string, isHostPlayer: boolean) => {
@@ -906,8 +940,35 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
       console.log('💾 닉네임 저장됨:', trimmedName);
     }
     
+    // 비밀번호가 있는 방인 경우 비밀번호 모달 표시
+    if (roomPassword) {
+      setShowPasswordModal(true);
+      return;
+    }
+    
     // 방 참여
     await joinRoom(trimmedName, false);
+  };
+
+  const handlePasswordSubmit = async () => {
+    if (!enteredPassword.trim()) {
+      setError('비밀번호를 입력해주세요.');
+      return;
+    }
+
+    if (enteredPassword !== roomPassword) {
+      setError('비밀번호가 올바르지 않습니다.');
+      setEnteredPassword('');
+      return;
+    }
+
+    setShowPasswordModal(false);
+    setError('');
+    
+    // 비밀번호가 맞으면 방 참여
+    if (nickname.trim()) {
+      await joinRoom(nickname.trim(), false);
+    }
   };
 
   // 방 삭제 로직 제거 - 게임 종료 후에도 방은 유지
@@ -963,6 +1024,60 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
           >
             홈으로 돌아가기
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (showPasswordModal) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center px-4">
+        <div className="bg-slate-800 rounded-2xl p-6 sm:p-8 max-w-md w-full border border-slate-700 shadow-2xl">
+          <div className="text-center mb-6">
+            <i className="ri-lock-line text-4xl sm:text-5xl text-teal-400 mb-4"></i>
+            <h2 className="text-xl sm:text-2xl font-bold mb-2">방 비밀번호</h2>
+            <p className="text-slate-400 text-sm">이 방은 비밀번호가 설정되어 있습니다</p>
+          </div>
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm text-center">
+              {error}
+            </div>
+          )}
+          <input
+            type="password"
+            placeholder="비밀번호 입력"
+            value={enteredPassword}
+            onChange={(e) => {
+              setEnteredPassword(e.target.value);
+              setError('');
+            }}
+            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-4 text-sm"
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                handlePasswordSubmit();
+              }
+            }}
+            autoFocus
+          />
+          <div className="flex gap-3">
+            <button
+              onClick={handlePasswordSubmit}
+              className="flex-1 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-xl transition-all duration-200"
+            >
+              확인
+            </button>
+            <button
+              onClick={() => {
+                setShowPasswordModal(false);
+                setEnteredPassword('');
+                setError('');
+                router.push('/rooms');
+              }}
+              className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-xl transition-all duration-200"
+            >
+              취소
+            </button>
+          </div>
         </div>
       </div>
     );
