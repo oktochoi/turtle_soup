@@ -122,7 +122,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   useEffect(() => {
     if (typeof window === 'undefined' || isLoading) return;
 
-    const urlParams = new URLSearchParams(window.location.search);
+      const urlParams = new URLSearchParams(window.location.search);
     const hostParam = urlParams.get('host') === 'true';
     const nicknameParam = urlParams.get('nickname');
     const passwordParam = urlParams.get('password');

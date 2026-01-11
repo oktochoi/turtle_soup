@@ -1,38 +1,47 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-
-const AVAILABLE_TAGS = [
-  '공포', '추리', '개그', '역사', '과학', '일상', '판타지', '미스터리',
-  '로맨스', '액션', '스릴러', '코미디', '드라마', 'SF', '호러', '범죄',
-  '심리', '철학', '종교', '정치', '경제', '스포츠', '음악', '예술',
-  '문학', '동물', '자연', '우주', '시간여행', '초능력', '좀비', '뱀파이어',
-  '마법', '전쟁', '모험', '서바이벌', '의학', '법률', '교육', '직업'
-];
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
+import { User } from '@supabase/supabase-js';
 
 export default function CreateProblem() {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [answer, setAnswer] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [author, setAuthor] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const toggleTag = (tag: string) => {
-    setTags(prev => 
-      prev.includes(tag) 
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
-    );
-  };
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        alert('로그인이 필요합니다.');
+        router.push('/auth/login');
+        return;
+      }
+      
+      setUser(user);
+      setIsLoading(false);
+    };
+
+    checkAuth();
+  }, [router]);
 
   const handleSubmit = async () => {
-    if (!title.trim() || !content.trim() || !answer.trim() || !author.trim() || !adminPassword.trim()) {
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      router.push('/auth/login');
+      return;
+    }
+
+    if (!title.trim() || !content.trim() || !answer.trim()) {
       alert('모든 필수 항목을 입력해주세요.');
       return;
     }
@@ -45,29 +54,125 @@ export default function CreateProblem() {
     setIsSubmitting(true);
 
     try {
-      const { data: problem, error } = await supabase
+      // Supabase 클라이언트 생성 (이미 로그인된 user 사용)
+      const supabaseClient = createClient();
+      
+      console.log('문제 생성 시작...', { 
+        titleLength: title.trim().length, 
+        contentLength: content.trim().length, 
+        answerLength: answer.trim().length,
+        userId: user.id 
+      });
+      
+      const insertData = {
+        title: title.trim(),
+        content: content.trim(),
+        answer: answer.trim(),
+        difficulty: 'medium' as const,
+        tags: [] as string[],
+        user_id: user.id,
+      };
+      
+      console.log('Insert 데이터 준비 완료:', { 
+        titleLength: insertData.title.length,
+        contentLength: insertData.content.length,
+        answerLength: insertData.answer.length,
+        userId: insertData.user_id
+      });
+      
+      console.log('Supabase insert 요청 시작...');
+      console.log('Content 필드 길이:', insertData.content.length, '자');
+      console.log('Content 필드 첫 100자:', insertData.content.substring(0, 100));
+      
+      const { data: problem, error } = await supabaseClient
         .from('problems')
-        .insert({
-          title: title.trim(),
-          content: content.trim(),
-          answer: answer.trim(),
-          difficulty: 'medium', // 하위 호환성을 위해 기본값 유지 (실제로는 사용 안 함)
-          tags,
-          author: author.trim(),
-          admin_password: adminPassword.trim(),
-        })
+        .insert(insertData)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('문제 생성 DB 오류:', error);
+        console.error('에러 코드:', error.code);
+        console.error('에러 메시지:', error.message);
+        console.error('에러 상세:', error.details);
+        console.error('에러 힌트:', error.hint);
+        throw error;
+      }
 
+      if (!problem) {
+        throw new Error('문제가 생성되지 않았습니다.');
+      }
+
+      setIsSubmitting(false);
       router.push(`/problem/${problem.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('문제 생성 오류:', error);
-      alert('문제 생성에 실패했습니다. 다시 시도해주세요.');
+      console.error('오류 타입:', typeof error);
+      console.error('오류 이름:', error?.name);
+      console.error('오류 메시지:', error?.message);
+      console.error('오류 코드:', error?.code);
+      console.error('오류 상세:', JSON.stringify(error, null, 2));
+      
+      // AbortError는 무해한 에러이므로 무시 (단, 실제 DB 에러는 아님)
+      // 하지만 DB 에러 코드가 있으면 실제 에러로 처리
+      const isAbortError = (error?.name === 'AbortError' || 
+                           (error?.message && error.message.includes('aborted')) ||
+                           (error?.details && error.details.includes('aborted'))) &&
+                           !error?.code && !error?.hint;
+      
+      if (isAbortError) {
+        // AbortError이면서 DB 에러 코드가 없는 경우만 무시
+        console.warn('AbortError 무시 (무해한 에러)');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      let errorMessage = '문제 생성에 실패했습니다.';
+      
+      // 에러 메시지가 있으면 표시
+      if (error?.message) {
+        errorMessage += `\n\n${error.message}`;
+      }
+      
+      // PostgreSQL 에러 코드 처리
+      if (error?.code) {
+        if (error.code === '23502') {
+          errorMessage = '필수 필드가 누락되었습니다. 데이터베이스 스키마를 확인해주세요.';
+        } else if (error.code === '23503') {
+          errorMessage = '참조 오류가 발생했습니다. 로그인 상태를 확인해주세요.';
+        } else if (error.code === 'PGRST116') {
+          errorMessage = '문제가 생성되지 않았습니다.';
+        } else if (error.code === '42501') {
+          errorMessage = '권한이 없습니다. 로그인 상태를 확인해주세요.';
+        } else {
+          errorMessage += `\n\n오류 코드: ${error.code}`;
+        }
+      }
+      
+      // 에러 힌트가 있으면 표시
+      if (error?.hint) {
+        errorMessage += `\n\n힌트: ${error.hint}`;
+      }
+      
+      alert(errorMessage);
       setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
+          <p className="text-slate-400">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // 리다이렉트 중
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
@@ -139,69 +244,6 @@ export default function CreateProblem() {
             </div>
           </div>
 
-          {/* 해시태그 */}
-          <div>
-            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-              해시태그
-            </label>
-            <p className="text-xs text-slate-400 mb-3">문제의 주제나 분야를 나타내는 해시태그를 추가해주세요.</p>
-            <div className="flex flex-wrap gap-2">
-              {AVAILABLE_TAGS.map(tag => (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => toggleTag(tag)}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
-                    tags.includes(tag)
-                      ? 'bg-teal-500 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                  }`}
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
-            {tags.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {tags.map(tag => (
-                  <span key={tag} className="px-2 sm:px-3 py-1 bg-teal-500/20 text-teal-400 rounded-lg text-xs">
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 작성자 */}
-          <div>
-            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-              작성자
-            </label>
-            <input
-              type="text"
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
-              placeholder="작성자 이름을 입력하세요"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm sm:text-base"
-              maxLength={50}
-            />
-          </div>
-
-          {/* 관리 비밀번호 */}
-          <div>
-            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-              관리 비밀번호
-            </label>
-            <p className="text-xs text-slate-400 mb-2">문제를 나중에 수정하거나 삭제할 때 사용할 비밀번호를 입력하세요.</p>
-            <input
-              type="password"
-              value={adminPassword}
-              onChange={(e) => setAdminPassword(e.target.value)}
-              placeholder="관리 비밀번호를 입력하세요"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm sm:text-base"
-            />
-          </div>
-
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
@@ -215,4 +257,3 @@ export default function CreateProblem() {
     </div>
   );
 }
-

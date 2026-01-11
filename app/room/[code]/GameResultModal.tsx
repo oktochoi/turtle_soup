@@ -81,34 +81,34 @@ export default function GameResultModal({ story, truth, questions, onRestart, ro
                     <div className="flex items-start gap-2 mb-2 flex-wrap">
                       <span className="text-xs font-bold text-slate-500 bg-slate-800 px-2 py-1 rounded">#{index + 1}</span>
                       <span className="text-xs sm:text-sm font-semibold text-cyan-400">{q.nickname}</span>
-                      {q.answer && (
-                        <span
+                    {q.answer && (
+                      <span
                           className={`ml-auto px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                            q.answer === 'yes'
+                          q.answer === 'yes'
                               ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                              : q.answer === 'no'
+                            : q.answer === 'no'
                               ? 'bg-red-500/20 text-red-400 border border-red-500/30'
                               : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                          }`}
-                        >
-                          {q.answer === 'yes' ? '예' : q.answer === 'no' ? '아니오' : '상관없음'}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm sm:text-base text-white break-words leading-relaxed">{q.text}</p>
+                        }`}
+                      >
+                        {q.answer === 'yes' ? '예' : q.answer === 'no' ? '아니오' : '상관없음'}
+                      </span>
+                    )}
                   </div>
+                    <p className="text-sm sm:text-base text-white break-words leading-relaxed">{q.text}</p>
+                </div>
                 ))
               )}
-            </div>
           </div>
+        </div>
 
           <div className="p-4 sm:p-6 border-t border-slate-700 flex flex-col sm:flex-row gap-2 sm:gap-3">
-            <Link href="/" className="flex-1">
+          <Link href="/" className="flex-1">
               <button className="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap text-sm sm:text-base">
-                <i className="ri-home-line mr-2"></i>
+              <i className="ri-home-line mr-2"></i>
                 홈으로 돌아가기
-              </button>
-            </Link>
+            </button>
+          </Link>
             {isUserWon && onClose && (
               <button
                 onClick={onClose}
@@ -118,12 +118,12 @@ export default function GameResultModal({ story, truth, questions, onRestart, ro
                 계속하기
               </button>
             )}
-            <Link href="/create-room" className="flex-1">
+          <Link href="/create-room" className="flex-1">
               <button className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap text-sm sm:text-base">
-                <i className="ri-add-circle-line mr-2"></i>
-                새 방 만들기
-              </button>
-            </Link>
+              <i className="ri-add-circle-line mr-2"></i>
+              새 방 만들기
+            </button>
+          </Link>
           </div>
         </div>
       </div>

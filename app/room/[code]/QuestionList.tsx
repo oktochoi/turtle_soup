@@ -25,8 +25,8 @@ export default function QuestionList({ questions, selectedId, onSelect, isHost =
       // 사용자 화면에서는 최신 질문이 보이도록 스크롤을 맨 아래로
       // 어드민 화면에서는 정렬된 순서대로 표시
       if (!isHost) {
-        listRef.current.scrollTop = listRef.current.scrollHeight;
-      }
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
     }
   }, [questions, isHost]);
 

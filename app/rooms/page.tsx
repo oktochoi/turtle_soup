@@ -92,9 +92,12 @@ export default function RoomsPage() {
 
       setRooms(roomsWithPlayerCount);
       setFilteredRooms(roomsWithPlayerCount);
-    } catch (error) {
-      console.error('방 리스트 로드 오류:', error);
-      setError('방 리스트를 불러올 수 없습니다.');
+    } catch (error: any) {
+      // AbortError는 무해한 에러이므로 무시 (컴포넌트 언마운트 시 발생 가능)
+      if (error?.name !== 'AbortError' && error?.message?.includes('aborted') === false) {
+        console.error('방 리스트 로드 오류:', error);
+        setError('방 리스트를 불러올 수 없습니다.');
+      }
     } finally {
       setIsLoading(false);
     }

@@ -44,13 +44,12 @@ export type Problem = {
   answer: string;
   difficulty: 'easy' | 'medium' | 'hard'; // 하위 호환성을 위해 유지, 실제로는 사용 안 함
   tags: string[];
-  author: string;
-  admin_password: string;
   like_count: number;
   comment_count: number;
   view_count: number;
   created_at: string;
   updated_at: string;
+  user_id?: string;
   // 별점 관련 (계산된 값)
   average_rating?: number;
   rating_count?: number;
@@ -81,5 +80,6 @@ export type ProblemComment = {
   nickname: string;
   text: string;
   created_at: string;
+  user_id?: string;
 };
 

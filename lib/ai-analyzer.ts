@@ -1,443 +1,724 @@
-// AI 질문 분석기 - 의미 기반(Semantic) 판정 엔진 V2
-// transformers.js를 사용한 sentence embedding 기반 분석
-// 문장 단위 분할 + 최대 유사도 기준 + 캐싱
+// AI 질문 분석기 - Semantic + Ontology Inference Engine V7
+// 목적: 바다거북스프 Yes/No/Irrelevant/Decisive 판정을 "문제별 룰" 없이 최대한 안정화
+//
+// 구성
+// 1) Embedding 기반 유사도 (semantic)
+// 2) 질문/정답에서 엔티티(개념) 추출 (dictionary)
+// 3) Ontology(부분-전체 계층) 추론으로 "일반화 질문"을 NO로 처리 (손 vs 손톱 문제 해결)
+// 4) Inference rule로 정답 텍스트에 없는 상위개념(사고/고의 등) 자동 태깅
+// 5) (옵션) 애매할 때만 LLM/NLI fallback hook 가능 (무료/유료 선택)
+//
+// NOTE: Vercel/Next.js 브라우저 실행 전제 (@xenova/transformers)
 
-// @ts-ignore - @xenova/transformers는 동적 import로 로드되므로 타입 체크 우회
 type Pipeline = any;
 
-// 싱글톤 패턴으로 모델 인스턴스 관리
+export type JudgeResult = "yes" | "no" | "irrelevant" | "decisive";
+
+const CONFIG = {
+  TOP_K_CONTENT: 14,
+  TOP_K_ANSWER: 14,
+
+  EMBEDDING_CONCURRENCY: 4,
+
+  CACHE_MAX: 2000,
+  CACHE_TTL_MS: 1000 * 60 * 60 * 12,
+
+  MIN_QUESTION_LEN: 5,
+  MAX_QUESTION_LEN: 420,
+
+  THRESHOLD: {
+    DECISIVE_ANSWER: 0.68,
+    DECISIVE_CONTENT: 0.35,
+
+    YES: 0.59,
+    NO_CONTENT: 0.42,
+    NO_ANSWER_MAX: 0.30,
+
+    IRRELEVANT_MAX: 0.25,
+  },
+
+  ADJUST: {
+    NEGATION_MISMATCH_PENALTY: 0.06,
+    MODALITY_MISMATCH_PENALTY: 0.04,
+
+    // ✅ 엔티티/추론 보정
+    CONCEPT_MATCH_BONUS: 0.12,
+    INFER_MATCH_BONUS: 0.10,
+
+    // ✅ "일반화 질문(부위/부분/전체)"이면서 정답은 더 좁은 경우 NO 쪽으로 강하게
+    GENERALIZATION_NO_BONUS: 0.25,
+  },
+
+  // fallback(옵션) 구간
+  AMBIGUOUS_RANGE: { min: 0.38, max: 0.62 },
+};
+
+// -------------------------
+// 모델 싱글톤
+// -------------------------
 let embeddingPipeline: Pipeline | null = null;
 let isModelLoading = false;
 let modelLoadPromise: Promise<Pipeline> | null = null;
 
-// 임베딩 캐시 (같은 텍스트는 재사용)
-const embeddingCache = new Map<string, Float32Array>();
+// -------------------------
+// LRU + TTL 캐시
+// -------------------------
+type CacheValue = { vec: Float32Array; expiresAt: number };
 
-/**
- * 문장 단위로 텍스트 분할
- * @param text 입력 텍스트
- * @returns 문장 배열
- */
-function splitSentences(text: string): string[] {
-  return text
-    .split(/[\.\n\?\!]/)
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
+class LRUCache<K, V> {
+  private map = new Map<K, V>();
+  constructor(private limit: number) {}
+
+  get(key: K): V | undefined {
+    const val = this.map.get(key);
+    if (val === undefined) return undefined;
+
+    // TTL check (CacheValue 가정)
+    const expiresAt = (val as any).expiresAt;
+    if (typeof expiresAt === "number" && Date.now() >= expiresAt) {
+      this.map.delete(key);
+      return undefined;
+    }
+
+    this.map.delete(key);
+    this.map.set(key, val);
+    return val;
+  }
+
+  set(key: K, value: V) {
+    if (this.map.has(key)) this.map.delete(key);
+    this.map.set(key, value);
+
+    if (this.map.size > this.limit) {
+      const oldestKey = this.map.keys().next().value;
+      if (oldestKey !== undefined) this.map.delete(oldestKey);
+    }
+  }
+
+  clear() {
+    this.map.clear();
+  }
 }
 
-/**
- * Sentence embedding 모델 로드 (싱글톤)
- * 최초 1회만 로드되도록 보장
- */
-async function loadEmbeddingModel(): Promise<Pipeline> {
-  // 이미 로드된 경우 즉시 반환
-  if (embeddingPipeline) {
-    return embeddingPipeline;
-  }
+const embeddingCache = new LRUCache<string, CacheValue>(CONFIG.CACHE_MAX);
 
-  // 로딩 중인 경우 기존 Promise 반환
-  if (isModelLoading && modelLoadPromise) {
-    return modelLoadPromise;
-  }
+// -------------------------
+// 유틸
+// -------------------------
+function normalizeText(text: string): string {
+  return (text ?? "")
+    .replace(/\u200B/g, "")
+    .replace(/[\u200C\u200D\uFEFF]/g, "")
+    .replace(/[“”"''""]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-  // 브라우저 환경에서만 실행
-  if (typeof window === 'undefined') {
-    throw new Error('Embedding model can only be loaded in browser environment');
-  }
+function splitSentencesKo(text: string): string[] {
+  const cleaned = normalizeText(text);
+  if (!cleaned) return [];
 
-  // 모델 로딩 시작
+  const rough = cleaned.split(/[\n\r]+/g);
+  const out: string[] = [];
+
+  for (const chunk of rough) {
+    const parts = chunk
+      .split(/(?<=[\.\?\!。？！])\s+/g)
+      .flatMap(p => p.split(/(?<=[다요죠까네임음])\s+(?=[가-힣A-Za-z0-9])/g));
+
+    for (const p of parts) {
+      const s = p.trim();
+      if (s.length >= 3) out.push(s);
+    }
+  }
+  return out.length ? out : [cleaned];
+}
+
+function roughRelevanceScore(question: string, sentence: string): number {
+  const q = normalizeText(question).toLowerCase();
+  const s = normalizeText(sentence).toLowerCase();
+  if (!q || !s) return 0;
+
+  const qTokens = q.split(/\s+/).filter(t => t.length >= 2);
+  const sTokens = new Set(s.split(/\s+/).filter(t => t.length >= 2));
+  if (!qTokens.length) return 0;
+
+  let exactHits = 0;
+  for (const t of qTokens) if (sTokens.has(t)) exactHits++;
+
+  let partial = 0;
+  for (const t of qTokens) if (t.length >= 3 && s.includes(t)) partial += 0.5;
+
+  const exactScore = exactHits / qTokens.length;
+  const partialScore = Math.min(0.8, (partial / qTokens.length));
+
+  return exactScore * 0.65 + partialScore * 0.35;
+}
+
+function selectTopKSentences(question: string, sentences: string[], k: number): string[] {
+  if (sentences.length <= k) return sentences;
+  return sentences
+    .map(s => ({ s, score: roughRelevanceScore(question, s) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, k)
+    .map(x => x.s);
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  if (!items.length) return [];
+  const results = new Array<R>(items.length);
+  let idx = 0;
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (true) {
+      const cur = idx++;
+      if (cur >= items.length) break;
+      results[cur] = await fn(items[cur]);
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
+}
+
+// -------------------------
+// 부정/모달리티 (간단)
+// -------------------------
+const NEGATION_PATTERNS = ["아니", "아니다", "아닌", "안 ", "못 ", "없", "전혀", "절대", "결코", "틀렸"];
+const MODALITY_PATTERNS = ["가능", "일 수도", "아마", "추정", "확실", "반드시", "모르", "불확실", "어쩌면"];
+
+function hasAny(text: string, patterns: string[]) {
+  const t = normalizeText(text);
+  if (!t) return false;
+  return patterns.some(p => t.includes(p));
+}
+function hasNegation(text: string) {
+  return hasAny(text, NEGATION_PATTERNS);
+}
+function hasModality(text: string) {
+  return hasAny(text, MODALITY_PATTERNS);
+}
+
+// -------------------------
+// ✅ 엔티티 사전 (문제별 X, 범용)
+// - 게임에서 자주 나오는 축만 먼저 탑재
+// - 계속 추가해도 "문제 수"와 무관하게 동작
+// -------------------------
+
+// "일반화 질문" 감지: "부위/부분/전체/전반/어느/무슨" 같은 표현이 들어가면
+// 손톱 같은 세부사실을 "손(부위) 먹었냐"로 일반화 질문하는 패턴을 잡아냄
+const GENERALIZATION_HINTS = ["부위", "부분", "전체", "전반", "어느", "어떤 부위", "어떤 부분", "무슨 부위", "무슨 부분"];
+
+// Ontology: 부모 -> 자식
+// (여기 예시는 body 중심이지만, 필요하면 차량/동물/물건 등 확장 가능)
+const ONTOLOGY: Record<string, string[]> = {
+  hand: ["palm", "back_of_hand", "finger", "nail", "wrist"],
+  finger: ["nail", "finger_tip", "finger_joint"],
+
+  face: ["eye", "nose", "mouth", "ear", "tooth", "tongue"],
+  eye: ["eyelid", "eyeball", "retina", "cornea"],
+
+  body: ["head", "neck", "chest", "back", "arm", "leg", "hand", "foot"],
+  foot: ["toe", "toenail", "sole", "ankle"],
+  toe: ["toenail"],
+
+  // 음식/재료 쪽도 자주 나옴
+  meat: ["skin", "fat", "bone", "organ"],
+};
+
+// 엔티티(개념) -> 표현들
+// "손 부위"처럼 질문에서 부모를 직접 말하는 표현도 포함시키는 게 포인트.
+const ENTITY_SYNONYMS: Record<string, string[]> = {
+  // body
+  hand: ["손", "손부위", "손 부위", "손 부분", "손쪽", "손 전체"],
+  palm: ["손바닥", "손 안쪽", "손안쪽", "손 안 짝"],
+  back_of_hand: ["손등", "손 바깥쪽", "손의 바깥"],
+  finger: ["손가락", "손가락 부위", "손가락 부분"],
+  nail: ["손톱", "손톱 부위", "손톱을", "손톱만"],
+
+  foot: ["발", "발 전체", "발 부위", "발 부분"],
+  toe: ["발가락"],
+  toenail: ["발톱"],
+
+  face: ["얼굴", "안면"],
+  eye: ["눈", "안구"],
+  mouth: ["입", "입안"],
+  tooth: ["이", "치아"],
+  tongue: ["혀"],
+
+  // 사건 성격(상위개념)
+  accident: ["실수", "우발", "사고", "불의", "의도치", "예기치", "뜻하지 않게", "우연히"],
+  intentional: ["고의", "일부러", "의도", "계획", "작정", "노림"],
+  murder: ["살인", "살해", "타살", "죽였다", "죽인"],
+  suicide: ["자살", "극단적 선택", "스스로 죽", "목숨을 끊", "자해"],
+
+  // 도구/상황 힌트(사고 추론에 사용)
+  brake_failure: ["브레이크 고장", "브레이크가 고장", "브레이크가 안", "브레이크 불량", "브레이크 망가"],
+  crash_event: ["충돌", "부딪", "박았", "가드레일", "넘어", "추락", "떨어", "낙하"],
+  speed_run: ["빠르게", "속도", "도주", "도망", "질주", "달리"],
+
+  // 행위
+  eat: ["먹", "먹었", "섭취", "씹", "삼켰"],
+};
+
+// 엔티티 추출: text에서 발견된 엔티티 key들 반환
+function extractEntities(text: string): Set<string> {
+  const t = normalizeText(text);
+  const found = new Set<string>();
+  if (!t) return found;
+
+  for (const [entity, words] of Object.entries(ENTITY_SYNONYMS)) {
+    if (words.some(w => t.includes(w))) found.add(entity);
+  }
+  return found;
+}
+
+function isGeneralizationQuestion(text: string): boolean {
+  const t = normalizeText(text);
+  if (!t) return false;
+  return GENERALIZATION_HINTS.some(h => t.includes(h));
+}
+
+// 부모/자식 관계 체크
+function isParentOf(parent: string, child: string): boolean {
+  const children = ONTOLOGY[parent] ?? [];
+  if (children.includes(child)) return true;
+  // 깊이 2~3까지 재귀 (필요시 깊이 늘려도 됨)
+  for (const c of children) {
+    if (isParentOf(c, child)) return true;
+  }
+  return false;
+}
+
+// 질문이 "부모 범주"를 물었는데, 정답은 "자식만" 확정인 케이스를 잡아 NO로 강제
+// 예) Q: 손 부위 먹었나요?  A facts: nail만 먹음  => NO
+function shouldForceNoByOntology(questionText: string, qEnt: Set<string>, aEnt: Set<string>): boolean {
+  // 일반화 힌트 없으면 너무 공격적으로 NO 내리면 오탐 가능 → 힌트가 있을 때 우선 적용
+  const generalized = isGeneralizationQuestion(questionText);
+
+  // 질문 엔티티 중 ontology 부모가 있고, 정답은 그 자식만 있는 경우
+  for (const q of qEnt) {
+    for (const a of aEnt) {
+      if (q !== a && isParentOf(q, a)) {
+        // 정답에 parent 자체가 명시되어 있지 않으면 "자식만"이라고 보는 편이 안전
+        const answerHasParent = aEnt.has(q);
+
+        // 일반화 질문이면 매우 강하게 NO
+        if (generalized && !answerHasParent) return true;
+
+        // 일반화 힌트가 없어도, "손 부위" 같은 표현은 사실상 일반화이므로
+        // 질문 텍스트에 parent 표현이 직접 들어가면 NO
+        const t = normalizeText(questionText);
+        const parentWords = ENTITY_SYNONYMS[q] ?? [];
+        const parentDirect = parentWords.some(w => t.includes(w) && (w.includes("부위") || w.includes("부분") || w.includes("전체")));
+        if (parentDirect && !answerHasParent) return true;
+      }
+    }
+  }
+  return false;
+}
+
+// -------------------------
+// ✅ 상위개념 추론(문제별 X, 범용)
+// -------------------------
+function inferConceptsFromText(text: string): Set<string> {
+  const t = normalizeText(text);
+  const concepts = new Set<string>();
+  if (!t) return concepts;
+
+  // 사고 추론: 기계고장/통제불능 + 충돌/추락/가드레일 등
+  const e = extractEntities(t);
+  const hasBrake = e.has("brake_failure") || (t.includes("브레이크") && (t.includes("고장") || t.includes("안") || t.includes("불량")));
+  const hasCrash = e.has("crash_event");
+  const hasRun = e.has("speed_run");
+
+  if (hasBrake && (hasCrash || hasRun)) concepts.add("accident");
+
+  // 고의 추론: "계획/고의/일부러" 등 직접 표현이 있을 때
+  if (e.has("intentional")) concepts.add("intentional");
+
+  // 살인/자살은 텍스트에 단서가 있을 때
+  if (e.has("murder")) concepts.add("murder");
+  if (e.has("suicide")) concepts.add("suicide");
+
+  return concepts;
+}
+
+// -------------------------
+// 모델 로드/임베딩
+// -------------------------
+async function loadEmbeddingModel(maxRetries = 1): Promise<Pipeline> {
+  if (embeddingPipeline) return embeddingPipeline;
+  if (isModelLoading && modelLoadPromise) return modelLoadPromise;
+
+  if (typeof window === "undefined") throw new Error("Embedding model can only be loaded in browser environment");
+
   isModelLoading = true;
   modelLoadPromise = (async () => {
-    try {
-      // @ts-ignore - 동적 import 타입 체크 우회
-      const { pipeline } = await import('@xenova/transformers');
-      
-      // 다국어 sentence embedding 모델 로드
-      // 한국어 포함 다국어 지원, 경량 모델
-      // @ts-ignore - transformers.js 옵션 타입 체크 우회
-      const model = await pipeline(
-        'feature-extraction',
-        'Xenova/paraphrase-multilingual-MiniLM-L12-v2',
-        {
-          // 모바일 저사양 환경 고려
-          quantized: true, // 양자화된 모델 사용 (메모리 절약)
-        }
-      );
-
-      embeddingPipeline = model;
-      isModelLoading = false;
-      return model;
-    } catch (error) {
-      isModelLoading = false;
-      modelLoadPromise = null;
-      console.error('모델 로드 오류:', error);
-      throw error;
+    let lastError: any = null;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const { pipeline } = await import("@xenova/transformers");
+        const model = await pipeline("feature-extraction", "Xenova/paraphrase-multilingual-MiniLM-L12-v2", {
+          quantized: true,
+        });
+        embeddingPipeline = model;
+        isModelLoading = false;
+        return model;
+      } catch (e) {
+        lastError = e;
+        if (attempt < maxRetries) await new Promise(r => setTimeout(r, 700));
+      }
     }
+    isModelLoading = false;
+    modelLoadPromise = null;
+    throw lastError ?? new Error("Model load failed");
   })();
 
   return modelLoadPromise;
 }
 
-/**
- * 텍스트를 임베딩 벡터로 변환 (캐싱 포함)
- * @param text 입력 텍스트
- * @returns 정규화된 임베딩 벡터 (Float32Array)
- */
+function normalizeVector(vector: Float32Array): Float32Array {
+  let sumSq = 0;
+  for (let i = 0; i < vector.length; i++) sumSq += vector[i] * vector[i];
+  const mag = Math.sqrt(sumSq);
+  if (mag === 0) return vector;
+  const out = new Float32Array(vector.length);
+  for (let i = 0; i < vector.length; i++) out[i] = vector[i] / mag;
+  return out;
+}
+
+function toFloat32Array(output: any): Float32Array {
+  if (output?.data) {
+    const data = output.data;
+    if (data instanceof Float32Array) return data;
+    if (Array.isArray(data)) return new Float32Array(data.flat(Infinity) as number[]);
+  }
+  if (Array.isArray(output)) return new Float32Array((output.flat(Infinity) as number[]));
+  if (output && typeof output === "object") return new Float32Array((Object.values(output).flat(Infinity) as number[]));
+  throw new Error("Unexpected embedding output");
+}
+
 async function getEmbedding(text: string): Promise<Float32Array> {
-  if (!text || text.trim().length === 0) {
-    throw new Error('Empty text cannot be embedded');
-  }
+  const normalized = normalizeText(text);
+  if (!normalized) throw new Error("Empty text");
 
-  const normalizedText = text.trim();
-
-  // 캐시 확인 (같은 텍스트는 재사용)
-  if (embeddingCache.has(normalizedText)) {
-    return embeddingCache.get(normalizedText)!;
-  }
+  const cached = embeddingCache.get(normalized);
+  if (cached && Date.now() < cached.expiresAt) return cached.vec;
 
   const model = await loadEmbeddingModel();
-  
-  try {
-    // 모델 실행하여 임베딩 추출
-    const output = await model(normalizedText, {
-      pooling: 'mean', // 평균 풀링으로 문장 레벨 임베딩 생성
-      normalize: true, // L2 정규화 (cosine similarity를 위해)
-    });
+  const output = await model(normalized, { pooling: "mean", normalize: true });
+  const vec = normalizeVector(toFloat32Array(output));
 
-    // 출력을 Float32Array로 변환
-    let embedding: Float32Array;
-    
-    if (Array.isArray(output)) {
-      // 배열인 경우
-      const flatArray = output.flat(Infinity) as number[];
-      embedding = new Float32Array(flatArray);
-    } else if (output && typeof output === 'object') {
-      // Tensor 객체인 경우
-      if (output.data) {
-        embedding = new Float32Array(output.data);
-      } else if (Array.isArray(output)) {
-        embedding = new Float32Array(output.flat(Infinity) as number[]);
-      } else {
-        // 객체의 값들을 배열로 변환
-        const values = Object.values(output) as number[];
-        embedding = new Float32Array(values.flat(Infinity));
-      }
-    } else {
-      throw new Error('Unexpected output format from embedding model');
-    }
-
-    // L2 정규화 (cosine similarity를 위해)
-    const normalizedEmbedding = normalizeVector(embedding);
-    
-    // 캐시에 저장 (최대 1000개까지)
-    if (embeddingCache.size < 1000) {
-      embeddingCache.set(normalizedText, normalizedEmbedding);
-    }
-    
-    return normalizedEmbedding;
-  } catch (error) {
-    console.error('임베딩 생성 오류:', error);
-    throw error;
-  }
+  embeddingCache.set(normalized, { vec, expiresAt: Date.now() + CONFIG.CACHE_TTL_MS });
+  return vec;
 }
 
-/**
- * 벡터 L2 정규화
- * @param vector 입력 벡터
- * @returns 정규화된 벡터
- */
-function normalizeVector(vector: Float32Array): Float32Array {
-  const magnitude = Math.sqrt(
-    Array.from(vector).reduce((sum, val) => sum + val * val, 0)
-  );
-  
-  if (magnitude === 0) {
-    return vector;
-  }
-
-  return new Float32Array(vector.map(val => val / magnitude));
+function cosineSimilarity(a: Float32Array, b: Float32Array): number {
+  if (a.length !== b.length) throw new Error(`Vector dims mismatch: ${a.length} vs ${b.length}`);
+  let dot = 0;
+  for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
+  return Math.max(-1, Math.min(1, dot));
 }
 
-/**
- * Cosine Similarity 계산
- * @param vec1 첫 번째 벡터 (정규화됨)
- * @param vec2 두 번째 벡터 (정규화됨)
- * @returns cosine similarity 값 (-1 ~ 1, 보통 0 ~ 1)
- */
-function cosineSimilarity(vec1: Float32Array, vec2: Float32Array): number {
-  if (vec1.length !== vec2.length) {
-    throw new Error('Vector dimensions must match');
+function maxSimilarity(questionVec: Float32Array, sentenceVecs: Float32Array[]): number {
+  if (!sentenceVecs.length) return 0;
+  let max = -1;
+  for (const v of sentenceVecs) {
+    const s = cosineSimilarity(questionVec, v);
+    if (s > max) max = s;
   }
-
-  // 정규화된 벡터의 내적 = cosine similarity
-  let dotProduct = 0;
-  for (let i = 0; i < vec1.length; i++) {
-    dotProduct += vec1[i] * vec2[i];
-  }
-
-  // 정규화된 벡터이므로 magnitude는 1이지만, 안전을 위해 확인
-  return Math.max(-1, Math.min(1, dotProduct));
+  return max;
 }
 
-/**
- * 최대 유사도 계산 (한 문장만 맞아도 YES)
- * @param questionVec 질문 벡터
- * @param sentenceVecs 문장 벡터 배열
- * @returns 최대 유사도 값
- */
-function maxSimilarity(
-  questionVec: Float32Array,
-  sentenceVecs: Float32Array[]
-): number {
-  if (sentenceVecs.length === 0) {
-    return 0;
-  }
-
-  return Math.max(
-    ...sentenceVecs.map(vec => cosineSimilarity(questionVec, vec))
-  );
+function avgSimilarity(questionVec: Float32Array, sentenceVecs: Float32Array[]): number {
+  if (!sentenceVecs.length) return 0;
+  let sum = 0;
+  for (const v of sentenceVecs) sum += cosineSimilarity(questionVec, v);
+  return sum / sentenceVecs.length;
 }
 
-/**
- * 의미 기반 질문 분석 (Semantic Analysis) V2
- * 
- * @param question 참가자의 질문
- * @param problemContent 문제 설명 텍스트
- * @param problemAnswer 정답 설명 텍스트
- * @returns 판정 결과: 'yes' | 'no' | 'irrelevant' | 'decisive'
- * 
- * V2 개선 사항:
- * - 문장 단위 분할 및 개별 임베딩
- * - 최대 유사도 기준 (한 문장만 맞아도 YES)
- * - 판정 순서 재정의 (decisive → yes → no → irrelevant → fallback)
- * - 임베딩 캐싱 (성능 향상)
- * - 질문 길이 제한 (트롤 방지)
- */
-export async function analyzeQuestionSemantic(
+// -------------------------
+// ✅ 최종 분석 함수 (V7)
+// -------------------------
+
+// (옵션) 애매할 때만 외부 NLI/LLM을 태울 수 있는 훅
+export type FallbackJudge = (args: {
+  question: string;
+  problemContent: string;
+  problemAnswer: string;
+}) => Promise<JudgeResult | null>;
+
+export async function analyzeQuestionSemanticV7(
   question: string,
   problemContent: string,
-  problemAnswer: string
-): Promise<'yes' | 'no' | 'irrelevant' | 'decisive'> {
+  problemAnswer: string,
+  fallbackJudge?: FallbackJudge
+): Promise<JudgeResult> {
   try {
-    // 입력 검증
-    if (!question || typeof question !== 'string' || question.trim().length === 0) {
-      return 'irrelevant';
+    if (!question || typeof question !== "string") return "irrelevant";
+
+    const q0 = normalizeText(question);
+    if (q0.length < CONFIG.MIN_QUESTION_LEN) return "irrelevant";
+
+    const q = q0.length > CONFIG.MAX_QUESTION_LEN ? q0.slice(0, CONFIG.MAX_QUESTION_LEN) : q0;
+
+    const content = normalizeText(problemContent ?? "");
+    const answer = normalizeText(problemAnswer ?? "");
+
+    if (typeof window === "undefined") return "irrelevant";
+    if (!content && !answer) return "irrelevant";
+
+    // -------------------------
+    // 0) 엔티티/추론 준비
+    // -------------------------
+    const qEntities = extractEntities(q);
+    const aEntities = extractEntities(answer);
+
+    // 정답 텍스트에 없는 상위개념을 infer로 태깅
+    const aInferred = inferConceptsFromText(answer);
+    for (const c of aInferred) aEntities.add(c);
+
+    // 0-1) Ontology 강제 NO 먼저 적용 (손 vs 손톱 같은 문제를 가장 안정적으로 해결)
+    // 단, 질문이 정확히 "손톱"을 물으면 YES 가능해야 하므로, 아래는 "부모 범주를 묻는 경우"에만 발동
+    if (shouldForceNoByOntology(q, qEntities, aEntities)) {
+      // 그래도 질문이 자식(손톱) 자체면 NO로 막으면 안 됨:
+      // (예: qEntities에 nail이 있고 answer도 nail이면 yes)
+      for (const qe of qEntities) {
+        if (aEntities.has(qe)) {
+          // exact entity match면 ontology NO 취소
+          break;
+        }
+      }
+      // exact match가 없는 경우만 NO
+      const hasExact = [...qEntities].some(e => aEntities.has(e));
+      if (!hasExact) return "no";
     }
-    if (!problemContent || typeof problemContent !== 'string') {
-      problemContent = '';
-    }
-    if (!problemAnswer || typeof problemAnswer !== 'string') {
-      problemAnswer = '';
-    }
 
-    // 브라우저 환경에서만 실행
-    if (typeof window === 'undefined') {
-      return 'irrelevant';
-    }
+    // -------------------------
+    // 1) 임베딩 기반 유사도
+    // -------------------------
+    const questionVec = await getEmbedding(q);
 
-    // 텍스트 정규화 (공백 정리)
-    const normalizedQuestion = question.trim();
-    const normalizedContent = problemContent.trim();
-    const normalizedAnswer = problemAnswer.trim();
+    const contentSentences = content ? selectTopKSentences(q, splitSentencesKo(content), CONFIG.TOP_K_CONTENT) : [];
+    const answerSentences = answer ? selectTopKSentences(q, splitSentencesKo(answer), CONFIG.TOP_K_ANSWER) : [];
 
-    // 질문 길이 컷 (트롤 방지 + 모델 낭비 방지)
-    if (normalizedQuestion.length < 5) {
-      return 'irrelevant';
-    }
+    const [contentVecs, answerVecs] = await Promise.all([
+      mapWithConcurrency(contentSentences, CONFIG.EMBEDDING_CONCURRENCY, getEmbedding),
+      mapWithConcurrency(answerSentences, CONFIG.EMBEDDING_CONCURRENCY, getEmbedding),
+    ]);
 
-    // 문제 설명이나 정답이 없으면 IRRELEVANT
-    if (normalizedContent.length === 0 && normalizedAnswer.length === 0) {
-      return 'irrelevant';
-    }
+    const simContentMax = contentVecs.length ? maxSimilarity(questionVec, contentVecs) : 0;
+    const simAnswerMax = answerVecs.length ? maxSimilarity(questionVec, answerVecs) : 0;
 
-    // 질문 임베딩
-    const questionEmbedding = await getEmbedding(normalizedQuestion);
+    const simContentAvg = contentVecs.length ? avgSimilarity(questionVec, contentVecs) : 0;
+    const simAnswerAvg = answerVecs.length ? avgSimilarity(questionVec, answerVecs) : 0;
 
-    // 문장 단위로 분할
-    const contentSentences = normalizedContent.length > 0 
-      ? splitSentences(normalizedContent)
-      : [];
-    const answerSentences = normalizedAnswer.length > 0
-      ? splitSentences(normalizedAnswer)
-      : [];
+    // -------------------------
+    // 2) 부정/모달리티 보정
+    // -------------------------
+    const qNeg = hasNegation(q);
+    const qMod = hasModality(q);
 
-    // 각 문장을 개별 임베딩 (병렬 처리)
-    const contentEmbeddings = await Promise.all(
-      contentSentences.map(sentence => getEmbedding(sentence))
-    );
-    const answerEmbeddings = await Promise.all(
-      answerSentences.map(sentence => getEmbedding(sentence))
-    );
+    const aNeg = answerSentences.some(hasNegation);
+    const aMod = answerSentences.some(hasModality);
 
-    // 최대 유사도 계산 (한 문장만 맞아도 YES)
-    const simContent = contentEmbeddings.length > 0
-      ? maxSimilarity(questionEmbedding, contentEmbeddings)
-      : 0;
-    
-    const simAnswer = answerEmbeddings.length > 0
-      ? maxSimilarity(questionEmbedding, answerEmbeddings)
-      : 0;
+    let simAnswerAdj = simAnswerMax;
+    let simContentAdj = simContentMax;
 
-    // 디버깅용 로그 (개발 환경에서만)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Similarity scores:', { 
-        simAnswer, 
-        simContent, 
-        diff: Math.abs(simAnswer - simContent),
-        answerSentences: answerSentences.length,
-        contentSentences: contentSentences.length
+    if (qNeg !== aNeg) simAnswerAdj -= CONFIG.ADJUST.NEGATION_MISMATCH_PENALTY;
+    if (qMod !== aMod) simAnswerAdj -= CONFIG.ADJUST.MODALITY_MISMATCH_PENALTY;
+
+    // -------------------------
+    // 3) ✅ 엔티티/추론 매칭 보정
+    // -------------------------
+    const conceptMatched = [...qEntities].some(e => aEntities.has(e));
+    if (conceptMatched) simAnswerAdj += CONFIG.ADJUST.CONCEPT_MATCH_BONUS;
+
+    // 질문이 accident/intentional 같은 상위개념이고, infer로 정답에서 도출되면 보너스
+    const inferMatched = (qEntities.has("accident") && aEntities.has("accident")) ||
+                         (qEntities.has("intentional") && aEntities.has("intentional"));
+    if (inferMatched) simAnswerAdj += CONFIG.ADJUST.INFER_MATCH_BONUS;
+
+    // "부위/부분/전체" 같은 일반화 질문인데 정답은 더 좁은 엔티티(예: nail)만 있을 때 NO 쪽으로 밀기
+    // (이미 shouldForceNoByOntology로 많은 케이스를 잡았지만, 여기선 점수 보정으로도 처리)
+    if (isGeneralizationQuestion(q)) {
+      // 질문이 parent, 정답이 child만 있을 때
+      const qHasParent = [...qEntities].some(parent => (ONTOLOGY[parent]?.length ?? 0) > 0);
+      const aHasChildOnly = [...aEntities].some(child => {
+        // 어떤 parent의 child인지
+        return Object.keys(ONTOLOGY).some(parentKey => {
+          const parentStr = parentKey as string;
+          return isParentOf(parentStr, child) && !aEntities.has(parentStr);
+        });
       });
+
+      if (qHasParent && aHasChildOnly && !conceptMatched) {
+        // YES를 약화시키고 NO를 강화 (간접)
+        simContentAdj += CONFIG.ADJUST.GENERALIZATION_NO_BONUS;
+        simAnswerAdj -= CONFIG.ADJUST.GENERALIZATION_NO_BONUS * 0.6;
+      }
     }
 
-    // 판정 로직 적용 (순서 중요!)
-    // 1. DECISIVE 먼저 (정답과 문제 설명 경계에 위치)
+    // clamp
+    simAnswerAdj = Math.max(-1, Math.min(1, simAnswerAdj));
+    simContentAdj = Math.max(-1, Math.min(1, simContentAdj));
+
+    // 최종 점수(최대/평균 혼합)
+    const simAnswerFinal = simAnswerAdj * 0.7 + simAnswerAvg * 0.3;
+    const simContentFinal = simContentAdj * 0.7 + simContentAvg * 0.3;
+
+    // -------------------------
+    // 4) 판정
+    // -------------------------
     if (
-      simAnswer > 0.45 &&
-      simContent > 0.45 &&
-      Math.abs(simAnswer - simContent) < 0.08
-    ) {
-      return 'decisive';
+      simAnswerFinal >= CONFIG.THRESHOLD.DECISIVE_ANSWER &&
+      simContentFinal >= CONFIG.THRESHOLD.DECISIVE_CONTENT
+    ) return "decisive";
+
+    if (simAnswerFinal >= CONFIG.THRESHOLD.YES) return "yes";
+
+    if (simContentFinal >= CONFIG.THRESHOLD.NO_CONTENT && simAnswerFinal <= CONFIG.THRESHOLD.NO_ANSWER_MAX) {
+      return "no";
     }
 
-    // 2. YES (정답 문장에 강하게 닿을 때만)
-    if (simAnswer > 0.55) {
-      return 'yes';
+    if (simAnswerFinal <= CONFIG.THRESHOLD.IRRELEVANT_MAX && simContentFinal <= CONFIG.THRESHOLD.IRRELEVANT_MAX) {
+      return "irrelevant";
     }
 
-    // 3. NO (문제에는 닿지만 정답과는 반대)
-    if (simContent > 0.40 && simAnswer < 0.30) {
-      return 'no';
+    // -------------------------
+    // 5) 애매하면 fallbackJudge(옵션)
+    // -------------------------
+    const inAmbiguous =
+      simAnswerFinal >= CONFIG.AMBIGUOUS_RANGE.min && simAnswerFinal <= CONFIG.AMBIGUOUS_RANGE.max;
+
+    if (inAmbiguous && fallbackJudge) {
+      const fb = await fallbackJudge({ question: q, problemContent: content, problemAnswer: answer });
+      if (fb) return fb;
     }
 
-    // 4. IRRELEVANT (문제/정답과 모두 멀 때)
-    if (simAnswer < 0.25 && simContent < 0.25) {
-      return 'irrelevant';
-    }
-
-    // 5. Fallback (기본적으로 관련이 있으면 판정)
-    // 정답 유사도가 더 높으면 YES, 문제 설명 유사도가 더 높으면 NO
-    return simAnswer >= simContent ? 'yes' : 'no';
-
-  } catch (error) {
-    console.error('의미 기반 질문 분석 오류:', error);
-    // 에러 발생 시 항상 IRRELEVANT로 fallback
-    return 'irrelevant';
+    // 기본 fallback
+    return simAnswerFinal >= simContentFinal ? "yes" : "no";
+  } catch (e) {
+    console.error("analyzeQuestionSemanticV7 error:", e);
+    return "irrelevant";
   }
 }
 
-/**
- * 기존 analyzeQuestion 함수를 analyzeQuestionSemantic으로 리다이렉트
- * (하위 호환성 유지)
- */
+// 하위 호환 alias
 export async function analyzeQuestion(
   question: string,
   problemContent: string,
   problemAnswer: string
-): Promise<'yes' | 'no' | 'irrelevant' | 'decisive'> {
-  return analyzeQuestionSemantic(question, problemContent, problemAnswer);
+): Promise<JudgeResult> {
+  return analyzeQuestionSemanticV7(question, problemContent, problemAnswer);
 }
 
-/**
- * 모델 초기화 (선택적, 사전 로딩용)
- * 사용자가 질문하기 전에 모델을 미리 로드할 수 있음
- */
 export async function initializeModel(): Promise<void> {
   try {
-    if (typeof window !== 'undefined') {
-      await loadEmbeddingModel();
-    }
-  } catch (error) {
-    console.error('모델 초기화 오류:', error);
-    // 에러는 무시 (lazy loading으로 처리)
+    if (typeof window !== "undefined") await loadEmbeddingModel();
+  } catch (e) {
+    console.error("initializeModel error:", e);
   }
 }
 
-/**
- * 모델 메모리 해제 (선택적)
- * 메모리 부족 시 호출 가능
- */
 export function releaseModel(): void {
   embeddingPipeline = null;
   isModelLoading = false;
   modelLoadPromise = null;
 }
 
-/**
- * 캐시 초기화 (선택적)
- * 메모리 부족 시 호출 가능
- */
 export function clearCache(): void {
   embeddingCache.clear();
 }
 
-/**
- * 정답 유사도 계산 (0 ~ 100% 반환)
- * @param userAnswer 사용자가 입력한 정답
- * @param correctAnswer 실제 정답
- * @returns 유사도 퍼센트 (0 ~ 100)
- */
+// -------------------------
+// 정답 유사도 계산 (0~100%)
+// -------------------------
 export async function calculateAnswerSimilarity(
   userAnswer: string,
   correctAnswer: string
 ): Promise<number> {
-  if (!userAnswer.trim() || !correctAnswer.trim()) {
-    return 0;
-  }
+  const ua = normalizeText(userAnswer);
+  const ca = normalizeText(correctAnswer);
+  if (!ua || !ca) return 0;
 
   try {
-    // 두 텍스트를 임베딩으로 변환
-    const userEmbedding = await getEmbedding(userAnswer.trim());
-    const correctEmbedding = await getEmbedding(correctAnswer.trim());
+    const userEmbedding = await getEmbedding(ua);
+    const correctEmbedding = await getEmbedding(ca);
 
-    // Cosine similarity 계산 (0 ~ 1 범위)
     const similarity = cosineSimilarity(userEmbedding, correctEmbedding);
-
-    // 0 ~ 1 범위를 0 ~ 100%로 변환 (음수는 0으로 처리)
-    const percentage = Math.max(0, Math.min(100, (similarity * 100)));
-
-    return Math.round(percentage * 10) / 10; // 소수점 첫째 자리까지
+    
+    // 비선형 보정: 높은 유사도 구간을 더 잘 구분
+    let adjustedSimilarity = similarity;
+    if (similarity > 0.8) {
+      adjustedSimilarity = 0.8 + (similarity - 0.8) * 1.2;
+    } else if (similarity > 0.5) {
+      adjustedSimilarity = similarity;
+    } else {
+      adjustedSimilarity = similarity * 0.9;
+    }
+    
+    const percentage = Math.max(0, Math.min(100, adjustedSimilarity * 100));
+    return Math.round(percentage * 10) / 10;
   } catch (error) {
-    console.error('정답 유사도 계산 오류:', error);
-    // 오류 발생 시 간단한 문자열 매칭으로 폴백
+    console.error("정답 유사도 계산 오류:", error);
     return calculateSimpleMatch(userAnswer, correctAnswer);
   }
 }
 
-/**
- * 간단한 문자열 매칭 (폴백용)
- * @param userAnswer 사용자 정답
- * @param correctAnswer 실제 정답
- * @returns 유사도 퍼센트 (0 ~ 100)
- */
+// 폴백 문자열 매칭
 function calculateSimpleMatch(userAnswer: string, correctAnswer: string): number {
-  const userWords = userAnswer.toLowerCase().split(/\s+/).filter(w => w.length > 0);
-  const correctWords = correctAnswer.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+  const userWords = normalizeText(userAnswer).toLowerCase().split(/\s+/).filter(w => w.length > 0);
+  const correctWords = normalizeText(correctAnswer).toLowerCase().split(/\s+/).filter(w => w.length > 0);
 
-  if (correctWords.length === 0) {
-    return 0;
-  }
+  if (correctWords.length === 0) return 0;
 
-  // 단어 매칭 비율
-  const matchedWords = userWords.filter(word => 
-    correctWords.some(correctWord => 
-      correctWord.includes(word) || word.includes(correctWord)
-    )
+  // 정확한 단어 매칭
+  const matchedWords = userWords.filter(word =>
+    correctWords.some(correctWord => correctWord.includes(word) || word.includes(correctWord))
   ).length;
-
-  const wordMatchRatio = matchedWords / correctWords.length;
+  const wordMatchRatio = matchedWords / Math.max(correctWords.length, userWords.length);
 
   // 부분 문자열 매칭
-  const userLower = userAnswer.toLowerCase();
-  const correctLower = correctAnswer.toLowerCase();
+  const userLower = normalizeText(userAnswer).toLowerCase();
+  const correctLower = normalizeText(correctAnswer).toLowerCase();
+  
   let substringMatch = 0;
-
-  // 사용자 정답이 실제 정답에 포함되는 비율
-  if (correctLower.includes(userLower) || userLower.includes(correctLower)) {
-    substringMatch = 0.5;
+  if (userLower && correctLower) {
+    if (correctLower.includes(userLower) || userLower.includes(correctLower)) {
+      substringMatch = Math.min(0.8, Math.max(userLower.length, correctLower.length) / Math.min(userLower.length, correctLower.length) * 0.4);
+    }
   }
 
-  // 최종 유사도 (단어 매칭 70% + 부분 문자열 30%)
-  const similarity = (wordMatchRatio * 0.7 + substringMatch * 0.3) * 100;
+  // 문자 레벨 유사도
+  let charSimilarity = 0;
+  if (userLower && correctLower) {
+    const maxLen = Math.max(userLower.length, correctLower.length);
+    const minLen = Math.min(userLower.length, correctLower.length);
+    if (maxLen > 0) {
+      let matches = 0;
+      for (let i = 0; i < minLen; i++) {
+        if (userLower[i] === correctLower[i]) matches++;
+      }
+      charSimilarity = (matches / maxLen) * 0.3;
+    }
+  }
 
+  // 종합 점수 (가중 평균)
+  const similarity = (wordMatchRatio * 0.5 + substringMatch * 0.3 + charSimilarity * 0.2) * 100;
   return Math.round(similarity * 10) / 10;
+}
+
+// 하위 호환: analyzeQuestionSemantic도 export
+export async function analyzeQuestionSemantic(
+  question: string,
+  problemContent: string,
+  problemAnswer: string
+): Promise<JudgeResult> {
+  return analyzeQuestionSemanticV7(question, problemContent, problemAnswer);
 }

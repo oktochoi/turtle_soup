@@ -4,9 +4,11 @@ import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 import type { Problem, ProblemQuestion, ProblemComment } from '@/lib/types';
 import { analyzeQuestion, calculateAnswerSimilarity, initializeModel } from '@/lib/ai-analyzer';
 import ProblemAdminButtons from './ProblemAdminButtons';
+import { User } from '@supabase/supabase-js';
 
 export default function ProblemPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -18,22 +20,17 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
   const [comments, setComments] = useState<ProblemComment[]>([]);
   const [questionText, setQuestionText] = useState('');
   const [commentText, setCommentText] = useState('');
-  const [commentNickname, setCommentNickname] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [suggestedAnswer, setSuggestedAnswer] = useState<'yes' | 'no' | 'irrelevant' | 'decisive' | null>(null);
   const [localQuestions, setLocalQuestions] = useState<Array<{ question: string; answer: string; timestamp: number }>>([]);
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminPassword, setAdminPassword] = useState('');
-  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [editAnswer, setEditAnswer] = useState('');
-  const [editDifficulty, setEditDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
-  const [editTags, setEditTags] = useState<string[]>([]);
   const [averageRating, setAverageRating] = useState<number>(0);
   const [ratingCount, setRatingCount] = useState<number>(0);
   const [userRating, setUserRating] = useState<number | null>(null);
@@ -42,6 +39,26 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
   const [similarityScore, setSimilarityScore] = useState<number | null>(null);
   const [isCalculatingSimilarity, setIsCalculatingSimilarity] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editCommentText, setEditCommentText] = useState('');
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    
+    checkAuth();
+    
+    const supabase = createClient();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     loadProblem();
@@ -56,6 +73,15 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
       console.error('AI 모델 사전 로딩 실패 (첫 질문 시 자동 로드됨):', err);
     });
   }, [problemId]);
+
+  // 작성자 확인 (user_id 기반)
+  useEffect(() => {
+    if (problem && user) {
+      setIsOwner(problem.user_id === user.id);
+    } else {
+      setIsOwner(false);
+    }
+  }, [problem, user]);
 
   const loadLocalQuestions = () => {
     if (typeof window === 'undefined') return;
@@ -100,13 +126,14 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
     if (problem && !isLoading) {
       const updateViewCount = async () => {
         try {
-          await supabase.rpc('increment_problem_view', { problem_id: problemId });
-        } catch (error) {
-          // RPC 함수가 없으면 직접 업데이트
+          // 직접 업데이트 (RPC 함수 없이)
           await supabase
             .from('problems')
             .update({ view_count: (problem.view_count || 0) + 1 })
             .eq('id', problemId);
+        } catch (error) {
+          // 에러는 무시 (조회수 증가 실패는 치명적이지 않음)
+          console.warn('조회수 증가 실패:', error);
         }
       };
       updateViewCount();
@@ -164,23 +191,30 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
 
   const checkLike = async () => {
     try {
-      const userIdentifier = localStorage.getItem('user_id') || 'anonymous';
+      if (!user) {
+        setIsLiked(false);
+        return;
+      }
+
       const { data } = await supabase
         .from('problem_likes')
         .select('id')
         .eq('problem_id', problemId)
-        .eq('user_identifier', userIdentifier)
-        .single();
+        .eq('user_identifier', user.id)
+        .maybeSingle();
 
       setIsLiked(!!data);
     } catch (error) {
       // 좋아요가 없으면 에러가 발생할 수 있음 (정상)
+      setIsLiked(false);
     }
   };
 
   const loadRating = async () => {
     try {
-      const userIdentifier = localStorage.getItem('user_id') || 'anonymous';
+      if (!user) {
+        setUserRating(null);
+      }
       
       // 평균 별점과 개수 계산
       const { data: ratings, error: ratingsError } = await supabase
@@ -200,31 +234,45 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
         setRatingCount(0);
       }
 
-      // 사용자 별점 확인
-      const { data: userRatingData } = await supabase
-        .from('problem_difficulty_ratings')
-        .select('rating')
-        .eq('problem_id', problemId)
-        .eq('user_identifier', userIdentifier)
-        .single();
+      // 사용자 별점 확인 (로그인한 경우에만)
+      if (user) {
+        const { data: userRatingData } = await supabase
+          .from('problem_difficulty_ratings')
+          .select('rating')
+          .eq('problem_id', problemId)
+          .eq('user_id', user.id)
+          .single();
 
-      setUserRating(userRatingData?.rating || null);
+        setUserRating(userRatingData?.rating || null);
+      }
     } catch (error) {
       console.error('별점 로드 오류:', error);
+      // 사용자 별점이 없는 경우 에러가 발생할 수 있음 (정상)
+      if (user) {
+        setUserRating(null);
+      }
     }
   };
 
   const handleRatingClick = async (rating: number) => {
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      router.push('/auth/login');
+      return;
+    }
+
     try {
-      const userIdentifier = localStorage.getItem('user_id') || 'anonymous';
-      
       // 기존 별점이 있으면 업데이트, 없으면 생성
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from('problem_difficulty_ratings')
         .select('id')
         .eq('problem_id', problemId)
-        .eq('user_identifier', userIdentifier)
-        .single();
+        .eq('user_id', user.id)
+        .maybeSingle(); // single() 대신 maybeSingle() 사용 (데이터가 없어도 에러 발생 안 함)
+
+      if (existingError && existingError.code !== 'PGRST116') { // PGRST116은 "no rows returned" 에러
+        throw existingError;
+      }
 
       if (existing) {
         // 업데이트
@@ -232,7 +280,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
           .from('problem_difficulty_ratings')
           .update({ rating, updated_at: new Date().toISOString() })
           .eq('problem_id', problemId)
-          .eq('user_identifier', userIdentifier);
+          .eq('user_id', user.id);
 
         if (error) throw error;
       } else {
@@ -241,7 +289,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
           .from('problem_difficulty_ratings')
           .insert({
             problem_id: problemId,
-            user_identifier: userIdentifier,
+            user_id: user.id,
             rating,
           });
 
@@ -250,9 +298,20 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
 
       setUserRating(rating);
       await loadRating(); // 평균 별점 다시 계산
-    } catch (error) {
+    } catch (error: any) {
       console.error('별점 투표 오류:', error);
-      alert('별점 투표에 실패했습니다.');
+      console.error('오류 메시지:', error?.message);
+      console.error('오류 코드:', error?.code);
+      console.error('오류 상세:', JSON.stringify(error, null, 2));
+      
+      let errorMessage = '별점 투표에 실패했습니다.';
+      if (error?.message) {
+        errorMessage = `별점 투표 오류: ${error.message}`;
+      } else if (error?.code) {
+        errorMessage = `별점 투표 오류 (코드: ${error.code})`;
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -335,18 +394,34 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
   };
 
   const handleSubmitComment = async () => {
-    if (!commentText.trim() || !commentNickname.trim()) {
-      alert('닉네임과 댓글을 입력해주세요.');
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      router.push('/auth/login');
+      return;
+    }
+
+    if (!commentText.trim()) {
+      alert('댓글을 입력해주세요.');
       return;
     }
 
     try {
+      // 사용자 닉네임 가져오기
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('nickname')
+        .eq('id', user.id)
+        .single();
+
+      const nickname = userProfile?.nickname || user.email?.split('@')[0] || '익명';
+
       const { error } = await supabase
         .from('problem_comments')
         .insert({
           problem_id: problemId,
-          nickname: commentNickname.trim(),
+          nickname: nickname,
           text: commentText.trim(),
+          user_id: user.id,
         });
 
       if (error) throw error;
@@ -355,23 +430,74 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
       loadComments();
     } catch (error) {
       console.error('댓글 제출 오류:', error);
-      alert('댓글 제출에 실패했습니다.');
+      alert('댓글 작성에 실패했습니다.');
+    }
+  };
+
+  const handleEditComment = (comment: ProblemComment) => {
+    setEditingCommentId(comment.id);
+    setEditCommentText(comment.text);
+  };
+
+  const handleSaveEditComment = async () => {
+    if (!editingCommentId || !editCommentText.trim() || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('problem_comments')
+        .update({ text: editCommentText.trim() })
+        .eq('id', editingCommentId)
+        .eq('user_id', user.id); // 본인 댓글만 수정 가능
+
+      if (error) throw error;
+
+      setEditingCommentId(null);
+      setEditCommentText('');
+      loadComments();
+    } catch (error) {
+      console.error('댓글 수정 오류:', error);
+      alert('댓글 수정에 실패했습니다.');
+    }
+  };
+
+  const handleCancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditCommentText('');
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('댓글을 삭제하시겠습니까?')) return;
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('problem_comments')
+        .delete()
+        .eq('id', commentId)
+        .eq('user_id', user.id); // 본인 댓글만 삭제 가능
+
+      if (error) throw error;
+
+      loadComments();
+    } catch (error) {
+      console.error('댓글 삭제 오류:', error);
+      alert('댓글 삭제에 실패했습니다.');
     }
   };
 
   const handleLike = async () => {
     if (!problem) return;
 
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      router.push('/auth/login');
+      return;
+    }
+
     const previousIsLiked = isLiked;
     const previousLikeCount = problem.like_count || 0;
 
     try {
-      // 사용자 식별자 가져오기 또는 생성
-      let userIdentifier = localStorage.getItem('user_id');
-      if (!userIdentifier) {
-        userIdentifier = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        localStorage.setItem('user_id', userIdentifier);
-      }
 
       // Optimistic UI 업데이트
       const newIsLiked = !isLiked;
@@ -388,7 +514,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
           .from('problem_likes')
           .insert({
             problem_id: problemId,
-            user_identifier: userIdentifier,
+            user_identifier: user.id,
           });
 
         if (error) {
@@ -406,7 +532,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
           .from('problem_likes')
           .delete()
           .eq('problem_id', problemId)
-          .eq('user_identifier', userIdentifier);
+          .eq('user_identifier', user.id);
 
         if (deleteError) throw deleteError;
 
@@ -448,22 +574,9 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
     }
   };
 
-  const handleAdminLogin = () => {
-    if (!problem) return;
-    
-    if (adminPassword === problem.admin_password) {
-      setIsAdmin(true);
-      setShowAdminModal(false);
-      setAdminPassword('');
-      alert('관리자 모드가 활성화되었습니다.');
-    } else {
-      alert('비밀번호가 올바르지 않습니다.');
-      setAdminPassword('');
-    }
-  };
 
   const handleAnswerQuestion = async (questionId: string, answer: 'yes' | 'no' | 'irrelevant' | 'decisive') => {
-    if (!isAdmin) return;
+    if (!isOwner) return;
 
     try {
       const { error } = await supabase
@@ -482,7 +595,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
   };
 
   const handleSaveEdit = async () => {
-    if (!isAdmin || !problem) return;
+    if (!isOwner || !problem) return;
 
     if (!editTitle.trim() || !editContent.trim() || !editAnswer.trim()) {
       alert('모든 필수 항목을 입력해주세요.');
@@ -496,8 +609,8 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
           title: editTitle.trim(),
           content: editContent.trim(),
           answer: editAnswer.trim(),
-          difficulty: editDifficulty,
-          tags: editTags,
+          difficulty: 'medium',
+          tags: [],
           updated_at: new Date().toISOString(),
         })
         .eq('id', problemId);
@@ -518,27 +631,10 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
       setEditTitle(problem.title);
       setEditContent(problem.content);
       setEditAnswer(problem.answer);
-      setEditDifficulty(problem.difficulty);
-      setEditTags(problem.tags);
     }
     setIsEditing(false);
   };
 
-  const toggleTag = (tag: string) => {
-    setEditTags(prev => 
-      prev.includes(tag) 
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
-    );
-  };
-
-  const AVAILABLE_TAGS = [
-    '공포', '추리', '개그', '역사', '과학', '일상', '판타지', '미스터리',
-    '로맨스', '액션', '스릴러', '코미디', '드라마', 'SF', '호러', '범죄',
-    '심리', '철학', '종교', '정치', '경제', '스포츠', '음악', '예술',
-    '문학', '동물', '자연', '우주', '시간여행', '초능력', '좀비', '뱀파이어',
-    '마법', '전쟁', '모험', '서바이벌', '의학', '법률', '교육', '직업'
-  ];
 
   const getDifficultyFromRating = (rating: number): { text: string; color: string; emoji: string } => {
     if (rating === 0) {
@@ -649,8 +745,19 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                 </h1>
               )}
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-400">
-                <span>출제자: {problem.author}</span>
                 <div className="flex items-center gap-2 flex-wrap">
+                  <span className="flex items-center gap-1">
+                    <i className="ri-eye-line"></i>
+                    {problem.view_count || 0}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <i className="ri-heart-line"></i>
+                    {problem.like_count || 0}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <i className="ri-chat-3-line"></i>
+                    {problem.comment_count || 0}
+                  </span>
                   <span className="flex items-center gap-1">
                     {difficultyBadge.emoji} {difficultyBadge.text}
                   </span>
@@ -663,33 +770,48 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-4 flex-wrap w-full sm:w-auto">
-              {isAdmin && (
+              {isOwner && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-purple-500/50">
-                    <span className="text-purple-400 text-xs font-semibold">
-                      <i className="ri-vip-crown-line mr-1"></i>
-                      관리자
-                    </span>
-                  </div>
                   {!isEditing && (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="px-2 sm:px-3 py-1.5 sm:py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-all text-xs sm:text-sm"
-                    >
-                      <i className="ri-edit-line mr-1"></i>
-                      <span className="hidden sm:inline">수정</span>
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          if (problem) {
+                            setEditTitle(problem.title);
+                            setEditContent(problem.content);
+                            setEditAnswer(problem.answer);
+                          }
+                          setIsEditing(true);
+                        }}
+                        className="px-2 sm:px-3 py-1.5 sm:py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-all text-xs sm:text-sm"
+                      >
+                        <i className="ri-edit-line mr-1"></i>
+                        <span className="hidden sm:inline">수정</span>
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('문제를 삭제하시겠습니까?')) return;
+                          try {
+                            const { error } = await supabase
+                              .from('problems')
+                              .delete()
+                              .eq('id', problemId);
+                            if (error) throw error;
+                            alert('문제가 삭제되었습니다.');
+                            router.push('/problems');
+                          } catch (error) {
+                            console.error('문제 삭제 오류:', error);
+                            alert('문제 삭제에 실패했습니다.');
+                          }
+                        }}
+                        className="px-2 sm:px-3 py-1.5 sm:py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all text-xs sm:text-sm"
+                      >
+                        <i className="ri-delete-bin-line mr-1"></i>
+                        <span className="hidden sm:inline">삭제</span>
+                      </button>
+                    </>
                   )}
                 </div>
-              )}
-              {!isAdmin && (
-                <button
-                  onClick={() => setShowAdminModal(true)}
-                  className="px-2 sm:px-3 py-1.5 sm:py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-all text-xs sm:text-sm"
-                >
-                  <i className="ri-settings-3-line mr-1"></i>
-                  <span className="hidden sm:inline">관리자 모드</span>
-                </button>
               )}
               <button
                 onClick={handleLike}
@@ -793,72 +915,6 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                 <div className="text-right text-xs text-slate-500 mt-1">
                   {editAnswer.length} / 2000
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-slate-300">난이도</label>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setEditDifficulty('easy')}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                      editDifficulty === 'easy'
-                        ? 'bg-green-500 text-white'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
-                  >
-                    쉬움
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditDifficulty('medium')}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                      editDifficulty === 'medium'
-                        ? 'bg-yellow-500 text-white'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
-                  >
-                    중간
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditDifficulty('hard')}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                      editDifficulty === 'hard'
-                        ? 'bg-red-500 text-white'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
-                  >
-                    어려움
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-slate-300">해시태그</label>
-                <div className="flex flex-wrap gap-2">
-                  {AVAILABLE_TAGS.map(tag => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleTag(tag)}
-                      className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-                        editTags.includes(tag)
-                          ? 'bg-purple-500 text-white'
-                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-                {editTags.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {editTags.map(tag => (
-                      <span key={tag} className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-lg text-xs">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
               <div className="flex gap-3">
                 <button
@@ -1178,7 +1234,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
           </div>
 
           {/* DB 질문 목록 (관리자용) */}
-          {isAdmin && questions.length > 0 && (
+          {isOwner && questions.length > 0 && (
             <div className="mt-6">
               <h3 className="text-lg font-semibold mb-3">DB 질문 목록 (관리자)</h3>
               <div className="space-y-3">
@@ -1188,12 +1244,12 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                     <div 
                       key={q.id} 
                       className={`bg-slate-900 rounded-lg p-4 border transition-all ${
-                        selectedQuestionId === q.id && isAdmin
+                        selectedQuestionId === q.id && isOwner
                           ? 'border-purple-500 bg-purple-500/10'
                           : 'border-slate-700'
-                      } ${isAdmin && !q.answer ? 'cursor-pointer hover:border-purple-500/50' : ''}`}
+                      } ${isOwner && !q.answer ? 'cursor-pointer hover:border-purple-500/50' : ''}`}
                       onClick={() => {
-                        if (isAdmin && !q.answer) {
+                        if (isOwner && !q.answer) {
                           setSelectedQuestionId(q.id === selectedQuestionId ? null : q.id);
                         }
                       }}
@@ -1215,7 +1271,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
           )}
 
           {/* 관리자 답변 버튼 */}
-          {isAdmin && selectedQuestionId && (
+          {isOwner && selectedQuestionId && (
             <div className="mt-4">
               <ProblemAdminButtons
                 onAnswer={(answer) => handleAnswerQuestion(selectedQuestionId, answer)}
@@ -1231,24 +1287,25 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
             댓글
           </h2>
           <div className="space-y-3 mb-4">
-            <input
-              type="text"
-              placeholder="닉네임"
-              value={commentNickname}
-              onChange={(e) => setCommentNickname(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm sm:text-base"
-              maxLength={20}
-            />
+            {!user && (
+              <div className="bg-yellow-500/10 border border-yellow-500/50 text-yellow-400 rounded-lg p-3 text-sm">
+                댓글을 작성하려면 로그인이 필요합니다.{' '}
+                <Link href="/auth/login" className="underline hover:text-yellow-300">
+                  로그인하기
+                </Link>
+              </div>
+            )}
             <textarea
-              placeholder="댓글을 입력하세요..."
+              placeholder={user ? "댓글을 입력하세요..." : "로그인이 필요합니다"}
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 h-24 resize-none text-sm sm:text-base"
+              disabled={!user}
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 h-24 resize-none text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
               maxLength={500}
             />
             <button
               onClick={handleSubmitComment}
-              disabled={!commentText.trim() || !commentNickname.trim()}
+              disabled={!commentText.trim() || !user}
               className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2.5 sm:py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base touch-manipulation"
             >
               댓글 작성
@@ -1260,60 +1317,73 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
             {comments.length === 0 ? (
               <p className="text-slate-400 text-xs sm:text-sm">아직 댓글이 없습니다.</p>
             ) : (
-              comments.map(comment => (
-                <div key={comment.id} className="bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700">
-                  <div className="flex items-start justify-between mb-2 gap-2">
-                    <span className="text-xs sm:text-sm font-semibold text-cyan-400 break-words">{comment.nickname}</span>
-                    <span className="text-xs text-slate-500 flex-shrink-0">
-                      {new Date(comment.created_at).toLocaleDateString('ko-KR')}
-                    </span>
+              comments.map(comment => {
+                const isOwner = user && comment.user_id === user.id;
+                const isEditingThis = editingCommentId === comment.id;
+                
+                return (
+                  <div key={comment.id} className="bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700">
+                    <div className="flex items-start justify-between mb-2 gap-2">
+                      <span className="text-xs sm:text-sm font-semibold text-cyan-400 break-words">{comment.nickname}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs text-slate-500">
+                          {new Date(comment.created_at).toLocaleDateString('ko-KR')}
+                        </span>
+                        {isOwner && !isEditingThis && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleEditComment(comment)}
+                              className="text-xs text-slate-400 hover:text-teal-400 transition-colors p-1"
+                              title="수정"
+                            >
+                              <i className="ri-edit-line"></i>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteComment(comment.id)}
+                              className="text-xs text-slate-400 hover:text-red-400 transition-colors p-1"
+                              title="삭제"
+                            >
+                              <i className="ri-delete-bin-line"></i>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {isEditingThis ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={editCommentText}
+                          onChange={(e) => setEditCommentText(e.target.value)}
+                          className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-xs sm:text-sm resize-none"
+                          rows={3}
+                          maxLength={500}
+                        />
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={handleSaveEditComment}
+                            className="px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white rounded-lg text-xs font-semibold transition-all"
+                          >
+                            저장
+                          </button>
+                          <button
+                            onClick={handleCancelEditComment}
+                            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold transition-all"
+                          >
+                            취소
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs sm:text-sm text-white break-words">{comment.text}</p>
+                    )}
                   </div>
-                  <p className="text-xs sm:text-sm text-white break-words">{comment.text}</p>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
       </div>
 
-      {/* 관리자 모드 로그인 모달 */}
-      {showAdminModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl p-4 sm:p-6 lg:p-8 max-w-md w-full border border-slate-700">
-            <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-white">관리자 모드</h3>
-            <p className="text-xs sm:text-sm text-slate-400 mb-3 sm:mb-4">관리 비밀번호를 입력하세요.</p>
-            <input
-              type="password"
-              placeholder="관리 비밀번호"
-              value={adminPassword}
-              onChange={(e) => setAdminPassword(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleAdminLogin();
-                }
-              }}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 mb-3 sm:mb-4 text-sm sm:text-base"
-            />
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <button
-                onClick={handleAdminLogin}
-                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2.5 sm:py-3 rounded-lg transition-all text-sm sm:text-base touch-manipulation"
-              >
-                로그인
-              </button>
-              <button
-                onClick={() => {
-                  setShowAdminModal(false);
-                  setAdminPassword('');
-                }}
-                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 sm:py-3 rounded-lg transition-all text-sm sm:text-base touch-manipulation"
-              >
-                취소
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

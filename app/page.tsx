@@ -21,16 +21,16 @@ export default function Home() {
             <div className="flex items-center gap-2 mb-3">
               <i className="ri-group-line text-teal-400 text-lg sm:text-xl"></i>
               <h2 className="text-base sm:text-lg font-semibold text-teal-400">멀티플레이어</h2>
-            </div>
+        </div>
             <p className="text-xs sm:text-sm text-slate-400 mb-4">친구들과 함께 실시간으로 게임을 즐기세요</p>
             
             <Link href="/rooms">
               <button className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-teal-500/50 text-sm sm:text-base">
                 <i className="ri-group-line mr-2"></i>
                 멀티 플레이
-              </button>
-            </Link>
-          </div>
+            </button>
+          </Link>
+            </div>
 
           {/* 오프라인 섹션 */}
           <div className="bg-slate-800/50 rounded-xl p-4 sm:p-5 lg:p-6 border border-slate-700">

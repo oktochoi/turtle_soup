@@ -16,17 +16,8 @@ export default function ProblemsPage() {
   
   // 필터 상태
   const [difficultyFilter, setDifficultyFilter] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
-  const [tagFilter, setTagFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('latest');
-
-  const AVAILABLE_TAGS = [
-    '공포', '추리', '개그', '역사', '과학', '일상', '판타지', '미스터리',
-    '로맨스', '액션', '스릴러', '코미디', '드라마', 'SF', '호러', '범죄',
-    '심리', '철학', '종교', '정치', '경제', '스포츠', '음악', '예술',
-    '문학', '동물', '자연', '우주', '시간여행', '초능력', '좀비', '뱀파이어',
-    '마법', '전쟁', '모험', '서바이벌', '의학', '법률', '교육', '직업'
-  ];
 
   useEffect(() => {
     loadProblems();
@@ -34,7 +25,7 @@ export default function ProblemsPage() {
 
   useEffect(() => {
     filterAndSortProblems();
-  }, [problems, difficultyFilter, tagFilter, searchQuery, sortOption]);
+  }, [problems, difficultyFilter, searchQuery, sortOption]);
 
   const loadProblems = async () => {
     try {
@@ -71,9 +62,23 @@ export default function ProblemsPage() {
       );
 
       setProblems(problemsWithRatings);
-    } catch (error) {
-      console.error('문제 로드 오류:', error);
-      alert('문제를 불러올 수 없습니다.');
+    } catch (error: any) {
+      // AbortError는 무해한 에러이므로 무시 (컴포넌트 언마운트 시 발생 가능)
+      if (error?.name !== 'AbortError' && error?.message?.includes('aborted') === false) {
+        console.error('문제 로드 오류:', error);
+        console.error('오류 메시지:', error?.message);
+        console.error('오류 코드:', error?.code);
+        console.error('오류 상세:', JSON.stringify(error, null, 2));
+        
+        let errorMessage = '문제를 불러올 수 없습니다.';
+        if (error?.message) {
+          errorMessage = `문제 로드 오류: ${error.message}`;
+        } else if (error?.code) {
+          errorMessage = `문제 로드 오류 (코드: ${error.code})`;
+        }
+        
+        alert(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -91,11 +96,6 @@ export default function ProblemsPage() {
         if (difficultyFilter === 'hard') return rating >= 4;
         return true;
       });
-    }
-
-    // 해시태그 필터
-    if (tagFilter !== 'all') {
-      filtered = filtered.filter(p => p.tags.includes(tagFilter));
     }
 
     // 검색 필터
@@ -232,36 +232,6 @@ export default function ProblemsPage() {
               </div>
             </div>
 
-            {/* 해시태그 필터 */}
-            <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">해시태그:</label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setTagFilter('all')}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
-                    tagFilter === 'all'
-                      ? 'bg-teal-500 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                  }`}
-                >
-                  모두
-                </button>
-                {AVAILABLE_TAGS.map(tag => (
-                  <button
-                    key={tag}
-                    onClick={() => setTagFilter(tagFilter === tag ? 'all' : tag)}
-                    className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
-                      tagFilter === tag
-                        ? 'bg-teal-500 text-white'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
-                  >
-                    #{tag}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* 정렬 */}
             <div>
               <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">정렬:</label>
@@ -343,26 +313,19 @@ export default function ProblemsPage() {
                     {truncateText(problem.content, 100)}
                   </p>
 
-                  {problem.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3 sm:mb-4">
-                      {problem.tags.slice(0, 3).map(tag => (
-                        <span key={tag} className="px-2 py-0.5 bg-teal-500/20 text-teal-400 rounded text-xs">
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3 sm:mb-4 text-xs sm:text-sm text-slate-400">
-                    <span className="break-words">작성자: {problem.author}</span>
                     <div className="flex items-center gap-2 sm:gap-3">
                       <span className="flex items-center gap-1">
+                        <i className="ri-eye-line"></i>
+                        {problem.view_count || 0}
+                      </span>
+                      <span className="flex items-center gap-1">
                         <i className="ri-heart-line"></i>
-                        {problem.like_count}
+                        {problem.like_count || 0}
                       </span>
                       <span className="flex items-center gap-1">
                         <i className="ri-chat-3-line"></i>
-                        {problem.comment_count}
+                        {problem.comment_count || 0}
                       </span>
                     </div>
                   </div>
