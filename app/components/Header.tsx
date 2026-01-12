@@ -54,7 +54,7 @@ export default function Header() {
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    setUser(null);
+    // useAuth 훅이 자동으로 인증 상태를 업데이트합니다
     router.push('/');
     router.refresh();
   };
