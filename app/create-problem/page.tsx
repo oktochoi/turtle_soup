@@ -5,34 +5,27 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase/client';
-import { User } from '@supabase/supabase-js';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 export default function CreateProblem() {
   const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [answer, setAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        alert('로그인이 필요합니다.');
-        router.push('/auth/login');
-        return;
-      }
-      
-      setUser(user);
+    if (!authLoading && !user) {
+      alert('로그인이 필요합니다.');
+      router.push('/auth/login');
+      return;
+    }
+    if (!authLoading) {
       setIsLoading(false);
-    };
-
-    checkAuth();
-  }, [router]);
+    }
+  }, [user, authLoading, router]);
 
   const handleSubmit = async () => {
     if (!user) {

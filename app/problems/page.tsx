@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import type { Problem } from '@/lib/types';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 type SortOption = 'latest' | 'popular' | 'difficulty';
 
 export default function ProblemsPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [problems, setProblems] = useState<Problem[]>([]);
   const [filteredProblems, setFilteredProblems] = useState<Problem[]>([]);
   const [isLoading, setIsLoading] = useState(true);

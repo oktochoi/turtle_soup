@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { Problem, ProblemQuestion, ProblemComment } from '@/lib/types';
 import { analyzeQuestion, calculateAnswerSimilarity, initializeModel } from '@/lib/ai-analyzer';
 import ProblemAdminButtons from './ProblemAdminButtons';
-import { User } from '@supabase/supabase-js';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 export default function ProblemPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -39,26 +39,9 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
   const [similarityScore, setSimilarityScore] = useState<number | null>(null);
   const [isCalculatingSimilarity, setIsCalculatingSimilarity] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    
-    checkAuth();
-    
-    const supabase = createClient();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   useEffect(() => {
     loadProblem();

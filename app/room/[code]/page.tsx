@@ -4,6 +4,7 @@ import { use, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { Question, Guess, Room } from '@/lib/types';
+import { useAuth } from '@/lib/hooks/useAuth';
 import StoryPanel from './StoryPanel';
 import QuestionInput from './QuestionInput';
 import QuestionList from './QuestionList';
@@ -34,6 +35,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   const resolvedParams = use(params);
   const roomCode = resolvedParams.code;
   const router = useRouter();
+  const { user } = useAuth();
   
   const [isHost, setIsHost] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);

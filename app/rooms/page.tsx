@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 type Room = {
   code: string;
@@ -17,6 +18,7 @@ type Room = {
 
 export default function RoomsPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [filteredRooms, setFilteredRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);

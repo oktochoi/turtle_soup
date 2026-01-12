@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 export default function CreateRoom() {
   const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
   const [story, setStory] = useState('');
   const [truth, setTruth] = useState('');
   const [maxQuestions, setMaxQuestions] = useState<number | null>(30);
@@ -14,6 +16,15 @@ export default function CreateRoom() {
   const [password, setPassword] = useState('');
   const [usePassword, setUsePassword] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      // 로그인하지 않아도 방 생성 가능 (선택적)
+      // 필요시 아래 주석을 해제하여 로그인 필수로 변경
+      // alert('로그인이 필요합니다.');
+      // router.push('/auth/login');
+    }
+  }, [user, authLoading, router]);
 
   const generateRoomCode = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
