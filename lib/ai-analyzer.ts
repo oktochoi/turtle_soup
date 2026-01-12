@@ -188,7 +188,11 @@ async function mapWithConcurrency<T, R>(
 // -------------------------
 // 부정/모달리티 (간단)
 // -------------------------
-const NEGATION_PATTERNS = ["아니", "아니다", "아닌", "안 ", "못 ", "없", "전혀", "절대", "결코", "틀렸"];
+const NEGATION_PATTERNS = [
+  "아니", "아니다", "아닌", "안 ", "못 ", "없", "전혀", "절대", "결코", "틀렸",
+  "지 않", "지않", "지 못", "지못", "하지 않", "하지않", "하지 못", "하지못",
+  "않았", "않는", "않을", "못했", "못하는", "못할", "안 했", "안했", "안 하는", "안하는"
+];
 const MODALITY_PATTERNS = ["가능", "일 수도", "아마", "추정", "확실", "반드시", "모르", "불확실", "어쩌면"];
 
 function hasAny(text: string, patterns: string[]) {
@@ -530,7 +534,18 @@ export async function analyzeQuestionSemanticV7(
     let simAnswerAdj = simAnswerMax;
     let simContentAdj = simContentMax;
 
-    if (qNeg !== aNeg) simAnswerAdj -= CONFIG.ADJUST.NEGATION_MISMATCH_PENALTY;
+    // 부정 질문 처리: "죽이지 않았나요?" 같은 질문은 답변을 반전시켜야 함
+    // 질문에 부정이 있고, 정답에 부정이 없으면 -> 유사도를 반전
+    // 예: Q: "죽이지 않았나요?" (부정) + A: "죽였다" (긍정) -> NO가 되어야 함
+    if (qNeg && !aNeg) {
+      // 부정 질문에 긍정 답변 -> 유사도를 반전 (높은 유사도 = NO, 낮은 유사도 = YES)
+      simAnswerAdj = 1 - simAnswerAdj;
+      simContentAdj = 1 - simContentAdj;
+    } else if (qNeg !== aNeg) {
+      // 부정이 일치하지 않으면 페널티
+      simAnswerAdj -= CONFIG.ADJUST.NEGATION_MISMATCH_PENALTY;
+    }
+    
     if (qMod !== aMod) simAnswerAdj -= CONFIG.ADJUST.MODALITY_MISMATCH_PENALTY;
 
     // -------------------------
