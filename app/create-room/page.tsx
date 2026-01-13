@@ -70,18 +70,28 @@ export default function CreateRoom() {
       }
 
       // 방 생성
+      const currentLang = 'ko'; // 기본값, 나중에 lang 파라미터에서 가져올 예정
+      const insertData: any = {
+        code: roomCode,
+        story: story.trim(),
+        truth: truth.trim(),
+        max_questions: maxQuestions || 999999, // null이면 매우 큰 값으로 설정 (무제한)
+        host_nickname: nickname.trim(),
+        password: usePassword && password.trim() ? password.trim() : null,
+        game_ended: false,
+        status: 'active',
+      };
+      
+      // lang 컬럼이 있으면 추가
+      try {
+        insertData.lang = currentLang;
+      } catch (e) {
+        // lang 컬럼이 없으면 무시
+      }
+      
       const { data: room, error: roomError } = await supabase
         .from('rooms')
-        .insert({
-          code: roomCode,
-          story: story.trim(),
-          truth: truth.trim(),
-          max_questions: maxQuestions || 999999, // null이면 매우 큰 값으로 설정 (무제한)
-          host_nickname: nickname.trim(),
-          password: usePassword && password.trim() ? password.trim() : null,
-          game_ended: false,
-          status: 'active',
-        })
+        .insert(insertData)
         .select()
         .single();
 

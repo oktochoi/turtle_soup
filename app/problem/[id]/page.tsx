@@ -9,6 +9,7 @@ import type { Problem, ProblemQuestion, ProblemComment } from '@/lib/types';
 import { buildProblemKnowledge, analyzeQuestionV8, calculateAnswerSimilarity, initializeModel, type ProblemKnowledge } from '@/lib/ai-analyzer';
 import ProblemAdminButtons from './ProblemAdminButtons';
 import { useAuth } from '@/lib/hooks/useAuth';
+import UserLabel from '@/components/UserLabel';
 
 export default function ProblemPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -43,6 +44,10 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
   const [problemKnowledge, setProblemKnowledge] = useState<ProblemKnowledge | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [hasSubmittedAnswer, setHasSubmittedAnswer] = useState(false);
+  const [authorGameUserId, setAuthorGameUserId] = useState<string | null>(null);
+  const [commentGameUserIds, setCommentGameUserIds] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     loadProblem();
@@ -135,6 +140,19 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
       if (error) throw error;
       setProblem(data);
       
+      // 작성자의 game_user_id 찾기
+      if (data.user_id) {
+        const { data: gameUser } = await supabase
+          .from('game_users')
+          .select('id')
+          .eq('auth_user_id', data.user_id)
+          .maybeSingle();
+
+        if (gameUser) {
+          setAuthorGameUserId(gameUser.id);
+        }
+      }
+      
       // 문제 로드 시 knowledge 생성 (V8 방식)
       if (data && data.content && data.answer) {
         try {
@@ -179,6 +197,23 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
 
       if (error) throw error;
       setComments(data || []);
+
+      // 각 댓글 작성자의 game_user_id 찾기
+      const userIds = new Map<string, string>();
+      for (const comment of data || []) {
+        if (comment.user_id) {
+          const { data: gameUser } = await supabase
+            .from('game_users')
+            .select('id')
+            .eq('auth_user_id', comment.user_id)
+            .maybeSingle();
+
+          if (gameUser) {
+            userIds.set(comment.id, gameUser.id);
+          }
+        }
+      }
+      setCommentGameUserIds(userIds);
     } catch (error) {
       console.error('댓글 로드 오류:', error);
     }
@@ -195,7 +230,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
         .from('problem_likes')
         .select('id')
         .eq('problem_id', problemId)
-        .eq('user_identifier', user.id)
+        .eq('user_id', user.id)
         .maybeSingle();
 
       setIsLiked(!!data);
@@ -441,14 +476,14 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
     }
 
     try {
-      // 사용자 닉네임 가져오기
-      const { data: userProfile } = await supabase
-        .from('users')
+      // game_users에서 닉네임 가져오기
+      const { data: gameUser } = await supabase
+        .from('game_users')
         .select('nickname')
-        .eq('id', user.id)
-        .single();
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
 
-      const nickname = userProfile?.nickname || user.email?.split('@')[0] || '익명';
+      const nickname = gameUser?.nickname || user.email?.split('@')[0] || '익명';
 
       const { error } = await supabase
         .from('problem_comments')
@@ -529,6 +564,26 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
       return;
     }
 
+    if (!user.id) {
+      console.error('사용자 ID가 없습니다:', user);
+      alert('사용자 정보를 불러올 수 없습니다. 다시 로그인해주세요.');
+      return;
+    }
+
+    // UUID 형식 검증
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(user.id)) {
+      console.error('잘못된 사용자 ID 형식:', user.id);
+      alert('사용자 정보가 올바르지 않습니다. 다시 로그인해주세요.');
+      return;
+    }
+
+    if (!problemId || !uuidRegex.test(problemId)) {
+      console.error('잘못된 문제 ID 형식:', problemId);
+      alert('문제 정보가 올바르지 않습니다.');
+      return;
+    }
+
     const previousIsLiked = isLiked;
     const previousLikeCount = problem.like_count || 0;
 
@@ -544,32 +599,113 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
       setProblem(prev => prev ? { ...prev, like_count: newLikeCount } : null);
 
       if (newIsLiked) {
-        // 좋아요 추가
-        const { error } = await supabase
+        // 먼저 이미 좋아요가 있는지 확인
+        const { data: existingLike, error: checkError } = await supabase
           .from('problem_likes')
-          .insert({
-            problem_id: problemId,
-            user_identifier: user.id,
-          });
+          .select('id')
+          .eq('problem_id', problemId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (checkError && checkError.code !== 'PGRST116') { // PGRST116은 "not found" 에러
+          console.error('좋아요 확인 오류:', checkError);
+        }
+
+        if (existingLike) {
+          // 이미 좋아요가 있으므로 상태만 업데이트
+          console.log('이미 좋아요가 존재함');
+          setIsLiked(true);
+          return;
+        }
+
+        // 좋아요 추가
+        const insertData = {
+          problem_id: problemId,
+          user_id: user.id,
+          user_identifier: null, // user_id를 사용하므로 user_identifier는 NULL
+        };
+        
+        console.log('좋아요 추가 시도:', insertData);
+        console.log('사용자 정보:', { id: user.id, email: user.email });
+        console.log('문제 ID:', problemId);
+        
+        const { data, error } = await supabase
+          .from('problem_likes')
+          .insert(insertData)
+          .select()
+          .single();
 
         if (error) {
+          // 에러 객체 전체를 JSON으로 변환하여 로깅
+          const errorString = JSON.stringify(error, Object.getOwnPropertyNames(error), 2);
+          console.error('좋아요 추가 오류 상세:', {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+            status: (error as any).status,
+            statusText: (error as any).statusText,
+            error: errorString,
+            fullError: error
+          });
+          
           // UNIQUE 제약 조건 위반 (이미 좋아요가 있는 경우)
-          if (error.code === '23505') {
+          if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+            console.log('이미 좋아요가 존재함 (UNIQUE 제약 조건), 상태만 업데이트');
             // 이미 좋아요가 있으므로 상태만 업데이트
             setIsLiked(true);
             return;
           }
+          
+          // 400 에러인 경우 더 자세한 정보 로깅
+          if (error.code === '400' || error.message?.includes('400') || (error as any).status === 400) {
+            console.error('400 에러 상세 정보:', {
+              insertData,
+              user: { id: user.id, email: user.email },
+              problemId: problemId,
+              errorString: errorString,
+              errorObject: error
+            });
+            
+            // RLS 정책 문제일 수 있으므로 확인
+            console.error('RLS 정책 확인 필요 - user_id가 auth.uid()와 일치하는지 확인');
+            console.error('현재 auth.uid():', (await supabase.auth.getUser()).data.user?.id);
+          }
+          
           throw error;
         }
+        
+        console.log('좋아요 추가 성공:', data);
       } else {
         // 좋아요 취소
+        console.log('좋아요 삭제 시도:', { problem_id: problemId, user_id: user.id });
+        
         const { error: deleteError } = await supabase
           .from('problem_likes')
           .delete()
           .eq('problem_id', problemId)
-          .eq('user_identifier', user.id);
+          .eq('user_id', user.id);
 
-        if (deleteError) throw deleteError;
+        if (deleteError) {
+          console.error('좋아요 삭제 오류 상세:', {
+            message: deleteError.message,
+            code: deleteError.code,
+            details: deleteError.details,
+            hint: deleteError.hint,
+            error: deleteError
+          });
+          
+          // 400 에러인 경우 더 자세한 정보 로깅
+          if (deleteError.code === '400' || deleteError.message?.includes('400')) {
+            console.error('400 에러 상세 정보 (삭제):', {
+              problemId: problemId,
+              userId: user.id,
+              error: JSON.stringify(deleteError, null, 2)
+            });
+          }
+          
+          throw deleteError;
+        }
 
         // 트리거가 비동기적으로 작동할 수 있으므로, 수동으로 카운트를 감소시킴
         const { error: updateError } = await supabase
@@ -600,12 +736,26 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
         // 최신 좋아요 개수로 UI 업데이트
         setProblem(prev => prev ? { ...prev, like_count: updatedProblem.like_count } : null);
       }
-    } catch (error) {
-      console.error('좋아요 오류:', error);
+    } catch (error: any) {
+      console.error('좋아요 오류:', {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+        error: error
+      });
       // 실패 시 롤백
       setIsLiked(previousIsLiked);
       setProblem(prev => prev ? { ...prev, like_count: previousLikeCount } : null);
-      alert('좋아요 처리에 실패했습니다.');
+      
+      // 사용자에게 친화적인 오류 메시지 표시
+      let errorMessage = '좋아요 처리에 실패했습니다.';
+      if (error?.message) {
+        errorMessage += `\n\n${error.message}`;
+      } else if (error?.code) {
+        errorMessage += `\n\n오류 코드: ${error.code}`;
+      }
+      alert(errorMessage);
     }
   };
 
@@ -859,6 +1009,14 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                 <i className={`ri-heart-${isLiked ? 'fill' : 'line'}`}></i>
                 <span>{problem.like_count}</span>
               </button>
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-all text-xs sm:text-sm bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white"
+                title="공유하기"
+              >
+                <i className="ri-share-line"></i>
+                <span className="hidden sm:inline">공유</span>
+              </button>
               <div className="flex items-center gap-1 sm:gap-2 text-slate-400 text-xs sm:text-sm">
                 <i className="ri-chat-3-line"></i>
                 <span>{problem.comment_count}</span>
@@ -968,6 +1126,24 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
             </div>
           ) : (
             <div className="bg-slate-900 rounded-lg p-4 sm:p-6 mb-4">
+              {problem.author && (
+                <div className="mb-3 pb-3 border-b border-slate-700">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
+                    <span>작성자:</span>
+                    {authorGameUserId ? (
+                      <Link href={`/profile/${authorGameUserId}`} className="hover:opacity-80 transition-opacity">
+                        <UserLabel
+                          userId={authorGameUserId}
+                          nickname={problem.author}
+                          size="sm"
+                        />
+                      </Link>
+                    ) : (
+                      <span className="text-cyan-400">{problem.author}</span>
+                    )}
+                  </div>
+                </div>
+              )}
               <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{problem.content}</p>
             </div>
           )}
@@ -1164,8 +1340,46 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
 
                     setIsCalculatingSimilarity(true);
                     try {
-                      const similarity = await calculateAnswerSimilarity(userGuess.trim(), problem.answer);
+                      // 문제 내용도 전달하여 맥락을 고려한 정답률 계산
+                      const similarity = await calculateAnswerSimilarity(
+                        userGuess.trim(), 
+                        problem.answer,
+                        problem.content
+                      );
                       setSimilarityScore(similarity);
+                      setHasSubmittedAnswer(true);
+                      
+                      // 정답률 80% 이상이고 로그인한 사용자인 경우 정답 수 증가
+                      if (similarity >= 80 && user) {
+                        try {
+                          // 이미 이 문제를 맞춘 기록이 있는지 확인
+                          const { data: existingSolve } = await supabase
+                            .from('user_problem_solves')
+                            .select('id')
+                            .eq('user_id', user.id)
+                            .eq('problem_id', problemId)
+                            .single();
+                          
+                          // 기록이 없으면 새로 추가
+                          if (!existingSolve) {
+                            const { error: solveError } = await supabase
+                              .from('user_problem_solves')
+                              .insert({
+                                user_id: user.id,
+                                problem_id: problemId,
+                                similarity_score: Math.round(similarity),
+                              });
+                            
+                            if (solveError) {
+                              console.error('정답 기록 저장 오류:', solveError);
+                            } else {
+                              // 성공 메시지는 유사도 결과에 포함되어 있으므로 별도로 표시하지 않음
+                            }
+                          }
+                        } catch (error) {
+                          console.error('정답 수 증가 오류:', error);
+                        }
+                      }
                     } catch (error) {
                       console.error('유사도 계산 오류:', error);
                       alert('유사도 계산에 실패했습니다.');
@@ -1240,22 +1454,31 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
 
               {/* 정답 확인하기 버튼 */}
               <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
-                <button
-                  onClick={() => setShowAnswer(!showAnswer)}
-                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2.5 sm:py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation"
-                >
-                  {showAnswer ? (
-                    <>
-                      <i className="ri-eye-off-line"></i>
-                      정답 숨기기
-                    </>
-                  ) : (
-                    <>
-                      <i className="ri-eye-line"></i>
-                      정답 확인하기
-                    </>
-                  )}
-                </button>
+                {!hasSubmittedAnswer ? (
+                  <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                    <p className="text-sm text-slate-400 text-center">
+                      <i className="ri-information-line mr-2"></i>
+                      정답을 제출한 후에만 정답을 확인할 수 있습니다.
+                    </p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowAnswer(!showAnswer)}
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2.5 sm:py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation"
+                  >
+                    {showAnswer ? (
+                      <>
+                        <i className="ri-eye-off-line"></i>
+                        정답 숨기기
+                      </>
+                    ) : (
+                      <>
+                        <i className="ri-eye-line"></i>
+                        정답 확인하기
+                      </>
+                    )}
+                  </button>
+                )}
 
                 {/* 정답 */}
                 {showAnswer && problem && (
@@ -1359,7 +1582,17 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
                 return (
                   <div key={comment.id} className="bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700">
                     <div className="flex items-start justify-between mb-2 gap-2">
-                      <span className="text-xs sm:text-sm font-semibold text-cyan-400 break-words">{comment.nickname}</span>
+                      {commentGameUserIds.get(comment.id) ? (
+                        <Link href={`/profile/${commentGameUserIds.get(comment.id)}`} className="hover:opacity-80 transition-opacity">
+                          <UserLabel
+                            userId={commentGameUserIds.get(comment.id)!}
+                            nickname={comment.nickname}
+                            size="sm"
+                          />
+                        </Link>
+                      ) : (
+                        <span className="text-xs sm:text-sm font-semibold text-cyan-400 break-words">{comment.nickname}</span>
+                      )}
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <span className="text-xs text-slate-500">
                           {new Date(comment.created_at).toLocaleDateString('ko-KR')}
@@ -1418,6 +1651,212 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
           </div>
         </div>
       </div>
+
+      {/* 공유 모달 */}
+      {showShareModal && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setShowShareModal(false)}
+        >
+          <div 
+            className="bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 rounded-2xl p-6 sm:p-8 max-w-md w-full border border-slate-600 shadow-2xl animate-fade-in-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+                문제 공유하기
+              </h2>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="text-slate-400 hover:text-white transition-colors text-2xl"
+              >
+                <i className="ri-close-line"></i>
+              </button>
+            </div>
+
+            {/* 문제 미리보기 카드 */}
+            <div className="bg-slate-900/50 rounded-xl p-4 sm:p-5 mb-6 border border-slate-600/50">
+              <h3 className="text-lg font-bold text-white mb-2 line-clamp-2">
+                {problem.title}
+              </h3>
+              <p className="text-sm text-slate-300 line-clamp-3 mb-3">
+                {problem.content}
+              </p>
+              <div className="flex items-center gap-3 text-xs text-slate-400">
+                <span className="flex items-center gap-1">
+                  <i className="ri-eye-line"></i>
+                  {problem.view_count || 0}
+                </span>
+                <span className="flex items-center gap-1">
+                  <i className="ri-heart-line"></i>
+                  {problem.like_count || 0}
+                </span>
+                <span className="flex items-center gap-1">
+                  <i className="ri-chat-3-line"></i>
+                  {problem.comment_count || 0}
+                </span>
+              </div>
+            </div>
+
+            {/* 공유 옵션 */}
+            <div className="space-y-3">
+              {/* 카카오톡 공유 */}
+              <button
+                onClick={async () => {
+                  const url = `${window.location.origin}/problem/${problemId}`;
+                  const title = problem.title;
+                  const text = `${title}\n\n${problem.content.substring(0, 100)}...\n\n${url}`;
+                  
+                  // 모바일: 카카오톡 앱으로 직접 공유
+                  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                  if (isMobile) {
+                    // 카카오톡 URL 스킴 시도
+                    const kakaoTalkUrl = `kakaotalk://send?text=${encodeURIComponent(text)}`;
+                    window.location.href = kakaoTalkUrl;
+                    
+                    // 앱이 없으면 3초 후 웹으로 폴백
+                    setTimeout(() => {
+                      const kakaoWebUrl = `https://story.kakao.com/share?url=${encodeURIComponent(url)}`;
+                      window.open(kakaoWebUrl, '_blank');
+                    }, 3000);
+                  } else {
+                    // 데스크톱: 카카오 SDK 또는 웹 공유
+                    const kakao = (window as any).Kakao;
+                    if (kakao && kakao.isInitialized && kakao.isInitialized()) {
+                      kakao.Share.sendDefault({
+                        objectType: 'feed',
+                        content: {
+                          title: title,
+                          description: problem.content.substring(0, 100),
+                          imageUrl: `${window.location.origin}/og-image.png`,
+                          link: {
+                            mobileWebUrl: url,
+                            webUrl: url,
+                          },
+                        },
+                      });
+                    } else {
+                      // 카카오톡 웹 공유
+                      const kakaoWebUrl = `https://story.kakao.com/share?url=${encodeURIComponent(url)}`;
+                      window.open(kakaoWebUrl, '_blank');
+                    }
+                  }
+                  setShowShareModal(false);
+                }}
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition-all font-medium shadow-lg"
+              >
+                <i className="ri-message-3-line text-xl"></i>
+                <span>카카오톡으로 보내기</span>
+              </button>
+
+              {/* 인스타그램 공유 */}
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/problem/${problemId}`;
+                  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                  
+                  if (isMobile) {
+                    // 모바일: 인스타그램 스토리 공유 (스토리 URL 스킴)
+                    const instagramUrl = `instagram://story-camera`;
+                    window.location.href = instagramUrl;
+                    
+                    // 앱이 없으면 웹으로 폴백
+                    setTimeout(() => {
+                      // 인스타그램 웹에서는 직접 공유가 제한적이므로 링크 복사 안내
+                      navigator.clipboard.writeText(url).then(() => {
+                        alert('인스타그램에 공유하려면 링크가 복사되었습니다. 인스타그램 앱에서 붙여넣어주세요.');
+                      }).catch(() => {
+                        alert(`인스타그램에 공유하려면 아래 링크를 복사하세요:\n${url}`);
+                      });
+                    }, 2000);
+                  } else {
+                    // 데스크톱: 인스타그램 웹 (제한적)
+                    navigator.clipboard.writeText(url).then(() => {
+                      alert('링크가 복사되었습니다. 인스타그램에 붙여넣어 공유하세요.');
+                    }).catch(() => {
+                      alert(`인스타그램에 공유하려면 아래 링크를 복사하세요:\n${url}`);
+                    });
+                  }
+                  setShowShareModal(false);
+                }}
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 hover:from-purple-600 hover:via-pink-600 hover:to-orange-600 text-white rounded-lg transition-all font-medium shadow-lg"
+              >
+                <i className="ri-instagram-line text-xl"></i>
+                <span>인스타그램으로 보내기</span>
+              </button>
+
+              {/* 트위터 공유 */}
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/problem/${problemId}`;
+                  const text = `${problem.title} - 거북이 국물 문제를 풀어보세요!`;
+                  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+                  window.open(twitterUrl, '_blank', 'width=550,height=420');
+                  setShowShareModal(false);
+                }}
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-all font-medium"
+              >
+                <i className="ri-twitter-x-line text-xl"></i>
+                <span>트위터 공유</span>
+              </button>
+
+              {/* 페이스북 공유 */}
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/problem/${problemId}`;
+                  const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+                  window.open(facebookUrl, '_blank', 'width=550,height=420');
+                  setShowShareModal(false);
+                }}
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all font-medium"
+              >
+                <i className="ri-facebook-line text-xl"></i>
+                <span>페이스북 공유</span>
+              </button>
+
+              {/* 링크 복사 (하단으로 이동) */}
+              <button
+                onClick={async () => {
+                  const url = `${window.location.origin}/problem/${problemId}`;
+                  try {
+                    await navigator.clipboard.writeText(url);
+                    alert('링크가 클립보드에 복사되었습니다!');
+                    setShowShareModal(false);
+                  } catch (error) {
+                    // 폴백: 텍스트 영역 사용
+                    const textArea = document.createElement('textarea');
+                    textArea.value = url;
+                    textArea.style.position = 'fixed';
+                    textArea.style.opacity = '0';
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    try {
+                      document.execCommand('copy');
+                      alert('링크가 클립보드에 복사되었습니다!');
+                      setShowShareModal(false);
+                    } catch (err) {
+                      alert('링크 복사에 실패했습니다. 수동으로 복사해주세요.');
+                    }
+                    document.body.removeChild(textArea);
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all font-medium border border-slate-600"
+              >
+                <i className="ri-file-copy-line text-xl"></i>
+                <span>링크 복사</span>
+              </button>
+            </div>
+
+            {/* URL 표시 */}
+            <div className="mt-6 p-3 bg-slate-900/50 rounded-lg border border-slate-600/50">
+              <p className="text-xs text-slate-400 mb-1">공유 링크</p>
+              <p className="text-xs text-teal-400 break-all font-mono">
+                {typeof window !== 'undefined' ? `${window.location.origin}/problem/${problemId}` : ''}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

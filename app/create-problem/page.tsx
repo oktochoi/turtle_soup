@@ -57,12 +57,16 @@ export default function CreateProblem() {
         userId: user.id 
       });
       
+      // author 필드 자동 설정 (user_id 기반 또는 이메일)
+      const authorName = user.email?.split('@')[0] || user.id.substring(0, 8) || '사용자';
+      
       const insertData = {
         title: title.trim(),
         content: content.trim(),
         answer: answer.trim(),
         difficulty: 'medium' as const,
         tags: [] as string[],
+        author: authorName,
         user_id: user.id,
       };
       

@@ -362,18 +362,24 @@ export default function ChatPanel({ roomCode, nickname }: ChatPanelProps) {
             type="text"
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
-            placeholder="메시지 입력..."
-            className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-xs sm:text-sm"
+            placeholder={nickname ? "메시지 입력..." : "닉네임을 입력해주세요"}
+            disabled={!nickname}
+            className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             maxLength={200}
           />
           <button
             type="submit"
-            disabled={!messageText.trim()}
+            disabled={!messageText.trim() || !nickname}
             className="px-3 sm:px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm touch-manipulation"
           >
             <i className="ri-send-plane-line"></i>
           </button>
         </div>
+        {!nickname && (
+          <p className="text-xs text-amber-400/70 mt-2 text-center">
+            💡 닉네임을 입력하면 잡담을 할 수 있습니다
+          </p>
+        )}
       </form>
     </div>
   );

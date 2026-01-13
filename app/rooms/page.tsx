@@ -13,6 +13,8 @@ type Room = {
   password: string | null;
   max_questions: number;
   created_at: string;
+  game_ended?: boolean;
+  status?: string;
   player_count: number;
 };
 
@@ -68,12 +70,55 @@ export default function RoomsPage() {
 
   const loadRooms = async () => {
     try {
-      // active 상태인 방들 가져오기
-      const { data: roomsData, error: roomsError } = await supabase
+      // active 상태인 방들 가져오기 (게임이 끝난 방도 포함)
+      const currentLang = 'ko'; // 기본값, 나중에 lang 파라미터에서 가져올 예정
+      
+      let query = supabase
         .from('rooms')
-        .select('code, story, host_nickname, password, max_questions, created_at')
-        .eq('status', 'active')
-        .order('created_at', { ascending: false });
+        .select('code, story, host_nickname, password, max_questions, created_at, game_ended, status, lang')
+        .in('status', ['active', 'done']);
+      
+      // lang 컬럼으로 필터링 시도
+      const result = await query.eq('lang', currentLang).order('created_at', { ascending: false });
+      
+      // lang 컬럼이 없어서 에러가 발생한 경우
+      if (result.error && (result.error.code === '42703' || result.error.message?.includes('column') || result.error.message?.includes('lang'))) {
+        console.warn('lang 컬럼이 없습니다. 모든 방을 가져옵니다. 마이그레이션을 실행해주세요.');
+        // lang 컬럼 없이 모든 방 가져오기
+        const allResult = await supabase
+          .from('rooms')
+          .select('code, story, host_nickname, password, max_questions, created_at, game_ended, status')
+          .in('status', ['active', 'done'])
+          .order('created_at', { ascending: false });
+        
+        if (allResult.error) throw allResult.error;
+        
+        // 클라이언트 사이드에서 필터링 (lang 필드가 있는 경우만)
+        const filteredData = (allResult.data || []).filter((r: any) => !r.lang || r.lang === currentLang);
+        
+        // 각 방의 플레이어 수 가져오기
+        const roomsWithPlayerCount = await Promise.all(
+          filteredData.map(async (room) => {
+            const { count } = await supabase
+              .from('players')
+              .select('*', { count: 'exact', head: true })
+              .eq('room_code', room.code);
+
+            return {
+              ...room,
+              player_count: count || 0,
+            };
+          })
+        );
+
+        setRooms(roomsWithPlayerCount);
+        setFilteredRooms(roomsWithPlayerCount);
+        return;
+      }
+      
+      if (result.error) throw result.error;
+      
+      const roomsData = result.data;
 
       if (roomsError) throw roomsError;
 
@@ -406,17 +451,25 @@ export default function RoomsPage() {
                 <div className="mb-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-lg font-bold text-teal-400">{room.code}</span>
-                    {room.password ? (
-                      <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs border border-yellow-500/50">
-                        <i className="ri-lock-line mr-1"></i>
-                        비밀번호
-                      </span>
-                    ) : (
-                      <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs border border-green-500/50">
-                        <i className="ri-global-line mr-1"></i>
-                        공개
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {(room.game_ended || room.status === 'done') && (
+                        <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs border border-red-500/50">
+                          <i className="ri-stop-circle-line mr-1"></i>
+                          종료
+                        </span>
+                      )}
+                      {room.password ? (
+                        <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs border border-yellow-500/50">
+                          <i className="ri-lock-line mr-1"></i>
+                          비밀번호
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs border border-green-500/50">
+                          <i className="ri-global-line mr-1"></i>
+                          공개
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <p className="text-sm text-slate-300 line-clamp-2 mb-3">{room.story}</p>
                   <div className="flex items-center gap-4 text-xs text-slate-400">
@@ -430,13 +483,25 @@ export default function RoomsPage() {
                     </span>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleJoinRoom(room.code, !!room.password)}
-                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-2.5 rounded-lg transition-all text-sm"
-                >
-                  <i className="ri-login-box-line mr-2"></i>
-                  참여하기
-                </button>
+                <div className="flex gap-2">
+                  {!(room.game_ended || room.status === 'done') && (
+                    <button
+                      onClick={() => handleJoinRoom(room.code, !!room.password)}
+                      className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-2.5 rounded-lg transition-all text-sm"
+                    >
+                      <i className="ri-login-box-line mr-2"></i>
+                      참여하기
+                    </button>
+                  )}
+                  <button
+                    onClick={() => router.push(`/room/${room.code}?spectator=true`)}
+                    className={`${!(room.game_ended || room.status === 'done') ? 'flex-1' : 'w-full'} bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 rounded-lg transition-all text-sm border border-slate-600`}
+                    title="관전 모드로 입장 (질문과 답변, 잡담을 볼 수 있습니다)"
+                  >
+                    <i className="ri-eye-line mr-2"></i>
+                    관전
+                  </button>
+                </div>
               </div>
             ))}
           </div>

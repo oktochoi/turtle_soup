@@ -1092,7 +1092,11 @@ export function clearCache(): void {
 // -------------------------
 // Answer similarity (unchanged)
 // -------------------------
-export async function calculateAnswerSimilarity(userAnswer: string, correctAnswer: string): Promise<number> {
+export async function calculateAnswerSimilarity(
+  userAnswer: string, 
+  correctAnswer: string, 
+  problemContent?: string
+): Promise<number> {
   const ua = normalizeText(userAnswer);
   const ca = normalizeText(correctAnswer);
   if (!ua || !ca) return 0;
@@ -1100,11 +1104,55 @@ export async function calculateAnswerSimilarity(userAnswer: string, correctAnswe
   try {
     const userEmbedding = await getEmbedding(ua);
     const correctEmbedding = await getEmbedding(ca);
-    const similarity = cosineSimilarity(userEmbedding, correctEmbedding);
+    let similarity = cosineSimilarity(userEmbedding, correctEmbedding);
 
+    // 문제 내용이 제공된 경우, 맥락 유사도도 고려
+    if (problemContent) {
+      const contentNormalized = normalizeText(problemContent);
+      if (contentNormalized) {
+        const contentEmbedding = await getEmbedding(contentNormalized);
+        const contentUserSim = cosineSimilarity(contentEmbedding, userEmbedding);
+        const contentCorrectSim = cosineSimilarity(contentEmbedding, correctEmbedding);
+        
+        // 맥락 유사도가 높으면 보너스 (맥락상 맞는 경우)
+        if (contentUserSim > 0.5 && contentCorrectSim > 0.5) {
+          const contextBonus = Math.min(0.15, (contentUserSim + contentCorrectSim) / 2 * 0.2);
+          similarity = Math.min(1.0, similarity + contextBonus);
+        }
+      }
+    }
+
+    // 키워드 매칭 보너스
+    const userWords = tokenizeKo(ua);
+    const correctWords = tokenizeKo(ca);
+    const correctSet = new Set(correctWords);
+    let keywordMatch = 0;
+    for (const w of userWords) {
+      if (correctSet.has(w)) keywordMatch++;
+      else {
+        const c = correctWords.find(x => x.includes(w) || w.includes(x));
+        if (c) keywordMatch += 0.5;
+      }
+    }
+    const keywordRatio = keywordMatch / Math.max(correctWords.length, userWords.length, 1);
+    if (keywordRatio > 0.3) {
+      // 키워드가 30% 이상 일치하면 보너스
+      const keywordBonus = Math.min(0.1, keywordRatio * 0.15);
+      similarity = Math.min(1.0, similarity + keywordBonus);
+    }
+
+    // 조정: 높은 유사도는 더 높게, 낮은 유사도는 약간 낮게
     let adjusted = similarity;
-    if (similarity > 0.8) adjusted = 0.8 + (similarity - 0.8) * 1.2;
-    else if (similarity <= 0.5) adjusted = similarity * 0.9;
+    if (similarity > 0.7) {
+      // 0.7 이상이면 더 관대하게 평가
+      adjusted = 0.7 + (similarity - 0.7) * 1.5;
+    } else if (similarity > 0.5) {
+      // 0.5~0.7 사이는 약간 보정
+      adjusted = 0.5 + (similarity - 0.5) * 1.2;
+    } else if (similarity <= 0.3) {
+      // 0.3 이하는 더 낮게
+      adjusted = similarity * 0.85;
+    }
 
     const pct = Math.max(0, Math.min(100, adjusted * 100));
     return Math.round(pct * 10) / 10;

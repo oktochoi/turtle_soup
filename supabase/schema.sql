@@ -156,6 +156,7 @@ CREATE TABLE IF NOT EXISTS problems (
   difficulty TEXT CHECK (difficulty IN ('easy', 'medium', 'hard')) DEFAULT 'medium' NOT NULL,
   tags TEXT[] DEFAULT '{}' NOT NULL,
   author TEXT NOT NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL, -- 작성자 ID (로그인한 경우)
   admin_password TEXT NOT NULL,
   like_count INTEGER DEFAULT 0 NOT NULL,
   comment_count INTEGER DEFAULT 0 NOT NULL,
@@ -187,18 +188,21 @@ CREATE TABLE IF NOT EXISTS problem_comments (
 CREATE TABLE IF NOT EXISTS problem_likes (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   problem_id UUID NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
-  user_identifier TEXT NOT NULL, -- IP 주소나 쿠키 등으로 사용자 식별
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE, -- 로그인한 사용자 ID (필수)
+  user_identifier TEXT, -- 비로그인 사용자용 (deprecated, 호환성 유지)
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
-  UNIQUE(problem_id, user_identifier)
+  UNIQUE(problem_id, user_id)
 );
 
 -- 인덱스 생성
 CREATE INDEX IF NOT EXISTS idx_problems_tags ON problems USING GIN(tags);
 CREATE INDEX IF NOT EXISTS idx_problems_difficulty ON problems(difficulty);
 CREATE INDEX IF NOT EXISTS idx_problems_created_at ON problems(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_problems_user_id ON problems(user_id);
 CREATE INDEX IF NOT EXISTS idx_problem_questions_problem_id ON problem_questions(problem_id);
 CREATE INDEX IF NOT EXISTS idx_problem_comments_problem_id ON problem_comments(problem_id);
 CREATE INDEX IF NOT EXISTS idx_problem_likes_problem_id ON problem_likes(problem_id);
+CREATE INDEX IF NOT EXISTS idx_problem_likes_user_id ON problem_likes(user_id);
 
 -- RLS 정책 설정
 ALTER TABLE problems ENABLE ROW LEVEL SECURITY;
@@ -345,6 +349,30 @@ BEGIN
   );
 END;
 $$ LANGUAGE plpgsql;
+
+-- 멀티플레이 정답 통계 뷰 (닉네임별 정답 개수)
+CREATE OR REPLACE VIEW multiplayer_correct_answers AS
+SELECT 
+  nickname,
+  COUNT(*) as correct_count,
+  MAX(created_at) as last_correct_at
+FROM guesses
+WHERE correct = true AND judged = true
+GROUP BY nickname
+ORDER BY correct_count DESC, last_correct_at DESC;
+
+-- 문제 좋아요 랭킹 뷰 (작성자별 좋아요 합계)
+CREATE OR REPLACE VIEW problem_author_likes AS
+SELECT 
+  p.user_id,
+  p.author,
+  COUNT(DISTINCT pl.id) as total_likes,
+  COUNT(DISTINCT p.id) as problem_count
+FROM problems p
+LEFT JOIN problem_likes pl ON p.id = pl.problem_id
+WHERE p.user_id IS NOT NULL
+GROUP BY p.user_id, p.author
+ORDER BY total_likes DESC, problem_count DESC;
 
 -- Realtime 활성화 (Supabase Realtime을 사용하기 위해 테이블을 publication에 추가)
 -- 참고: Supabase 대시보드에서도 설정할 수 있습니다.

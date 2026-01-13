@@ -5,13 +5,20 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/hooks/useAuth';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { useTranslations } from '@/hooks/useTranslations';
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
+  const t = useTranslations();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userNickname, setUserNickname] = useState<string | null>(null);
+  const [gameUserId, setGameUserId] = useState<string | null>(null);
+  
+  // 현재 언어 추출
+  const currentLang = pathname?.split('/')[1] || 'ko';
 
   useEffect(() => {
     const loadNickname = async () => {
@@ -22,22 +29,38 @@ export default function Header() {
 
       try {
         const supabase = createClient();
-        // public.users 테이블에서 닉네임 가져오기
-        const { data: userProfile, error: profileError } = await supabase
-          .from('users')
-          .select('nickname')
-          .eq('id', user.id)
+        // game_users 테이블에서 유저 정보 가져오기
+        const { data: gameUser, error: gameUserError } = await supabase
+          .from('game_users')
+          .select('id, nickname')
+          .eq('auth_user_id', user.id)
           .maybeSingle();
         
-        if (profileError) {
-          console.error('프로필 로드 오류:', profileError);
+        if (gameUserError) {
+          console.error('게임 유저 로드 오류:', gameUserError);
         }
         
-        if (userProfile?.nickname) {
-          setUserNickname(userProfile.nickname);
+        if (gameUser) {
+          setGameUserId(gameUser.id);
+          setUserNickname(gameUser.nickname);
         } else {
-          // 닉네임이 없으면 이메일 앞부분 사용
-          setUserNickname(user.email?.split('@')[0] || '사용자');
+          // game_users에 없으면 public.users에서 확인
+          const { data: userProfile, error: profileError } = await supabase
+            .from('users')
+            .select('nickname')
+            .eq('id', user.id)
+            .maybeSingle();
+          
+          if (profileError) {
+            console.error('프로필 로드 오류:', profileError);
+          }
+          
+          if (userProfile?.nickname) {
+            setUserNickname(userProfile.nickname);
+          } else {
+            // 닉네임이 없으면 이메일 앞부분 사용
+            setUserNickname(user.email?.split('@')[0] || '사용자');
+          }
         }
       } catch (error: any) {
         // AbortError는 무해한 에러이므로 무시 (컴포넌트 언마운트 시 발생 가능)
@@ -55,39 +78,47 @@ export default function Header() {
     const supabase = createClient();
     await supabase.auth.signOut();
     // useAuth 훅이 자동으로 인증 상태를 업데이트합니다
-    router.push('/');
+    router.push(`/${currentLang}`);
     router.refresh();
   };
 
   const isActive = (path: string) => {
+    // 언어 코드를 포함한 경로로 비교
+    const pathWithLang = `/${currentLang}${path === '/' ? '' : path}`;
     if (path === '/') {
-      return pathname === '/';
+      return pathname === `/${currentLang}` || pathname === `/${currentLang}/`;
     }
-    return pathname?.startsWith(path);
+    return pathname?.startsWith(pathWithLang);
+  };
+
+  const getLocalizedPath = (path: string) => {
+    return `/${currentLang}${path === '/' ? '' : path}`;
   };
 
   const navLinks = [
-    { href: '/rooms', label: '멀티 플레이', activeColor: 'bg-teal-500' },
-    { href: '/problems', label: '문제 풀기', activeColor: 'bg-purple-500' },
-    { href: '/create-problem', label: '게임 만들기', activeColor: 'bg-pink-500' },
-    { href: '/tutorial', label: '게임 설명', activeColor: 'bg-cyan-500' },
+    { href: '/rooms', label: t.nav.multiplayer, activeColor: 'bg-teal-500' },
+    { href: '/problems', label: t.nav.problems, activeColor: 'bg-purple-500' },
+    { href: '/create-problem', label: t.nav.playGame, activeColor: 'bg-pink-500' },
+    { href: '/community', label: t.nav.community, activeColor: 'bg-blue-500' },
+    { href: '/ranking', label: t.nav.ranking, activeColor: 'bg-yellow-500' },
+    { href: '/tutorial', label: t.nav.tutorial, activeColor: 'bg-cyan-500' },
   ];
 
   return (
     <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href={getLocalizedPath('/')} className="flex items-center gap-2">
             <i className="ri-question-line text-teal-400 text-xl sm:text-2xl"></i>
             <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
-              바다거북스프
+              {currentLang === 'ko' ? '바다거북스프' : 'Turtle Soup'}
             </span>
           </Link>
           
           {/* 데스크톱 네비게이션 */}
           <nav className="hidden md:flex items-center gap-2 lg:gap-3">
             {navLinks.map((link) => (
-              <Link key={link.href} href={link.href}>
+              <Link key={link.href} href={getLocalizedPath(link.href)}>
                 <button
                   className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all ${
                     isActive(link.href)
@@ -100,6 +131,9 @@ export default function Header() {
               </Link>
             ))}
             
+            {/* 언어 전환 버튼 */}
+            <LanguageSwitcher />
+            
             {/* 로그인/로그아웃 버튼 */}
             {authLoading ? (
               <div className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold bg-slate-800 text-slate-400 ml-2">
@@ -107,20 +141,27 @@ export default function Header() {
               </div>
             ) : user ? (
               <div className="flex items-center gap-3 ml-2">
+                {gameUserId && (
+                  <Link href={getLocalizedPath(`/profile/${gameUserId}`)}>
+                    <button className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-slate-800 text-slate-300 hover:bg-slate-700">
+                      {t.common.myPage}
+                    </button>
+                  </Link>
+                )}
                 <span className="text-sm text-slate-300 font-medium">
-                  {userNickname || user.email?.split('@')[0] || '사용자'}님
+                  {userNickname || user.email?.split('@')[0] || (currentLang === 'ko' ? '사용자' : 'User')}{currentLang === 'ko' ? '님' : ''}
                 </span>
                 <button
                   onClick={handleSignOut}
                   className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30"
                 >
-                  로그아웃
+                  {t.common.logout}
                 </button>
               </div>
             ) : (
-              <Link href="/auth/login">
+              <Link href={getLocalizedPath('/auth/login')}>
                 <button className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600 ml-2">
-                  로그인
+                  {t.common.login}
                 </button>
               </Link>
             )}
@@ -130,7 +171,7 @@ export default function Header() {
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="md:hidden p-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all"
-            aria-label="메뉴 열기"
+            aria-label={currentLang === 'ko' ? '메뉴 열기' : 'Open menu'}
           >
             <i className={`ri-${isMobileMenuOpen ? 'close' : 'menu'}-line text-xl`}></i>
           </button>
@@ -143,7 +184,7 @@ export default function Header() {
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
-                  href={link.href}
+                  href={getLocalizedPath(link.href)}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <button
@@ -166,8 +207,18 @@ export default function Header() {
                   </div>
                 ) : user ? (
                   <>
+                    {gameUserId && (
+                      <Link
+                        href={getLocalizedPath(`/profile/${gameUserId}`)}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <button className="w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left bg-slate-800 text-slate-300 hover:bg-slate-700 mb-2">
+                          {t.common.myPage}
+                        </button>
+                      </Link>
+                    )}
                     <div className="px-4 py-2 text-sm text-slate-300 font-medium">
-                      {userNickname || user.email?.split('@')[0] || '사용자'}님
+                      {userNickname || user.email?.split('@')[0] || (currentLang === 'ko' ? '사용자' : 'User')}{currentLang === 'ko' ? '님' : ''}
                     </div>
                     <button
                       onClick={() => {
@@ -176,18 +227,23 @@ export default function Header() {
                       }}
                       className="w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30"
                     >
-                      로그아웃
+                      {t.common.logout}
                     </button>
                   </>
                 ) : (
-                  <Link
-                    href="/auth/login"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <button className="w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600">
-                      로그인
-                    </button>
-                  </Link>
+                  <>
+                    <div className="px-4 py-2 mb-2">
+                      <LanguageSwitcher />
+                    </div>
+                    <Link
+                      href={getLocalizedPath('/auth/login')}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <button className="w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600">
+                        {t.common.login}
+                      </button>
+                    </Link>
+                  </>
                 )}
               </div>
             </div>

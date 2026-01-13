@@ -38,6 +38,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   const { user } = useAuth();
   
   const [isHost, setIsHost] = useState(false);
+  const [isSpectator, setIsSpectator] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
   const [userWon, setUserWon] = useState(false); // 정답 맞춘 유저만 개인적으로 종료
   const [story, setStory] = useState('');
@@ -106,17 +107,33 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     loadRoom();
   }, [roomCode]);
 
-  // 호스트 여부를 URL 파라미터에서 먼저 확인 (즉시 설정)
+  // 호스트 여부와 관전 모드를 URL 파라미터에서 먼저 확인 (즉시 설정)
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const urlParams = new URLSearchParams(window.location.search);
     const hostParam = urlParams.get('host') === 'true';
+    const spectatorParam = urlParams.get('spectator') === 'true';
     
     // URL에 host=true가 있으면 즉시 호스트로 설정
     if (hostParam) {
       console.log('✅ 호스트로 접속 감지, isHost를 true로 설정');
       setIsHost(true);
+    }
+    
+    // URL에 spectator=true가 있으면 관전 모드로 설정
+    if (spectatorParam) {
+      console.log('✅ 관전 모드로 접속 감지');
+      setIsSpectator(true);
+      // 관전 모드도 채팅을 위해 닉네임 입력 필요
+      // 닉네임이 없으면 모달 표시
+      const savedNickname = localStorage.getItem(`nickname_${roomCode}`);
+      if (!savedNickname) {
+        setShowNicknameModal(true);
+      } else {
+        setNickname(savedNickname);
+        setShowNicknameModal(false);
+      }
     }
   }, []); // 컴포넌트 마운트 시 한 번만 실행
 
@@ -1228,6 +1245,14 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
                 </span>
               </div>
             )}
+            {isSpectator && (
+              <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 px-3 py-2 rounded-lg border border-purple-500/50">
+                <span className="text-purple-400 text-xs font-semibold">
+                  <i className="ri-eye-line mr-1"></i>
+                  관전 모드
+                </span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -1256,7 +1281,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
 
         <div className="grid lg:grid-cols-3 gap-4 mt-4">
           <div className="lg:col-span-2 space-y-4">
-            {!isHost && !gameEnded && (
+            {!isHost && !isSpectator && !gameEnded && (
               <>
                 {maxQuestions !== null && questions.length >= maxQuestions ? (
                   <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-xl p-4 border border-orange-500/30">
@@ -1277,6 +1302,21 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
                 )}
               </>
             )}
+            {isSpectator && (
+              <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl p-4 border border-purple-500/30">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 flex items-center justify-center bg-purple-500/20 rounded-lg flex-shrink-0">
+                    <i className="ri-eye-line text-purple-400 text-sm"></i>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-sm text-purple-400 mb-1">관전 모드</h3>
+                    <p className="text-xs text-slate-300">
+                      질문과 답변만 볼 수 있습니다. 게임에 참여하려면 방을 나가서 다시 입장하세요.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             
             <QuestionList
               questions={questions}
@@ -1296,7 +1336,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
             {/* 채팅 패널 */}
             <ChatPanel roomCode={roomCode} nickname={nickname} />
 
-            {!isHost && !gameEnded && (
+            {!isHost && !isSpectator && !gameEnded && (
               <GuessInput 
                 onSubmit={handleSubmitGuess} 
                 hasSubmitted={guesses.some(g => g.nickname === nickname)}
