@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase/client';
 import type { Problem, ProblemQuestion, ProblemComment } from '@/lib/types';
-import { analyzeQuestion, calculateAnswerSimilarity, initializeModel } from '@/lib/ai-analyzer';
+import { buildProblemKnowledge, analyzeQuestionV8, calculateAnswerSimilarity, initializeModel, type ProblemKnowledge } from '@/lib/ai-analyzer';
 import ProblemAdminButtons from './ProblemAdminButtons';
 import { useAuth } from '@/lib/hooks/useAuth';
 
@@ -42,6 +42,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
   const { user } = useAuth();
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
+  const [problemKnowledge, setProblemKnowledge] = useState<ProblemKnowledge | null>(null);
 
   useEffect(() => {
     loadProblem();
@@ -133,6 +134,17 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
 
       if (error) throw error;
       setProblem(data);
+      
+      // 문제 로드 시 knowledge 생성 (V8 방식)
+      if (data && data.content && data.answer) {
+        try {
+          const knowledge = await buildProblemKnowledge(data.content, data.answer);
+          setProblemKnowledge(knowledge);
+        } catch (err) {
+          console.error('Knowledge 생성 오류:', err);
+          // knowledge 생성 실패해도 계속 진행
+        }
+      }
     } catch (error) {
       console.error('문제 로드 오류:', error);
       alert('문제를 불러올 수 없습니다.');
@@ -303,8 +315,22 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
 
     setIsAnalyzing(true);
     try {
-      const answer = await analyzeQuestion(questionText, problem.content, problem.answer);
-      setSuggestedAnswer(answer);
+      // V8 방식: knowledge가 있으면 재사용, 없으면 생성
+      let knowledge = problemKnowledge;
+      if (!knowledge && problem.content && problem.answer) {
+        knowledge = await buildProblemKnowledge(problem.content, problem.answer);
+        setProblemKnowledge(knowledge);
+      }
+      
+      if (knowledge) {
+        const answer = await analyzeQuestionV8(questionText, knowledge);
+        setSuggestedAnswer(answer);
+      } else {
+        // fallback: knowledge 생성 실패 시 기존 방식 사용
+        const { analyzeQuestion } = await import('@/lib/ai-analyzer');
+        const answer = await analyzeQuestion(questionText, problem.content, problem.answer);
+        setSuggestedAnswer(answer);
+      }
     } catch (error) {
       console.error('질문 분석 오류:', error);
     } finally {
@@ -323,7 +349,20 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
     let aiAnswer: 'yes' | 'no' | 'irrelevant' | 'decisive' | null = null;
     
     try {
-      aiAnswer = await analyzeQuestion(questionText, problem.content, problem.answer);
+      // V8 방식: knowledge가 있으면 재사용, 없으면 생성
+      let knowledge = problemKnowledge;
+      if (!knowledge && problem.content && problem.answer) {
+        knowledge = await buildProblemKnowledge(problem.content, problem.answer);
+        setProblemKnowledge(knowledge);
+      }
+      
+      if (knowledge) {
+        aiAnswer = await analyzeQuestionV8(questionText, knowledge);
+      } else {
+        // fallback
+        const { analyzeQuestion } = await import('@/lib/ai-analyzer');
+        aiAnswer = await analyzeQuestion(questionText, problem.content, problem.answer);
+      }
       setSuggestedAnswer(aiAnswer);
     } catch (error) {
       console.error('AI 분석 오류:', error);
@@ -349,8 +388,21 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
     let aiAnswer: 'yes' | 'no' | 'irrelevant' | 'decisive' | null = null;
     
     try {
-      // AI가 답변 제안
-      aiAnswer = await analyzeQuestion(questionText.trim(), problem.content, problem.answer);
+      // V8 방식: knowledge가 있으면 재사용, 없으면 생성
+      let knowledge = problemKnowledge;
+      if (!knowledge && problem.content && problem.answer) {
+        knowledge = await buildProblemKnowledge(problem.content, problem.answer);
+        setProblemKnowledge(knowledge);
+      }
+      
+      if (knowledge) {
+        // AI가 답변 제안
+        aiAnswer = await analyzeQuestionV8(questionText.trim(), knowledge);
+      } else {
+        // fallback
+        const { analyzeQuestion } = await import('@/lib/ai-analyzer');
+        aiAnswer = await analyzeQuestion(questionText.trim(), problem.content, problem.answer);
+      }
       setSuggestedAnswer(aiAnswer);
       
       // AI 제안 답변 사용
@@ -601,7 +653,7 @@ export default function ProblemPage({ params }: { params: Promise<{ id: string }
       if (error) throw error;
 
       setIsEditing(false);
-      loadProblem();
+      await loadProblem(); // 문제 재로드 (knowledge도 자동으로 재생성됨)
       alert('문제가 수정되었습니다.');
     } catch (error) {
       console.error('문제 수정 오류:', error);
