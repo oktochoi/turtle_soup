@@ -32,8 +32,18 @@ export default function Home() {
     
     if (code && !isRedirecting) {
       setIsRedirecting(true);
+      
+      // 프로덕션 환경 감지
+      const isProduction = window.location.hostname.includes('turtle-soup-rust.vercel.app') || 
+                          window.location.hostname.includes('vercel.app');
+      
+      // 프로덕션에서는 항상 프로덕션 URL 사용, 개발 환경에서는 현재 origin 사용
+      const baseUrl = isProduction 
+        ? 'https://turtle-soup-rust.vercel.app'
+        : window.location.origin;
+      
       // 즉시 리다이렉트 (렌더링 전에 처리, replace로 히스토리 교체)
-      window.location.replace(`/${lang}/auth/callback?code=${encodeURIComponent(code)}`);
+      window.location.replace(`${baseUrl}/${lang}/auth/callback?code=${encodeURIComponent(code)}`);
     }
   }, [lang, isRedirecting]);
 
