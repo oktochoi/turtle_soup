@@ -17,6 +17,7 @@ interface ChatPanelProps {
 }
 
 export default function ChatPanel({ roomCode, nickname }: ChatPanelProps) {
+  const t = useTranslations();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageText, setMessageText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
