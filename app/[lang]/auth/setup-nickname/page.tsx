@@ -236,7 +236,7 @@ export default function SetupNicknamePage({ params }: { params: Promise<{ lang: 
               disabled={isLoading || isChecking || !!error || nickname.trim().length < 2}
               className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-teal-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? (lang === 'ko' ? '설정 중...' : 'Setting up...') : t.auth.setupNicknameButton}
+              {isLoading ? t.auth.settingUp : t.auth.setupNicknameButton}
             </button>
           </form>
         </div>

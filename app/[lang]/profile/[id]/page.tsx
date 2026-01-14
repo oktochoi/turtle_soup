@@ -7,11 +7,14 @@ import { supabase } from '@/lib/supabase';
 import LevelBadge from '@/components/LevelBadge';
 import type { UserProgress, Title, Achievement } from '@/types/progress';
 import { requiredXP, xpToNextLevel } from '@/lib/progress';
+import { useTranslations } from '@/hooks/useTranslations';
 
-export default function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
+export default function ProfilePage({ params }: { params: Promise<{ lang: string; id: string }> }) {
   const resolvedParams = use(params);
+  const lang = resolvedParams.lang || 'ko';
   const userId = resolvedParams.id;
   const router = useRouter();
+  const t = useTranslations();
 
   const [user, setUser] = useState<any>(null);
   const [progress, setProgress] = useState<UserProgress | null>(null);
@@ -38,7 +41,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         .single();
 
       if (!userData) {
-        router.push('/');
+        router.push(`/${lang}`);
         return;
       }
 
@@ -141,7 +144,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       setProgress({ ...progress, selected_title_id: titleId });
     } catch (error) {
       console.error('칭호 선택 오류:', error);
-      alert('칭호 선택에 실패했습니다.');
+      alert(t.profile.selectTitleFail);
     }
   };
 
@@ -159,7 +162,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
-          <p className="text-slate-400">프로필을 불러오는 중...</p>
+          <p className="text-slate-400">{t.profile.loadingProfile}</p>
         </div>
       </div>
     );
@@ -169,10 +172,10 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
         <div className="text-center">
-          <p className="text-slate-400 mb-4">프로필을 찾을 수 없습니다.</p>
-          <Link href="/">
+          <p className="text-slate-400 mb-4">{t.profile.profileNotFound}</p>
+          <Link href={`/${lang}`}>
             <button className="px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg">
-              홈으로
+              {t.common.home}
             </button>
           </Link>
         </div>
@@ -194,10 +197,10 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-4xl">
         <div className="mb-6">
-          <Link href="/">
+          <Link href={`/${lang}`}>
             <button className="text-slate-400 hover:text-white transition-colors text-sm">
               <i className="ri-arrow-left-line mr-2"></i>
-              돌아가기
+              {t.common.back}
             </button>
           </Link>
         </div>
@@ -217,7 +220,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
           {/* XP Progress Bar */}
           <div className="mb-4">
             <div className="flex items-center justify-between text-sm text-slate-400 mb-2">
-              <span>경험치</span>
+              <span>{t.profile.xp}</span>
               <span>{currentLevelXP} / {nextLevelXP} XP</span>
             </div>
             <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
@@ -227,7 +230,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               />
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              다음 레벨까지 {xpToNextLevel(progress.xp, progress.level)} XP 필요
+              {t.profile.nextLevel} {xpToNextLevel(progress.xp, progress.level)} {t.profile.xpNeeded}
             </p>
           </div>
 
@@ -235,32 +238,32 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
             <div className="text-center">
               <div className="text-2xl font-bold text-teal-400">{progress.points}</div>
-              <div className="text-xs text-slate-400">포인트</div>
+              <div className="text-xs text-slate-400">{t.profile.points}</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-yellow-400">{progress.current_streak}</div>
-              <div className="text-xs text-slate-400">연속 참여</div>
+              <div className="text-xs text-slate-400">{t.profile.streak}</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-400">{actualSolveCount}</div>
-              <div className="text-xs text-slate-400">해결한 문제</div>
+              <div className="text-xs text-slate-400">{t.profile.solved}</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-pink-400">{receivedHearts}</div>
-              <div className="text-xs text-slate-400">받은 하트</div>
+              <div className="text-xs text-slate-400">{t.profile.hearts}</div>
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-400">{userTitles.length}</div>
-              <div className="text-xs text-slate-400">획득한 칭호</div>
+              <div className="text-xs text-slate-400">{t.profile.titles}</div>
             </div>
           </div>
         </div>
 
         {/* 대표 칭호 선택 */}
         <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700/50 mb-6">
-          <h2 className="text-xl font-bold mb-4">대표 칭호</h2>
+          <h2 className="text-xl font-bold mb-4">{t.profile.selectedTitle}</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {titles
               .filter(t => userTitles.includes(t.id))
@@ -277,9 +280,13 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   <div className="flex items-center gap-2">
                     {title.icon && <span>{title.icon}</span>}
                     <div className="flex-1">
-                      <div className="font-semibold text-sm">{title.name}</div>
-                      {title.description && (
-                        <div className="text-xs opacity-75 mt-1">{title.description}</div>
+                      <div className="font-semibold text-sm">
+                        {lang === 'en' && (title as any).name_en ? (title as any).name_en : title.name}
+                      </div>
+                      {((lang === 'en' && (title as any).description_en) || title.description) && (
+                        <div className="text-xs opacity-75 mt-1">
+                          {lang === 'en' && (title as any).description_en ? (title as any).description_en : title.description}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -287,13 +294,13 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               ))}
           </div>
           {titles.filter(t => userTitles.includes(t.id)).length === 0 && (
-            <p className="text-slate-400 text-center py-4">획득한 칭호가 없습니다.</p>
+            <p className="text-slate-400 text-center py-4">{t.profile.noTitles}</p>
           )}
         </div>
 
         {/* 업적 */}
         <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700/50">
-          <h2 className="text-xl font-bold mb-4">업적</h2>
+          <h2 className="text-xl font-bold mb-4">{t.profile.achievements}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {achievements.map((achievement) => {
               const isUnlocked = userAchievements.includes(achievement.id);
@@ -311,11 +318,15 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                       <span className="text-2xl">{achievement.icon}</span>
                     )}
                     <div className="flex-1">
-                      <div className="font-semibold mb-1">{achievement.name}</div>
-                      <div className="text-xs opacity-75">{achievement.description}</div>
+                      <div className="font-semibold mb-1">
+                        {lang === 'en' && (achievement as any).name_en ? (achievement as any).name_en : achievement.name}
+                      </div>
+                      <div className="text-xs opacity-75">
+                        {lang === 'en' && (achievement as any).description_en ? (achievement as any).description_en : achievement.description}
+                      </div>
                       {isUnlocked && (
                         <div className="text-xs mt-2 opacity-75">
-                          보상: +{achievement.reward_xp} XP, +{achievement.reward_points} P
+                          {t.common.reward}: +{achievement.reward_xp} XP, +{achievement.reward_points} P
                         </div>
                       )}
                     </div>
@@ -327,6 +338,9 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               );
             })}
           </div>
+          {achievements.length === 0 && (
+            <p className="text-slate-400 text-center py-4">{t.profile.noAchievements}</p>
+          )}
         </div>
       </div>
     </div>

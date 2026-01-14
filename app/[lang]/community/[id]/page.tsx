@@ -300,7 +300,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
 
   const handleUpdateComment = async (commentId: string) => {
     if (!editingCommentText.trim()) {
-      alert(lang === 'ko' ? '댓글 내용을 입력해주세요.' : 'Please enter comment content.');
+      alert(t.community.enterCommentContent);
       return;
     }
 
@@ -320,7 +320,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
       await loadComments();
     } catch (error) {
       console.error('댓글 수정 오류:', error);
-      alert(lang === 'ko' ? '댓글 수정에 실패했습니다.' : 'Failed to update comment.');
+      alert(t.community.updateCommentFail);
     }
   };
 
@@ -520,7 +520,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
                         <>
                           <span>·</span>
                           <span className="text-xs text-slate-500">
-                            {lang === 'ko' ? '(수정됨)' : '(edited)'}
+                            ({t.common.edited})
                           </span>
                         </>
                       )}
@@ -530,14 +530,14 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
                         <button
                           onClick={() => handleStartEdit(comment)}
                           className="text-xs text-slate-400 hover:text-blue-400 transition-colors"
-                          title={lang === 'ko' ? '수정' : 'Edit'}
+                          title={t.common.edit}
                         >
                           <i className="ri-edit-line"></i>
                         </button>
                         <button
                           onClick={() => handleDeleteComment(comment.id)}
                           className="text-xs text-slate-400 hover:text-red-400 transition-colors"
-                          title={lang === 'ko' ? '삭제' : 'Delete'}
+                          title={t.common.delete}
                         >
                           <i className="ri-delete-bin-line"></i>
                         </button>
@@ -568,7 +568,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
                             disabled={!editingCommentText.trim()}
                             className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg text-sm transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {lang === 'ko' ? '저장' : 'Save'}
+                            {t.common.save}
                           </button>
                         </div>
                       </div>

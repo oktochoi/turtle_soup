@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from '@/hooks/useTranslations';
+
 type Guess = {
   id: string;
   nickname: string;
@@ -13,9 +15,11 @@ type HostAnswerInboxProps = {
   guesses: Guess[];
   onJudge: (guessId: string, correct: boolean) => void;
   gameEnded: boolean;
+  lang: string;
 };
 
-export default function HostAnswerInbox({ guesses, onJudge, gameEnded }: HostAnswerInboxProps) {
+export default function HostAnswerInbox({ guesses, onJudge, gameEnded, lang }: HostAnswerInboxProps) {
+  const t = useTranslations();
   const unjudgedGuesses = guesses.filter(g => !g.judged);
 
   return (
@@ -24,19 +28,19 @@ export default function HostAnswerInbox({ guesses, onJudge, gameEnded }: HostAns
         <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-purple-500/20 rounded-lg flex-shrink-0">
           <i className="ri-inbox-line text-purple-400 text-sm sm:text-base"></i>
         </div>
-        <h3 className="font-bold text-purple-400 text-sm sm:text-base">정답 제출함</h3>
+        <h3 className="font-bold text-purple-400 text-sm sm:text-base">{t.room.guesses}</h3>
         {unjudgedGuesses.length > 0 && (
           <span className="ml-auto bg-purple-500 text-white text-xs font-bold px-2 py-1 rounded-full">
             {unjudgedGuesses.length}
           </span>
         )}
-        <span className="ml-auto text-xs sm:text-sm text-slate-500">{guesses.length}개</span>
+        <span className="ml-auto text-xs sm:text-sm text-slate-500">{guesses.length}{lang === 'ko' ? t.room.questionsCount : ''}</span>
       </div>
       <div className="max-h-64 sm:max-h-96 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3">
         {guesses.length === 0 ? (
           <div className="text-center py-8 text-slate-500 text-xs sm:text-sm">
             <i className="ri-inbox-line text-2xl sm:text-3xl mb-2"></i>
-            <p>제출된 정답이 없습니다</p>
+            <p>{t.room.noAnswersSubmitted}</p>
           </div>
         ) : (
           guesses.map((guess) => (
@@ -60,7 +64,7 @@ export default function HostAnswerInbox({ guesses, onJudge, gameEnded }: HostAns
                         : 'bg-red-500/20 text-red-400 border border-red-500/30'
                     }`}
                   >
-                    {guess.correct ? '정답' : '오답'}
+                    {guess.correct ? t.room.correctAnswer : t.room.wrongAnswer}
                   </span>
                 )}
               </div>
@@ -72,14 +76,14 @@ export default function HostAnswerInbox({ guesses, onJudge, gameEnded }: HostAns
                     className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-lg transition-all duration-200 text-xs sm:text-sm whitespace-nowrap"
                   >
                     <i className="ri-check-line mr-1"></i>
-                    정답
+                    {t.room.correctAnswer}
                   </button>
                   <button
                     onClick={() => onJudge(guess.id, false)}
                     className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 rounded-lg transition-all duration-200 text-xs sm:text-sm whitespace-nowrap"
                   >
                     <i className="ri-close-line mr-1"></i>
-                    오답
+                    {t.room.wrongAnswer}
                   </button>
                 </div>
               )}

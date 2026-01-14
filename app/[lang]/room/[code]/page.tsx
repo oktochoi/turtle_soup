@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { Question, Guess, Room } from '@/lib/types';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { useTranslations } from '@/hooks/useTranslations';
 import StoryPanel from './StoryPanel';
 import QuestionInput from './QuestionInput';
 import QuestionList from './QuestionList';
@@ -31,11 +32,13 @@ type LocalGuess = {
   timestamp: number;
 };
 
-export default function RoomPage({ params }: { params: Promise<{ code: string }> }) {
+export default function RoomPage({ params }: { params: Promise<{ lang: string; code: string }> }) {
   const resolvedParams = use(params);
+  const lang = resolvedParams.lang || 'ko';
   const roomCode = resolvedParams.code;
   const router = useRouter();
   const { user } = useAuth();
+  const t = useTranslations();
   
   const [isHost, setIsHost] = useState(false);
   const [isSpectator, setIsSpectator] = useState(false);
@@ -61,7 +64,9 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     const loadRoom = async () => {
       // Supabase 환경 변수 확인
       if (!isSupabaseConfigured()) {
-        setError('Supabase가 설정되지 않았습니다.\n\n.env.local 파일을 확인하고 개발 서버를 재시작하세요.');
+        setError(lang === 'ko' 
+          ? 'Supabase가 설정되지 않았습니다.\n\n.env.local 파일을 확인하고 개발 서버를 재시작하세요.'
+          : 'Supabase is not configured.\n\nPlease check your .env.local file and restart the development server.');
         setIsLoading(false);
         return;
       }
@@ -79,8 +84,8 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
             console.log('✅ 방이 삭제되었습니다 - 게임 종료 상태로 간주');
             setGameEnded(true);
             // 게임 종료 모달을 표시하기 위해 최소한의 데이터 설정
-            setStory('게임이 종료되었습니다');
-            setTruth('게임이 종료되었습니다');
+            setStory(t.room.gameEndedMessage);
+            setTruth(t.room.gameEndedMessage);
             setIsLoading(false);
             return;
           } else {
@@ -98,7 +103,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
         }
       } catch (err) {
         console.error('방 로드 오류:', err);
-        setError('방 정보를 불러오는데 실패했습니다.');
+        setError(t.room.loadRoomFail);
       } finally {
         setIsLoading(false);
       }
@@ -699,7 +704,9 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
 
     // 최대 질문 개수 체크 (무제한이 아닐 때만)
     if (maxQuestions !== null && questions.length >= maxQuestions) {
-      alert(`최대 질문 개수(${maxQuestions}개)에 도달했습니다. 더 이상 질문할 수 없습니다.`);
+      alert(lang === 'ko' 
+        ? `최대 질문 개수(${maxQuestions}개)에 도달했습니다. 더 이상 질문할 수 없습니다.`
+        : `Maximum questions (${maxQuestions}) reached. You cannot ask more questions.`);
       return;
     }
 
@@ -743,7 +750,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
       console.error('질문 제출 오류:', err);
       // 실패 시 롤백
       setQuestions(prev => prev.filter(q => q.id !== tempId));
-      alert('질문 제출에 실패했습니다.');
+      alert(t.room.questionSubmitFail);
     }
   };
 
@@ -770,7 +777,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
         prev.map(q => q.id === questionId ? { ...q, answer: null } : q)
       );
       setSelectedQuestionId(questionId);
-      alert('답변 제출에 실패했습니다.');
+      alert(t.room.answerSubmitFail);
     }
   };
 
@@ -819,7 +826,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
       console.error('추측 제출 오류:', err);
       // 실패 시 롤백
       setGuesses(prev => prev.filter(g => g.id !== tempId));
-      alert('추측 제출에 실패했습니다.');
+      alert(t.room.guessSubmitFail);
     }
   };
 
@@ -918,7 +925,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     setGuesses(prev =>
         prev.map(g => g.id === guessId ? { ...g, judged: false, correct: false } : g)
       );
-      alert('추측 판정에 실패했습니다.');
+      alert(t.room.guessJudgeFail);
     }
   };
 
@@ -926,7 +933,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   const handleEndGame = async () => {
     if (!isHost) return;
 
-    if (!confirm('게임을 종료하시겠습니까? 종료하면 모든 데이터가 삭제됩니다.')) {
+    if (!confirm(t.room.endGameConfirm)) {
       return;
     }
 
@@ -970,7 +977,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     } catch (err) {
       console.error('게임 종료 오류:', err);
       setGameEnded(false); // 오류 발생 시 상태 롤백
-      alert('게임 종료 중 오류가 발생했습니다.');
+      alert(t.room.endGameFail);
     }
   };
 
@@ -978,7 +985,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   const handleCopyRoomCode = async () => {
     try {
       await navigator.clipboard.writeText(roomCode);
-      alert('방 코드가 복사되었습니다!');
+      alert(t.room.roomCodeCopied);
     } catch (err) {
       // 복사 실패 시 대체 방법
       const textArea = document.createElement('textarea');
@@ -987,25 +994,25 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
       textArea.select();
       document.execCommand('copy');
       document.body.removeChild(textArea);
-      alert('방 코드가 복사되었습니다!');
+      alert(t.room.roomCodeCopied);
     }
   };
 
   const handleShareRoom = async () => {
     try {
-      const roomUrl = `${window.location.origin}/room/${roomCode}`;
+      const roomUrl = `${window.location.origin}/${lang}/room/${roomCode}`;
       await navigator.clipboard.writeText(roomUrl);
-      alert('방 링크가 복사되었습니다!');
+      alert(t.room.roomLinkCopied);
     } catch (err) {
       // 복사 실패 시 대체 방법
-      const roomUrl = `${window.location.origin}/room/${roomCode}`;
+      const roomUrl = `${window.location.origin}/${lang}/room/${roomCode}`;
       const textArea = document.createElement('textarea');
       textArea.value = roomUrl;
       document.body.appendChild(textArea);
       textArea.select();
       document.execCommand('copy');
       document.body.removeChild(textArea);
-      alert('방 링크가 복사되었습니다!');
+      alert(t.room.roomLinkCopied);
     }
   };
 
@@ -1043,12 +1050,12 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
 
   const handlePasswordSubmit = async () => {
     if (!enteredPassword.trim()) {
-      setError('비밀번호를 입력해주세요.');
+      setError(t.room.enterPasswordAlert);
       return;
     }
 
     if (!roomPassword || enteredPassword !== roomPassword) {
-      setError('비밀번호가 올바르지 않습니다.');
+      setError(t.room.incorrectPassword);
       setEnteredPassword('');
       return;
     }
@@ -1092,7 +1099,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     setSelectedQuestionId(null);
     } catch (err) {
       console.error('재시작 오류:', err);
-      alert('게임 재시작에 실패했습니다.');
+      alert(t.room.restartFail);
     }
   };
 
@@ -1101,7 +1108,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
-          <p className="text-slate-400">방 정보를 불러오는 중...</p>
+          <p className="text-slate-400">{t.room.loadingRoom}</p>
         </div>
       </div>
     );
@@ -1114,10 +1121,10 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
           <i className="ri-error-warning-line text-5xl text-red-400 mb-4"></i>
           <h2 className="text-2xl font-bold mb-2 text-white">{error}</h2>
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push(`/${lang}`)}
             className="mt-6 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200"
           >
-            홈으로 돌아가기
+            {t.common.backToHome}
           </button>
         </div>
       </div>
@@ -1130,8 +1137,8 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
         <div className="bg-slate-800 rounded-2xl p-6 sm:p-8 max-w-md w-full border border-slate-700 shadow-2xl">
           <div className="text-center mb-6">
             <i className="ri-lock-line text-4xl sm:text-5xl text-teal-400 mb-4"></i>
-            <h2 className="text-xl sm:text-2xl font-bold mb-2">방 비밀번호</h2>
-            <p className="text-slate-400 text-sm">이 방은 비밀번호가 설정되어 있습니다</p>
+            <h2 className="text-xl sm:text-2xl font-bold mb-2">{t.room.password}</h2>
+            <p className="text-slate-400 text-sm">{t.room.passwordRequired}</p>
           </div>
           {error && (
             <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm text-center">
@@ -1140,7 +1147,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
           )}
           <input
             type="password"
-            placeholder="비밀번호 입력"
+            placeholder={t.room.enterPassword}
             value={enteredPassword}
             onChange={(e) => {
               setEnteredPassword(e.target.value);
@@ -1159,18 +1166,18 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
               onClick={handlePasswordSubmit}
               className="flex-1 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-xl transition-all duration-200"
             >
-              확인
+              {t.common.confirm}
             </button>
             <button
               onClick={() => {
                 setShowPasswordModal(false);
                 setEnteredPassword('');
                 setError('');
-                router.push('/rooms');
+                router.push(`/${lang}/rooms`);
               }}
               className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-xl transition-all duration-200"
             >
-              취소
+              {t.common.cancel}
             </button>
           </div>
         </div>
@@ -1184,12 +1191,12 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
         <div className="bg-slate-800 rounded-2xl p-6 sm:p-8 max-w-md w-full border border-slate-700 shadow-2xl">
           <div className="text-center mb-6">
             <i className="ri-user-add-line text-4xl sm:text-5xl text-teal-400 mb-4"></i>
-            <h2 className="text-xl sm:text-2xl font-bold mb-2">닉네임 설정</h2>
-            <p className="text-slate-400 text-sm">게임에 사용할 닉네임을 입력하세요</p>
+            <h2 className="text-xl sm:text-2xl font-bold mb-2">{t.room.setNickname}</h2>
+            <p className="text-slate-400 text-sm">{t.room.setNicknameDesc}</p>
           </div>
           <input
             type="text"
-            placeholder="닉네임 입력"
+            placeholder={t.room.nicknamePlaceholder}
             className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-4 text-sm"
             maxLength={20}
             onKeyPress={(e) => {
@@ -1205,7 +1212,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
             }}
             className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-xl transition-all duration-200 whitespace-nowrap"
           >
-            시작하기
+            {t.room.start}
           </button>
         </div>
       </div>
@@ -1219,20 +1226,20 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <div className="bg-slate-800 px-3 sm:px-4 py-2 rounded-lg border border-slate-700 flex items-center gap-2">
               <div>
-              <span className="text-slate-400 text-xs">방 코드</span>
+              <span className="text-slate-400 text-xs">{t.room.roomCode}</span>
                 <div className="font-mono font-bold text-teal-400 text-base sm:text-lg">{roomCode}</div>
               </div>
               <button
                 onClick={handleCopyRoomCode}
                 className="ml-2 p-1.5 hover:bg-slate-700 rounded-lg transition-colors"
-                title="방 코드 복사"
+                title={t.room.copyRoomCode}
               >
                 <i className="ri-file-copy-line text-teal-400 text-sm"></i>
               </button>
               <button
                 onClick={handleShareRoom}
                 className="ml-2 p-1.5 hover:bg-slate-700 rounded-lg transition-colors"
-                title="방 링크 공유하기"
+                title={t.room.shareRoomLink}
               >
                 <i className="ri-share-line text-teal-400 text-sm"></i>
               </button>
@@ -1241,7 +1248,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
               <div className="bg-gradient-to-r from-teal-500/20 to-cyan-500/20 px-3 py-2 rounded-lg border border-teal-500/50">
                 <span className="text-teal-400 text-xs font-semibold">
                   <i className="ri-vip-crown-line mr-1"></i>
-                  관리자
+                  {t.room.host}
                 </span>
               </div>
             )}
@@ -1249,7 +1256,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
               <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 px-3 py-2 rounded-lg border border-purple-500/50">
                 <span className="text-purple-400 text-xs font-semibold">
                   <i className="ri-eye-line mr-1"></i>
-                  관전 모드
+                  {t.room.spectatorMode}
                 </span>
               </div>
             )}
@@ -1258,7 +1265,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
             <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
               gameEnded ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
             }`}>
-              {gameEnded ? '종료' : '진행중'}
+              {gameEnded ? t.room.ended : t.room.inProgress}
             </div>
             <div className={`px-3 py-1 rounded-full text-xs border ${
               maxQuestions !== null && questions.length >= maxQuestions 
@@ -1271,13 +1278,13 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
                   : 'text-teal-400'
               }`}>{questions.length}</span>
               <span className="text-slate-500">
-                {maxQuestions === null ? ' / 무제한' : ` / ${maxQuestions}`}
+                {maxQuestions === null ? ` / ${t.room.unlimited}` : ` / ${maxQuestions}`}
               </span>
             </div>
           </div>
         </div>
 
-        <StoryPanel story={story} />
+        <StoryPanel story={story} lang={lang} />
 
         <div className="grid lg:grid-cols-3 gap-4 mt-4">
           <div className="lg:col-span-2 space-y-4">
@@ -1290,9 +1297,11 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
                         <i className="ri-alert-line text-orange-400 text-sm"></i>
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-sm text-orange-400 mb-1">질문 제한 도달</h3>
+                        <h3 className="font-semibold text-sm text-orange-400 mb-1">{t.room.questionLimitReached}</h3>
                         <p className="text-xs text-slate-300">
-                          최대 질문 개수({maxQuestions}개)에 도달했습니다. 이제 정답을 추측해보세요!
+                          {lang === 'ko' 
+                            ? `최대 질문 개수(${maxQuestions}개)에 도달했습니다. 이제 정답을 추측해보세요!`
+                            : `Maximum questions (${maxQuestions}) reached. Now try to guess the answer!`}
                         </p>
                       </div>
                     </div>
@@ -1309,9 +1318,9 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
                     <i className="ri-eye-line text-purple-400 text-sm"></i>
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-sm text-purple-400 mb-1">관전 모드</h3>
+                    <h3 className="font-semibold text-sm text-purple-400 mb-1">{t.room.spectatorMode}</h3>
                     <p className="text-xs text-slate-300">
-                      질문과 답변만 볼 수 있습니다. 게임에 참여하려면 방을 나가서 다시 입장하세요.
+                      {t.room.spectatorModeDesc}
                     </p>
                   </div>
                 </div>
@@ -1334,7 +1343,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
 
           <div className="space-y-4">
             {/* 채팅 패널 */}
-            <ChatPanel roomCode={roomCode} nickname={nickname} />
+            <ChatPanel roomCode={roomCode} nickname={nickname} lang={lang} />
 
             {!isHost && !isSpectator && !gameEnded && (
               <GuessInput 
@@ -1354,10 +1363,10 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
                     className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 text-sm sm:text-base touch-manipulation"
                   >
                     <i className="ri-stop-circle-line mr-2"></i>
-                    게임 종료 (전체 공개)
+                    {t.room.endGameButton}
                   </button>
                   <p className="text-xs text-slate-400 mt-2 text-center">
-                    게임을 종료하면 모든 참여자에게 진실이 공개됩니다
+                    {t.room.endGameDesc}
                   </p>
                 </div>
               );
@@ -1368,6 +1377,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
                 guesses={guesses}
                 onJudge={handleJudgeGuess}
                 gameEnded={gameEnded}
+                lang={lang}
               />
             )}
           </div>
@@ -1381,6 +1391,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
           questions={questions}
           onRestart={handleRestart}
           roomCode={roomCode}
+          lang={lang}
           isUserWon={userWon && !gameEnded}
           onClose={userWon && !gameEnded ? () => setUserWon(false) : undefined}
         />

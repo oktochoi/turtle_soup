@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from '@/hooks/useTranslations';
 
 type GuessInputProps = {
   onSubmit: (text: string) => void;
@@ -12,6 +13,7 @@ type GuessInputProps = {
 };
 
 export default function GuessInput({ onSubmit, hasSubmitted, userGuess }: GuessInputProps) {
+  const t = useTranslations();
   const [text, setText] = useState('');
 
   const handleSubmit = () => {
@@ -28,8 +30,8 @@ export default function GuessInput({ onSubmit, hasSubmitted, userGuess }: GuessI
         <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-green-500/20 rounded-full mx-auto mb-2 sm:mb-3">
           <i className="ri-checkbox-circle-line text-green-400 text-xl sm:text-2xl"></i>
         </div>
-        <h3 className="font-semibold text-green-400 mb-1 text-xs sm:text-sm">정답입니다!</h3>
-        <p className="text-xs sm:text-sm text-slate-400">축하합니다!</p>
+        <h3 className="font-semibold text-green-400 mb-1 text-xs sm:text-sm">{t.room.correctAnswer}</h3>
+        <p className="text-xs sm:text-sm text-slate-400">{t.room.congrats}</p>
       </div>
     );
   }
@@ -44,8 +46,8 @@ export default function GuessInput({ onSubmit, hasSubmitted, userGuess }: GuessI
           <div className="flex items-center gap-2">
             <i className="ri-close-circle-line text-red-400 text-sm sm:text-base"></i>
             <div>
-              <h4 className="font-semibold text-red-400 text-xs sm:text-sm">오답입니다</h4>
-              <p className="text-xs text-slate-400">다시 생각해보세요</p>
+              <h4 className="font-semibold text-red-400 text-xs sm:text-sm">{t.room.wrongAnswer}</h4>
+              <p className="text-xs text-slate-400">{t.room.thinkAgain}</p>
             </div>
           </div>
         </div>
@@ -55,8 +57,8 @@ export default function GuessInput({ onSubmit, hasSubmitted, userGuess }: GuessI
           <div className="flex items-center gap-2">
             <i className="ri-check-double-line text-purple-400 text-sm sm:text-base"></i>
             <div>
-              <h4 className="font-semibold text-purple-400 text-xs sm:text-sm">정답이 제출되었습니다</h4>
-              <p className="text-xs text-slate-400">관리자의 판정을 기다려주세요</p>
+              <h4 className="font-semibold text-purple-400 text-xs sm:text-sm">{t.room.answerSubmitted}</h4>
+              <p className="text-xs text-slate-400">{t.room.waitForJudgment}</p>
             </div>
           </div>
         </div>
@@ -65,12 +67,12 @@ export default function GuessInput({ onSubmit, hasSubmitted, userGuess }: GuessI
         <div className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center flex-shrink-0">
           <i className="ri-lightbulb-flash-line text-purple-400 text-sm sm:text-base"></i>
         </div>
-        <h3 className="font-semibold text-xs sm:text-sm">정답 추측</h3>
+        <h3 className="font-semibold text-xs sm:text-sm">{t.room.guessAnswer}</h3>
       </div>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="진실이 무엇이라고 생각하시나요? 자세히 서술해주세요..."
+        placeholder={t.room.guessPlaceholder}
         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none h-24 sm:h-32 text-xs sm:text-sm mb-2 sm:mb-3"
         maxLength={500}
       />
@@ -82,7 +84,7 @@ export default function GuessInput({ onSubmit, hasSubmitted, userGuess }: GuessI
           className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 sm:px-6 py-2 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm whitespace-nowrap"
         >
           <i className="ri-send-plane-fill mr-1"></i>
-          제출하기
+          {t.room.submit}
         </button>
       </div>
     </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations } from '@/hooks/useTranslations';
 
 type Question = {
   id: string;
@@ -16,11 +17,13 @@ type GameResultModalProps = {
   questions: Question[];
   onRestart: () => void;
   roomCode: string;
+  lang: string;
   isUserWon?: boolean; // 정답 맞춘 유저만 개인적으로 보는 경우
   onClose?: () => void; // 모달 닫기 (정답 맞춘 유저가 게임 계속할 수 있도록)
 };
 
-export default function GameResultModal({ story, truth, questions, onRestart, roomCode, isUserWon = false, onClose }: GameResultModalProps) {
+export default function GameResultModal({ story, truth, questions, onRestart, roomCode, lang, isUserWon = false, onClose }: GameResultModalProps) {
+  const t = useTranslations();
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50">
       <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl sm:rounded-2xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden border border-slate-700 shadow-2xl">
@@ -29,10 +32,10 @@ export default function GameResultModal({ story, truth, questions, onRestart, ro
             <i className="ri-trophy-line text-white text-2xl sm:text-3xl"></i>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-white mb-1">
-            {isUserWon ? '정답을 맞추셨습니다!' : '게임 종료!'}
+            {isUserWon ? t.room.correctAnswerTitle : t.room.gameEndedTitle}
           </h2>
           <p className="text-white/80 text-xs sm:text-sm">
-            {isUserWon ? '축하합니다! 정답을 맞추셨습니다.' : '정답이 맞춰졌습니다'}
+            {isUserWon ? t.room.congratulations : t.room.answerGuessed}
           </p>
         </div>
 
@@ -42,7 +45,7 @@ export default function GameResultModal({ story, truth, questions, onRestart, ro
               <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-indigo-500/20 rounded-lg flex-shrink-0">
                 <i className="ri-book-open-line text-indigo-400 text-sm sm:text-base"></i>
               </div>
-              <h3 className="font-bold text-indigo-400 text-sm sm:text-base">표면 이야기</h3>
+              <h3 className="font-bold text-indigo-400 text-sm sm:text-base">{t.room.surfaceStory}</h3>
             </div>
             <div className="max-h-48 sm:max-h-64 overflow-y-auto">
               <p className="text-xs sm:text-sm text-white leading-relaxed break-words pr-2">{story}</p>
@@ -54,7 +57,7 @@ export default function GameResultModal({ story, truth, questions, onRestart, ro
               <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-yellow-500/20 rounded-lg flex-shrink-0">
                 <i className="ri-key-line text-yellow-400 text-sm sm:text-base"></i>
               </div>
-              <h3 className="font-bold text-yellow-400 text-sm sm:text-base">진실</h3>
+              <h3 className="font-bold text-yellow-400 text-sm sm:text-base">{t.room.truth}</h3>
             </div>
             <div className="max-h-48 sm:max-h-64 overflow-y-auto">
               <p className="text-xs sm:text-sm text-white leading-relaxed break-words pr-2">{truth}</p>
@@ -66,14 +69,14 @@ export default function GameResultModal({ story, truth, questions, onRestart, ro
               <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-blue-500/20 rounded-lg flex-shrink-0">
                 <i className="ri-question-line text-blue-400 text-sm sm:text-base"></i>
               </div>
-              <h3 className="font-bold text-blue-400 text-sm sm:text-base">질문 목록</h3>
-              <span className="ml-auto text-xs sm:text-sm text-slate-500">{questions.length}개</span>
+              <h3 className="font-bold text-blue-400 text-sm sm:text-base">{t.room.questionList}</h3>
+              <span className="ml-auto text-xs sm:text-sm text-slate-500">{questions.length}{t.room.questionsCount}</span>
             </div>
             <div className="space-y-2 max-h-64 sm:max-h-80 overflow-y-auto pr-2">
               {questions.length === 0 ? (
                 <div className="text-center py-8 text-slate-500 text-xs sm:text-sm">
                   <i className="ri-chat-off-line text-2xl sm:text-3xl mb-2"></i>
-                  <p>질문이 없습니다</p>
+                  <p>{t.room.noQuestions}</p>
                 </div>
               ) : (
                 questions.map((q, index) => (
@@ -91,7 +94,7 @@ export default function GameResultModal({ story, truth, questions, onRestart, ro
                               : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
                         }`}
                       >
-                        {q.answer === 'yes' ? '예' : q.answer === 'no' ? '아니오' : '상관없음'}
+                        {q.answer === 'yes' ? t.problem.yes : q.answer === 'no' ? t.problem.no : t.problem.irrelevant}
                       </span>
                     )}
                   </div>
@@ -103,10 +106,10 @@ export default function GameResultModal({ story, truth, questions, onRestart, ro
         </div>
 
           <div className="p-4 sm:p-6 border-t border-slate-700 flex flex-col sm:flex-row gap-2 sm:gap-3">
-          <Link href="/" className="flex-1">
+          <Link href={`/${lang}`} className="flex-1">
               <button className="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap text-sm sm:text-base">
               <i className="ri-home-line mr-2"></i>
-                홈으로 돌아가기
+                {t.room.backToHome}
             </button>
           </Link>
             {isUserWon && onClose && (
@@ -115,13 +118,13 @@ export default function GameResultModal({ story, truth, questions, onRestart, ro
                 className="flex-1 bg-slate-600 hover:bg-slate-500 text-white font-semibold py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap text-sm sm:text-base"
               >
                 <i className="ri-close-line mr-2"></i>
-                계속하기
+                {t.room.continue}
               </button>
             )}
-          <Link href="/create-room" className="flex-1">
+          <Link href={`/${lang}/create-room`} className="flex-1">
               <button className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap text-sm sm:text-base">
               <i className="ri-add-circle-line mr-2"></i>
-              새 방 만들기
+              {t.room.createNewRoomTitle}
             </button>
           </Link>
           </div>

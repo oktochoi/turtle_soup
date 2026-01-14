@@ -145,7 +145,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
       // AbortError는 무해한 에러이므로 무시 (컴포넌트 언마운트 시 발생 가능)
       if (error?.name !== 'AbortError' && error?.message?.includes('aborted') === false) {
         console.error('방 리스트 로드 오류:', error);
-        setError(lang === 'ko' ? '방 리스트를 불러올 수 없습니다.' : 'Failed to load room list.');
+        setError(t.room.loadRoomListFail);
       }
     } finally {
       setIsLoading(false);
@@ -194,7 +194,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
   const handleSubmitPassword = () => {
     if (!selectedRoom) return;
     if (!password.trim()) {
-      setError(lang === 'ko' ? '비밀번호를 입력해주세요.' : 'Please enter password.');
+      setError(t.room.enterPasswordAlert);
       return;
     }
     
@@ -232,7 +232,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
               <ellipse cx="70" cy="70" rx="6" ry="5" fill="#14b8a6" />
             </svg>
           </div>
-          <p className="text-slate-400">{lang === 'ko' ? '방 목록을 불러오는 중...' : 'Loading rooms...'}</p>
+          <p className="text-slate-400">{t.room.loadingRooms}</p>
         </div>
       </div>
     );
@@ -253,7 +253,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
             className="text-slate-400 hover:text-white transition-colors text-xs sm:text-sm"
           >
             <i className="ri-refresh-line mr-2"></i>
-            {lang === 'ko' ? '새로고침' : 'Refresh'}
+            {t.room.refresh}
           </button>
         </div>
 
@@ -261,14 +261,14 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
-                {lang === 'ko' ? '방 목록' : 'Room List'}
+                {t.room.roomList}
               </h1>
-              <p className="text-slate-400 text-xs sm:text-sm">{lang === 'ko' ? '참여 가능한 방을 선택하세요' : 'Select a room to join'}</p>
+              <p className="text-slate-400 text-xs sm:text-sm">{t.room.selectRoomToJoin}</p>
             </div>
             <Link href={`/${lang}/create-room`}>
               <button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-lg hover:shadow-teal-500/50 text-sm sm:text-base whitespace-nowrap">
                 <i className="ri-add-circle-line mr-2"></i>
-                {lang === 'ko' ? '새 방 생성하기' : 'Create New Room'}
+                {t.room.createNewRoom}
               </button>
             </Link>
           </div>
@@ -280,7 +280,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
             <i className="ri-search-line absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
             <input
               type="text"
-              placeholder={lang === 'ko' ? '방 코드, 스토리, 호스트명으로 검색...' : 'Search by room code, story, host name...'}
+              placeholder={t.room.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
@@ -300,7 +300,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
         <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* 공개/비공개 필터 */}
           <div>
-            <label className="block text-xs text-slate-400 mb-2">{lang === 'ko' ? '공개 설정' : 'Privacy'}</label>
+            <label className="block text-xs text-slate-400 mb-2">{t.room.privacy}</label>
             <div className="flex gap-2">
               <button
                 onClick={() => setPrivacyFilter('all')}
@@ -310,7 +310,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                     : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
                 }`}
               >
-                {lang === 'ko' ? '전체' : 'All'}
+                {t.room.all}
               </button>
               <button
                 onClick={() => setPrivacyFilter('public')}
@@ -321,7 +321,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                 }`}
               >
                 <i className="ri-global-line mr-1"></i>
-                {lang === 'ko' ? '공개' : 'Public'}
+                {t.room.public}
               </button>
               <button
                 onClick={() => setPrivacyFilter('private')}
@@ -332,14 +332,14 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                 }`}
               >
                 <i className="ri-lock-line mr-1"></i>
-                {lang === 'ko' ? '비공개' : 'Private'}
+                {t.room.private}
               </button>
             </div>
           </div>
 
           {/* 최소 인원수 필터 */}
           <div>
-            <label className="block text-xs text-slate-400 mb-2">{lang === 'ko' ? '최소 인원수' : 'Min Players'}</label>
+            <label className="block text-xs text-slate-400 mb-2">{t.room.minPlayers}</label>
             <div className="flex gap-2 items-center">
               <input
                 type="number"
@@ -375,7 +375,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
               className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-lg transition-all"
             >
               <i className="ri-refresh-line mr-2"></i>
-              {lang === 'ko' ? '필터 초기화' : 'Reset Filters'}
+              {t.room.resetFilters}
             </button>
           </div>
         </div>
@@ -391,28 +391,13 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
           <p className="text-sm text-slate-400">
             {filteredRooms.length > 0 ? (
               <>
-                {lang === 'ko' ? (
-                  <>
-                    총 <span className="font-semibold text-teal-400">{filteredRooms.length}</span>개의 방
-                    {rooms.length !== filteredRooms.length && (
-                      <span className="text-slate-500 ml-2">
-                        (전체 {rooms.length}개 중)
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <span className="font-semibold text-teal-400">{filteredRooms.length}</span> rooms
-                    {rooms.length !== filteredRooms.length && (
-                      <span className="text-slate-500 ml-2">
-                        (of {rooms.length} total)
-                      </span>
-                    )}
-                  </>
-                )}
+                {lang === 'ko' 
+                  ? <>총 <span className="font-semibold text-teal-400">{filteredRooms.length}</span>개의 방{rooms.length !== filteredRooms.length && <span className="text-slate-500 ml-2">(전체 {rooms.length}개 중)</span>}</>
+                  : <><span className="font-semibold text-teal-400">{filteredRooms.length}</span> rooms{rooms.length !== filteredRooms.length && <span className="text-slate-500 ml-2">(of {rooms.length} total)</span>}</>
+                }
               </>
             ) : (
-              <span>{lang === 'ko' ? '검색 결과가 없습니다' : 'No results found'}</span>
+              <span>{t.room.noResults}</span>
             )}
           </p>
           {(searchQuery || privacyFilter !== 'all' || minPlayers > 0) && (
@@ -425,7 +410,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
               className="text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1"
             >
               <i className="ri-filter-off-line"></i>
-              {lang === 'ko' ? '필터 해제' : 'Clear Filters'}
+              {t.room.clearFilters}
             </button>
           )}
         </div>
@@ -437,20 +422,20 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
             </div>
             {searchQuery ? (
               <>
-                <p className="text-slate-400 mb-4">{lang === 'ko' ? '검색 결과가 없습니다.' : 'No search results found.'}</p>
+                <p className="text-slate-400 mb-4">{t.room.noSearchResults}</p>
                 <button
                   onClick={() => setSearchQuery('')}
                   className="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-6 py-3 rounded-xl transition-all"
                 >
-                  {lang === 'ko' ? '검색 초기화' : 'Clear Search'}
+                  {t.room.clearSearch}
                 </button>
               </>
             ) : (
               <>
-                <p className="text-slate-400 mb-4">{lang === 'ko' ? '현재 참여 가능한 방이 없습니다.' : 'No rooms available.'}</p>
+                <p className="text-slate-400 mb-4">{t.room.noRoomsAvailable}</p>
                 <Link href={`/${lang}/create-room`}>
                   <button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold px-6 py-3 rounded-xl transition-all">
-                    {lang === 'ko' ? '새 방 만들기' : 'Create New Room'}
+                    {t.room.createNewRoom}
                   </button>
                 </Link>
               </>
@@ -470,18 +455,18 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                       {(room.game_ended || room.status === 'done') && (
                         <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs border border-red-500/50">
                           <i className="ri-stop-circle-line mr-1"></i>
-                          {lang === 'ko' ? '종료' : 'Ended'}
+                          {t.room.ended}
                         </span>
                       )}
                       {room.password ? (
                         <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs border border-yellow-500/50">
                           <i className="ri-lock-line mr-1"></i>
-                          {lang === 'ko' ? '비밀번호' : 'Password'}
+                          {t.room.password}
                         </span>
                       ) : (
                         <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs border border-green-500/50">
                           <i className="ri-global-line mr-1"></i>
-                          {lang === 'ko' ? '공개' : 'Public'}
+                          {t.room.public}
                         </span>
                       )}
                     </div>
@@ -490,11 +475,11 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                   <div className="flex items-center gap-4 text-xs text-slate-400">
                     <span>
                       <i className="ri-user-line mr-1"></i>
-                      {lang === 'ko' ? '호스트' : 'Host'}: {room.host_nickname}
+                      {t.room.host}: {room.host_nickname}
                     </span>
                     <span>
                       <i className="ri-group-line mr-1"></i>
-                      {room.player_count}{lang === 'ko' ? '명' : ''}
+                      {room.player_count}{lang === 'ko' ? t.room.playersCount : ''}
                     </span>
                   </div>
                 </div>
@@ -505,16 +490,16 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                       className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-2.5 rounded-lg transition-all text-sm"
                     >
                       <i className="ri-login-box-line mr-2"></i>
-                      {lang === 'ko' ? '참여하기' : 'Join'}
+                      {t.room.join}
                     </button>
                   )}
                   <button
                     onClick={() => router.push(`/${lang}/room/${room.code}?spectator=true`)}
                     className={`${!(room.game_ended || room.status === 'done') ? 'flex-1' : 'w-full'} bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 rounded-lg transition-all text-sm border border-slate-600`}
-                    title={lang === 'ko' ? '관전 모드로 입장 (질문과 답변, 잡담을 볼 수 있습니다)' : 'Spectate mode (view questions, answers, and chat)'}
+                    title={t.room.spectateModeTooltip}
                   >
                     <i className="ri-eye-line mr-2"></i>
-                    {lang === 'ko' ? '관전' : 'Spectate'}
+                    {t.room.spectator}
                   </button>
                 </div>
               </div>
@@ -527,10 +512,10 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
       {showPasswordModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-xl p-6 max-w-md w-full border border-slate-700">
-            <h3 className="text-lg font-bold mb-4 text-white">{lang === 'ko' ? '방 비밀번호 입력' : 'Enter Room Password'}</h3>
+            <h3 className="text-lg font-bold mb-4 text-white">{t.room.enterRoomPassword}</h3>
             <input
               type="password"
-              placeholder={lang === 'ko' ? '비밀번호를 입력하세요' : 'Enter password'}
+              placeholder={t.room.enterPasswordPlaceholder}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyPress={(e) => {

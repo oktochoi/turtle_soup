@@ -37,7 +37,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
 
   const handleCreate = async () => {
     if (!story.trim() || !truth.trim() || !nickname.trim()) {
-      alert(lang === 'ko' ? '모든 필드를 입력해주세요' : 'Please fill in all fields');
+      alert(t.room.fillAllFields);
       return;
     }
 
@@ -73,7 +73,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
       }
 
       if (codeExists) {
-        throw new Error(lang === 'ko' ? '방 코드 생성에 실패했습니다. 다시 시도해주세요.' : 'Failed to generate room code. Please try again.');
+        throw new Error(t.room.roomCodeGenerationFail);
       }
 
       // 방 생성
@@ -142,7 +142,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
       router.push(`/${lang}/room/${roomCode}?host=true&nickname=${encodeURIComponent(nickname.trim())}`);
     } catch (error) {
       console.error('방 생성 오류:', error);
-      alert(lang === 'ko' ? '방 생성에 실패했습니다. 다시 시도해주세요.' : 'Failed to create room. Please try again.');
+      alert(t.room.createRoomFail);
       setIsCreating(false);
     }
   };
@@ -161,22 +161,22 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
 
         <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
-            {lang === 'ko' ? '새 방 만들기' : 'Create New Room'}
+            {t.room.createNewRoomTitle}
           </h1>
-          <p className="text-slate-400 text-xs sm:text-sm">{lang === 'ko' ? '관리자로 게임을 시작합니다' : 'Start a game as host'}</p>
+          <p className="text-slate-400 text-xs sm:text-sm">{t.room.startGameAsHost}</p>
         </div>
 
         <div className="space-y-4 sm:space-y-5">
           <div>
             <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
               <i className="ri-user-line mr-1"></i>
-              {lang === 'ko' ? '닉네임' : 'Nickname'}
+              {t.room.host}
             </label>
             <input
               type="text"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              placeholder={lang === 'ko' ? '관리자 닉네임' : 'Host nickname'}
+              placeholder={t.room.hostNickname}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
               maxLength={20}
             />
@@ -185,12 +185,12 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
           <div>
             <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
               <i className="ri-file-text-line mr-1"></i>
-              {lang === 'ko' ? '표면 이야기 (참여자에게 보여질 내용)' : 'Surface Story (shown to participants)'}
+              {t.room.surfaceStory}
             </label>
             <textarea
               value={story}
               onChange={(e) => setStory(e.target.value)}
-              placeholder={lang === 'ko' ? '예: 한 남자가 레스토랑에서 바다거북스프를 먹고 자살했다. 왜 그랬을까?' : 'Example: A man ate turtle soup at a restaurant and committed suicide. Why?'}
+              placeholder={t.room.surfaceStoryPlaceholder}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-32 resize-none text-sm"
               maxLength={500}
             />
@@ -202,12 +202,12 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
           <div>
             <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
               <i className="ri-key-line mr-1"></i>
-              {lang === 'ko' ? '진실 (정답 스토리)' : 'Truth (Answer Story)'}
+              {t.room.truth}
             </label>
             <textarea
               value={truth}
               onChange={(e) => setTruth(e.target.value)}
-              placeholder={lang === 'ko' ? '실제 진실을 입력하세요. 이 내용은 정답이 맞춰질 때까지 숨겨집니다.' : 'Enter the actual truth. This content will be hidden until the answer is guessed correctly.'}
+              placeholder={t.room.truthPlaceholder}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-40 resize-none text-sm"
               maxLength={500}
             />
@@ -219,7 +219,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
           <div>
             <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
               <i className="ri-lock-line mr-1"></i>
-              {lang === 'ko' ? '방 비밀번호 (선택)' : 'Room Password (Optional)'}
+              {t.room.roomPasswordOptional}
             </label>
             <div className="space-y-3">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -234,21 +234,21 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                   }}
                   className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-teal-500 focus:ring-teal-500"
                 />
-                <span className="text-xs sm:text-sm text-slate-400">{lang === 'ko' ? '비밀번호 설정' : 'Set Password'}</span>
+                <span className="text-xs sm:text-sm text-slate-400">{t.room.setPassword}</span>
               </label>
               {usePassword && (
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={lang === 'ko' ? '방 비밀번호 입력' : 'Enter room password'}
+                  placeholder={t.room.enterRoomPasswordPlaceholder}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
                   maxLength={20}
                 />
               )}
               {usePassword && (
                 <p className="text-xs text-slate-500">
-                  {lang === 'ko' ? '비밀번호가 설정된 방은 비밀번호를 입력해야 참여할 수 있습니다.' : 'Rooms with passwords require password entry to join.'}
+                  {t.room.passwordDescription}
                 </p>
               )}
             </div>
@@ -257,7 +257,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
           <div>
             <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
               <i className="ri-question-answer-line mr-1"></i>
-              {lang === 'ko' ? '최대 질문 개수' : 'Max Questions'}
+              {t.room.maxQuestions}
             </label>
             <div className="space-y-3">
               <div className="flex items-center gap-3 sm:gap-4">
@@ -274,7 +274,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                   className="flex-1 accent-teal-500"
                 />
                 <span className="text-xl sm:text-2xl font-bold text-teal-400 w-16 sm:w-20 text-center">
-                  {maxQuestions === null ? (lang === 'ko' ? '무제한' : 'Unlimited') : maxQuestions}
+                  {maxQuestions === null ? t.room.unlimited : maxQuestions}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -287,7 +287,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                   }`}
                 >
-                  {lang === 'ko' ? '무제한' : 'Unlimited'}
+                  {t.room.unlimited}
                 </button>
                 <button
                   type="button"
@@ -298,7 +298,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                   }`}
                 >
-                  30{lang === 'ko' ? '개' : ''}
+                  30{lang === 'ko' ? t.room.questionsCount : ''}
                 </button>
                 <button
                   type="button"
@@ -309,7 +309,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                   }`}
                 >
-                  50{lang === 'ko' ? '개' : ''}
+                  50{lang === 'ko' ? t.room.questionsCount : ''}
                 </button>
               </div>
             </div>
@@ -322,8 +322,8 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
           >
             <i className="ri-door-open-line mr-2"></i>
             {isCreating 
-              ? (lang === 'ko' ? '방 생성 중...' : 'Creating room...')
-              : (lang === 'ko' ? '방 만들기' : 'Create Room')
+              ? t.room.creatingRoom
+              : t.room.createRoom
             }
           </button>
         </div>

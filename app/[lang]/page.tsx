@@ -407,7 +407,22 @@ export default function Home() {
                 </div>
               </div>
             </Link>
-          ) : null}
+          ) : (
+            <div className="bg-slate-800/40 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-lg">
+                  <i className="ri-calendar-check-line text-teal-400 text-xl sm:text-2xl"></i>
+                </div>
+                <h2 className="font-bold text-teal-400 text-base sm:text-lg lg:text-xl">
+                  {t.home.todayProblem}
+                </h2>
+              </div>
+              <div className="text-center py-8">
+                <i className="ri-time-line text-4xl text-slate-500 mb-3"></i>
+                <p className="text-slate-400 text-sm sm:text-base">{t.home.preparing}</p>
+              </div>
+            </div>
+          )}
 
           <Link href={getLocalizedPath('/ranking')}>
             <div className="bg-slate-800/40 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 hover:border-purple-500/50 transition-all cursor-pointer animate-fade-in-up delay-100">

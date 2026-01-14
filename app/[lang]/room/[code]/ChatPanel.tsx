@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useTranslations } from '@/hooks/useTranslations';
 
 type ChatMessage = {
   id: string;
@@ -299,7 +300,7 @@ export default function ChatPanel({ roomCode, nickname }: ChatPanelProps) {
       <div className="p-3 sm:p-4 border-b border-slate-700">
         <h3 className="text-sm sm:text-base font-semibold text-teal-400 flex items-center gap-2">
           <i className="ri-chat-3-line"></i>
-          잡담
+          {t.room.chat}
         </h3>
       </div>
 
@@ -315,10 +316,10 @@ export default function ChatPanel({ roomCode, nickname }: ChatPanelProps) {
           </div>
         ) : messages.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-xs sm:text-sm text-slate-400">아직 메시지가 없습니다.</p>
-            <p className="text-xs text-slate-500 mt-1">잡담을 시작해보세요!</p>
+            <p className="text-xs sm:text-sm text-slate-400">{t.room.noMessagesYet}</p>
+            <p className="text-xs text-slate-500 mt-1">{t.room.startChatting}</p>
             <p className="text-xs text-amber-400/70 mt-2 px-2">
-              💡 실시간 메시지는 정상 작동합니다
+              {t.room.realtimeMessagesWorking}
             </p>
           </div>
         ) : (
@@ -362,7 +363,7 @@ export default function ChatPanel({ roomCode, nickname }: ChatPanelProps) {
             type="text"
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
-            placeholder={nickname ? "메시지 입력..." : "닉네임을 입력해주세요"}
+            placeholder={nickname ? t.room.enterMessage : t.room.enterNicknameToChat}
             disabled={!nickname}
             className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             maxLength={200}
@@ -377,7 +378,7 @@ export default function ChatPanel({ roomCode, nickname }: ChatPanelProps) {
         </div>
         {!nickname && (
           <p className="text-xs text-amber-400/70 mt-2 text-center">
-            💡 닉네임을 입력하면 잡담을 할 수 있습니다
+            {t.room.enterNicknameToChatDesc}
           </p>
         )}
       </form>

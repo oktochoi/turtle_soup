@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useTranslations } from '@/hooks/useTranslations';
 
 type Question = {
   id: string;
@@ -15,9 +16,11 @@ type QuestionListProps = {
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   isHost?: boolean; // 호스트 여부
+  lang: string;
 };
 
-export default function QuestionList({ questions, selectedId, onSelect, isHost = false }: QuestionListProps) {
+export default function QuestionList({ questions, selectedId, onSelect, isHost = false, lang }: QuestionListProps) {
+  const t = useTranslations();
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,7 +43,7 @@ export default function QuestionList({ questions, selectedId, onSelect, isHost =
     if (!answer) {
       return (
         <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-700 text-slate-400 whitespace-nowrap">
-          대기중
+          {t.room.waiting}
         </span>
       );
     }
@@ -52,9 +55,9 @@ export default function QuestionList({ questions, selectedId, onSelect, isHost =
     };
 
     const labels = {
-      yes: '예',
-      no: '아니오',
-      irrelevant: '상관없음',
+      yes: t.problem.yes,
+      no: t.problem.no,
+      irrelevant: t.problem.irrelevant,
     };
 
     return (
@@ -70,20 +73,20 @@ export default function QuestionList({ questions, selectedId, onSelect, isHost =
         <div className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center flex-shrink-0">
           <i className="ri-chat-3-line text-teal-400 text-sm sm:text-base"></i>
         </div>
-        <h3 className="font-semibold text-xs sm:text-sm">질문 목록</h3>
+        <h3 className="font-semibold text-xs sm:text-sm">{t.room.questionList}</h3>
         {isHost && (
-          <span className="text-xs text-slate-400 ml-2" title="질문을 클릭하면 예/아니오/상관없음을 선택할 수 있습니다">
+          <span className="text-xs text-slate-400 ml-2" title={t.room.clickQuestionToAnswer}>
             <i className="ri-information-line mr-1"></i>
-            질문 클릭하여 답변하기
+            {t.room.clickQuestionToAnswer}
           </span>
         )}
-        <span className="ml-auto text-xs text-slate-500">{questions.length}개</span>
+        <span className="ml-auto text-xs text-slate-500">{questions.length}{lang === 'ko' ? t.room.questionsCount : ''}</span>
       </div>
       <div ref={listRef} className="max-h-64 sm:max-h-96 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3">
         {sortedQuestions.length === 0 ? (
           <div className="text-center py-6 sm:py-8 text-slate-500 text-xs sm:text-sm">
             <i className="ri-chat-off-line text-2xl sm:text-3xl mb-2"></i>
-            <p>아직 질문이 없습니다</p>
+            <p>{t.room.noQuestionsYet}</p>
           </div>
         ) : (
           sortedQuestions.map((q) => (
