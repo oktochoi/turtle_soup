@@ -53,6 +53,19 @@ export default function Home() {
 
     loadTodayProblem();
     checkTodayCheckIn();
+    
+    // 주기적으로 비활성 방 정리 (1시간 이상 활동이 없으면 방 제거)
+    const cleanupInterval = setInterval(async () => {
+      try {
+        await fetch('/api/rooms/cleanup', { method: 'POST' });
+      } catch (error) {
+        console.error('방 정리 API 호출 오류:', error);
+      }
+    }, 10 * 60 * 1000); // 10분마다
+
+    return () => {
+      clearInterval(cleanupInterval);
+    };
   }, [user, lang, isRedirecting]);
 
   const loadTodayProblem = async () => {

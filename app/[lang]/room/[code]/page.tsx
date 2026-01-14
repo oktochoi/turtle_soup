@@ -60,6 +60,8 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
   const [roomPassword, setRoomPassword] = useState<string | null>(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [enteredPassword, setEnteredPassword] = useState('');
+  const [roomCreatedAt, setRoomCreatedAt] = useState<Date | null>(null);
+  const [lastChatAt, setLastChatAt] = useState<Date | null>(null);
 
   // Supabase에서 방 정보 로드
   useEffect(() => {
@@ -102,6 +104,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
           setMaxQuestions(room.max_questions >= 999999 ? null : room.max_questions);
           setGameEnded(room.game_ended || room.status === 'done');
           setRoomPassword(room.password);
+          setRoomCreatedAt(room.created_at ? new Date(room.created_at) : null);
         }
       } catch (err) {
         console.error('방 로드 오류:', err);
@@ -597,6 +600,26 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
       )
       .subscribe();
 
+    // 채팅 실시간 구독 (최근 대화 시간 업데이트용)
+    const chatTimeChannel = supabase
+      .channel(`chat-time:${roomCode}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'room_chats',
+          filter: `room_code=eq.${roomCode}`,
+        },
+        (payload) => {
+          // 새 채팅 메시지가 올 때마다 최근 대화 시간 업데이트
+          if (payload.new && payload.new.created_at) {
+            setLastChatAt(new Date(payload.new.created_at));
+          }
+        }
+      )
+      .subscribe();
+
     // 기존 데이터 로드
     const loadInitialData = async () => {
       try {
@@ -627,7 +650,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
           }
         }
 
-        const [questionsRes, guessesRes, playersRes] = await Promise.all([
+        const [questionsRes, guessesRes, playersRes, lastChatRes] = await Promise.all([
           supabase
             .from('questions')
             .select('*')
@@ -642,6 +665,13 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
             .from('players')
             .select('nickname, is_host')
             .eq('room_code', roomCode),
+          supabase
+            .from('room_chats')
+            .select('created_at')
+            .eq('room_code', roomCode)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
         ]);
 
         if (questionsRes.error) {
@@ -691,6 +721,13 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
             is_ready: false,
           })));
         }
+
+        // 최근 대화 시간 업데이트
+        if (lastChatRes.data && lastChatRes.data.created_at) {
+          setLastChatAt(new Date(lastChatRes.data.created_at));
+        } else {
+          setLastChatAt(null);
+        }
       } catch (err) {
         console.error('초기 데이터 로드 오류:', err);
       }
@@ -738,12 +775,53 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
     // 2초마다 방 상태 확인
     const pollInterval = setInterval(pollRoomStatus, 2000);
 
+    // 5분마다 비활성 방 정리 API 호출 (1시간 이상 활동이 없으면 방 제거)
+    const cleanupInterval = setInterval(async () => {
+      try {
+        await fetch('/api/rooms/cleanup', { method: 'POST' });
+      } catch (error) {
+        console.error('방 정리 API 호출 오류:', error);
+      }
+    }, 5 * 60 * 1000); // 5분마다
+
+    // 현재 방의 활동 시간도 체크하여 1시간 이상 비활성이면 경고
+    const checkInactivity = async () => {
+      try {
+        const { data: roomData } = await supabase
+          .from('rooms')
+          .select('last_activity_at, created_at')
+          .eq('code', roomCode)
+          .single();
+        
+        if (roomData) {
+          const lastActivity = roomData.last_activity_at 
+            ? new Date(roomData.last_activity_at).getTime()
+            : new Date(roomData.created_at).getTime();
+          const now = Date.now();
+          const inactiveMinutes = (now - lastActivity) / (1000 * 60);
+          
+          // 50분 이상 비활성이면 경고 (1시간 전에 경고)
+          if (inactiveMinutes >= 50 && inactiveMinutes < 60) {
+            console.warn(`⚠️ 방이 ${Math.floor(inactiveMinutes)}분 동안 비활성 상태입니다. 곧 자동으로 제거될 수 있습니다.`);
+          }
+        }
+      } catch (error) {
+        // 무시
+      }
+    };
+
+    // 10분마다 현재 방의 비활성 상태 체크
+    const inactivityCheckInterval = setInterval(checkInactivity, 10 * 60 * 1000);
+
     return () => {
       questionsChannel.unsubscribe();
       guessesChannel.unsubscribe();
       roomChannel.unsubscribe();
       playersChannel.unsubscribe();
+      chatTimeChannel.unsubscribe();
       clearInterval(pollInterval);
+      clearInterval(cleanupInterval);
+      clearInterval(inactivityCheckInterval);
     };
   }, [roomCode, showNicknameModal]);
 
@@ -1064,6 +1142,81 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
     }
   };
 
+  const handleLeaveRoom = async () => {
+    if (!nickname) return;
+
+    // 확인 다이얼로그
+    const confirmMessage = isHost 
+      ? (lang === 'ko' 
+          ? '호스트로 나가시면 방이 종료됩니다. 정말 나가시겠습니까?' 
+          : 'Leaving as host will end the room. Are you sure?')
+      : (lang === 'ko' 
+          ? '방에서 나가시겠습니까?' 
+          : 'Are you sure you want to leave the room?');
+    
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      // 호스트인 경우 방 종료
+      if (isHost) {
+        const { error: endGameError } = await supabase
+          .from('rooms')
+          .update({ 
+            status: 'done',
+            game_ended: true 
+          })
+          .eq('code', roomCode);
+
+        if (endGameError) {
+          console.error('방 종료 오류:', endGameError);
+        }
+      }
+
+      // players 테이블에서 제거
+      const { error: leaveError } = await supabase
+        .from('players')
+        .delete()
+        .eq('room_code', roomCode)
+        .eq('nickname', nickname);
+
+      if (leaveError) {
+        console.error('방 나가기 오류:', leaveError);
+        // 에러가 발생해도 계속 진행 (이미 나간 상태일 수 있음)
+      }
+
+      // 호스트가 나간 경우 다른 플레이어에게 호스트 권한 위임 시도
+      if (isHost && !leaveError) {
+        // 남은 플레이어 중 첫 번째를 호스트로 지정
+        const { data: remainingPlayers } = await supabase
+          .from('players')
+          .select('nickname')
+          .eq('room_code', roomCode)
+          .order('joined_at', { ascending: true })
+          .limit(1);
+
+        if (remainingPlayers && remainingPlayers.length > 0) {
+          await supabase
+            .from('players')
+            .update({ is_host: true })
+            .eq('room_code', roomCode)
+            .eq('nickname', remainingPlayers[0].nickname);
+        }
+      }
+
+      // localStorage에서 닉네임 제거
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(`nickname_${roomCode}`);
+        localStorage.removeItem(`roomCode_${roomCode}`);
+      }
+
+      // 방 목록으로 리다이렉트
+      router.push(`/${lang}/rooms`);
+    } catch (error) {
+      console.error('방 나가기 오류:', error);
+      alert(lang === 'ko' ? '방 나가기에 실패했습니다.' : 'Failed to leave room.');
+    }
+  };
+
   const handleSetNickname = async (name: string) => {
     if (!name.trim()) return;
 
@@ -1270,6 +1423,48 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <div className="container mx-auto px-3 sm:px-4 py-4 max-w-6xl">
+        {/* 방 정보 카드 (생성 시간, 최근 대화 시간) */}
+        <div className="mb-3 sm:mb-4 bg-slate-800/50 backdrop-blur-xl rounded-lg p-3 sm:p-4 border border-slate-700/50">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-slate-400">
+            {roomCreatedAt && (
+              <div className="flex items-center gap-1.5">
+                <i className="ri-time-line text-teal-400"></i>
+                <span className="text-slate-300">
+                  {lang === 'ko' ? '생성' : 'Created'}: {roomCreatedAt.toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
+              </div>
+            )}
+            {lastChatAt && (
+              <div className="flex items-center gap-1.5">
+                <i className="ri-chat-3-line text-cyan-400"></i>
+                <span className="text-slate-300">
+                  {lang === 'ko' ? '최근 대화' : 'Last Chat'}: {lastChatAt.toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
+              </div>
+            )}
+            {!lastChatAt && roomCreatedAt && (
+              <div className="flex items-center gap-1.5">
+                <i className="ri-chat-3-line text-slate-500"></i>
+                <span className="text-slate-500">
+                  {lang === 'ko' ? '아직 대화가 없습니다' : 'No chat yet'}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* 호스트인 경우 초대 중심 UI */}
         {isHost && (
           <div className="mb-4 sm:mb-6 bg-gradient-to-br from-green-500/10 via-emerald-500/10 to-teal-500/10 rounded-xl p-4 sm:p-6 border border-green-500/30">
@@ -1377,6 +1572,14 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
             )}
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleLeaveRoom}
+              className="px-3 sm:px-4 py-1.5 sm:py-2 bg-red-500/20 hover:bg-red-500/30 active:bg-red-500/40 text-red-400 border border-red-500/50 rounded-lg transition-all text-xs sm:text-sm font-semibold touch-manipulation active:scale-95 flex items-center gap-1.5"
+              title={lang === 'ko' ? '방 나가기' : 'Leave Room'}
+            >
+              <i className="ri-logout-box-line"></i>
+              <span className="hidden sm:inline">{lang === 'ko' ? '나가기' : 'Leave'}</span>
+            </button>
             <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
               gameEnded ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
             }`}>
