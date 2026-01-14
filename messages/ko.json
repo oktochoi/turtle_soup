@@ -47,6 +47,7 @@
     "checkInComplete": "오늘 출석 완료!",
     "checkInProcessing": "처리 중...",
     "checkInSuccess": "출석 완료!",
+    "checkInLoginRequired": "출석체크를 하려면 로그인이 필요합니다.",
     "gameRules": "게임 방법",
     "rule1": "관리자는 이야기의 진실을 알고 있습니다",
     "rule2": "참여자는 질문을 통해 진실을 추리합니다",

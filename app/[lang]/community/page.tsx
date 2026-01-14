@@ -135,14 +135,19 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
             {t.community.title}
           </h1>
-          {user && (
-            <Link href={`/${lang}/community/create`}>
-              <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all font-semibold text-sm sm:text-base">
-                <i className="ri-pencil-line mr-2"></i>
-                {t.community.createPost}
-              </button>
-            </Link>
-          )}
+          <button
+            onClick={() => {
+              if (user) {
+                router.push(`/${lang}/community/create`);
+              } else {
+                router.push(`/${lang}/auth/login`);
+              }
+            }}
+            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all font-semibold text-sm sm:text-base"
+          >
+            <i className="ri-pencil-line mr-2"></i>
+            {t.community.createPost}
+          </button>
         </div>
 
         {/* 카테고리 탭 */}
@@ -172,13 +177,18 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
           <div className="text-center py-12 bg-slate-800/50 rounded-xl border border-slate-700">
             <i className="ri-inbox-line text-4xl text-slate-600 mb-4"></i>
             <p className="text-slate-400 mb-4">{t.community.noPosts}</p>
-            {user && (
-              <Link href={`/${lang}/community/create`}>
-                <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all">
-                  {t.community.createFirst}
-                </button>
-              </Link>
-            )}
+            <button
+              onClick={() => {
+                if (user) {
+                  router.push(`/${lang}/community/create`);
+                } else {
+                  router.push(`/${lang}/auth/login`);
+                }
+              }}
+              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all"
+            >
+              {t.community.createFirst}
+            </button>
           </div>
         ) : (
           <div className="space-y-4">
@@ -190,13 +200,18 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
                     ? t.community.noPosts
                     : `${getCategoryInfo(selectedCategory).label} ${t.community.noPostsInCategory}`}
                 </p>
-                {user && (
-                  <Link href={`/${lang}/community/create`}>
-                    <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all">
-                      {t.community.createFirst}
-                    </button>
-                  </Link>
-                )}
+                <button
+                  onClick={() => {
+                    if (user) {
+                      router.push(`/${lang}/community/create`);
+                    } else {
+                      router.push(`/${lang}/auth/login`);
+                    }
+                  }}
+                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all"
+                >
+                  {t.community.createFirst}
+                </button>
               </div>
             ) : (
               posts.map((post) => {

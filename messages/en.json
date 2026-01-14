@@ -47,6 +47,7 @@
     "checkInComplete": "Today's check-in complete!",
     "checkInProcessing": "Processing...",
     "checkInSuccess": "Check-in complete!",
+    "checkInLoginRequired": "Login required to check in.",
     "gameRules": "How to Play",
     "rule1": "The host knows the truth of the story",
     "rule2": "Participants deduce the truth through questions",

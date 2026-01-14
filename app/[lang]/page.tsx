@@ -41,6 +41,30 @@ export default function Home() {
         return;
       }
 
+      // 언어별로 필터링: 영어권은 영어 문제만, 한국어권은 한국어 문제만
+      // language 필드가 없을 수도 있으므로, 클라이언트 측에서 필터링
+      const filteredProblems = problems.filter((problem: any) => {
+        // language 필드가 없는 경우, 기본적으로 한국어 문제로 간주
+        if (!problem.language) {
+          // language 필드가 없으면 한국어 문제로 간주 (기존 문제들)
+          return lang === 'ko';
+        }
+        
+        // language 필드가 있는 경우, 해당 언어의 문제만 표시
+        if (lang === 'en') {
+          // 영어권: language가 'en'인 문제만
+          return problem.language === 'en';
+        } else {
+          // 한국어권: language가 'ko'인 문제만
+          return problem.language === 'ko';
+        }
+      });
+
+      if (filteredProblems.length === 0) {
+        setIsLoadingProblem(false);
+        return;
+      }
+
       // 오늘 날짜를 기반으로 해시 생성하여 일관된 문제 선택
       const today = new Date();
       const dateString = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
@@ -54,8 +78,8 @@ export default function Home() {
       }
       
       // 양수로 변환하고 문제 인덱스 선택
-      const index = Math.abs(hash) % problems.length;
-      setTodayProblem(problems[index]);
+      const index = Math.abs(hash) % filteredProblems.length;
+      setTodayProblem(filteredProblems[index]);
     } catch (error) {
       console.error('오늘의 문제 로드 오류:', error);
     } finally {
@@ -116,6 +140,16 @@ export default function Home() {
 
   const handleCheckIn = async () => {
     if (isCheckedIn || isCheckingIn) return;
+
+    // 로그인 체크
+    if (!user) {
+      setCheckInMessage(t.home.checkInLoginRequired);
+      // 로그인 페이지로 리디렉션
+      setTimeout(() => {
+        window.location.href = `/${lang}/auth/login`;
+      }, 1500);
+      return;
+    }
 
     setIsCheckingIn(true);
     setCheckInMessage(null);
