@@ -17,7 +17,7 @@ export async function generateMetadata({
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://turtle-soup-rust.vercel.app";
   const baseUrl = `${siteUrl}/${locale}`;
   
-  const siteName = locale === 'ko' ? '바다거북스프' : 'Turtle Soup';
+  const siteName = locale === 'ko' ? '바다거북스프' : 'Pelican Soup Riddle';
   const siteDescription = locale === 'ko' 
     ? '추리와 질문으로 진실을 밝혀내는 온라인 멀티플레이어 바다거북스프 게임. 친구들과 함께 실시간으로 추리 게임을 즐기세요.'
     : 'A deduction game where you uncover the truth through questions. Play with friends in real-time.';
@@ -67,7 +67,7 @@ export default async function LangLayout({
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    "name": locale === 'ko' ? "바다거북스프게임" : "Turtle Soup Game",
+    "name": locale === 'ko' ? "바다거북스프게임" : "Pelican Soup Riddle",
     "description": locale === 'ko' 
       ? "추리와 질문으로 진실을 밝혀내는 온라인 멀티플레이어 바다거북스프 게임"
       : "A deduction game where you uncover the truth through questions",
@@ -81,7 +81,7 @@ export default async function LangLayout({
     },
     "game": {
       "@type": "VideoGame",
-      "name": locale === 'ko' ? "바다거북스프" : "Turtle Soup",
+      "name": locale === 'ko' ? "바다거북스프" : "Pelican Soup Riddle",
       "description": locale === 'ko' ? "추리 게임" : "Deduction Game",
       "gamePlatform": "Web Browser",
       "genre": locale === 'ko' ? "추리게임" : "Puzzle"

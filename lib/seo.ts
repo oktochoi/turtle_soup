@@ -14,7 +14,7 @@ type RobotsInfo = {
 };
 
 const getSiteName = (locale: Locale = 'ko') => {
-  return locale === 'ko' ? '바다거북스프' : 'Turtle Soup';
+  return locale === 'ko' ? '바다거북스프' : 'Pelican Soup Riddle';
 };
 
 const getSiteDescription = (locale: Locale = 'ko') => {

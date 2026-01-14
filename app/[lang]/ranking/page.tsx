@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useTranslations } from '@/hooks/useTranslations';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 type ProblemAuthorRanking = {
   user_id: string | null;
@@ -24,10 +25,14 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
   const resolvedParams = use(params);
   const lang = resolvedParams.lang || 'ko';
   const t = useTranslations();
+  const { user } = useAuth();
   const [problemRanking, setProblemRanking] = useState<ProblemAuthorRanking[]>([]);
   const [solveRanking, setSolveRanking] = useState<ProblemSolveRanking[]>([]);
   const [activeTab, setActiveTab] = useState<'hearts' | 'solves'>('hearts');
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [myRank, setMyRank] = useState<{ rank: number; data: ProblemAuthorRanking | ProblemSolveRanking | null } | null>(null);
+  const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
     loadRankings();
@@ -135,15 +140,28 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
               .sort((a, b) => b.solve_count - a.solve_count);
 
             setSolveRanking(ranking);
+            
+            // 자신의 등수 찾기
+            if (user) {
+              const myRankIndex = ranking.findIndex(item => item.user_id === user.id);
+              if (myRankIndex !== -1) {
+                setMyRank({ rank: myRankIndex + 1, data: ranking[myRankIndex] });
+              } else {
+                setMyRank(null);
+              }
+            }
           } else {
             setSolveRanking([]);
+            setMyRank(null);
           }
         } else {
           setSolveRanking([]);
+          setMyRank(null);
         }
       } catch (error) {
         console.error('문제 맞춘 수 랭킹 로드 오류:', error);
         setSolveRanking([]);
+        setMyRank(null);
       }
 
       // 문제 좋아요 랭킹 - 유저가 만든 모든 문제의 하트를 합산
@@ -206,13 +224,25 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
             .slice(0, 100);
 
           setProblemRanking(ranking);
+          
+          // 자신의 등수 찾기
+          if (user) {
+            const myRankIndex = ranking.findIndex(item => item.user_id === user.id);
+            if (myRankIndex !== -1) {
+              setMyRank({ rank: myRankIndex + 1, data: ranking[myRankIndex] });
+            } else {
+              setMyRank(null);
+            }
+          }
         } else {
           // 문제 데이터가 없으면 빈 배열
           setProblemRanking([]);
+          setMyRank(null);
         }
       } catch (error) {
         console.error('문제 랭킹 로드 오류:', error);
         setProblemRanking([]);
+        setMyRank(null);
       }
     } catch (error) {
       console.error('랭킹 로드 오류:', error);
@@ -220,6 +250,20 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
       setIsLoading(false);
     }
   };
+  
+  // 자신의 등수 찾기 (문제 맞춘 수)
+  useEffect(() => {
+    if (user && solveRanking.length > 0) {
+      const myRankIndex = solveRanking.findIndex(item => item.user_id === user.id);
+      if (myRankIndex !== -1) {
+        setMyRank({ rank: myRankIndex + 1, data: solveRanking[myRankIndex] });
+      } else {
+        setMyRank(null);
+      }
+    } else if (!user) {
+      setMyRank(null);
+    }
+  }, [user, solveRanking, activeTab]);
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return '🥇';
@@ -268,7 +312,10 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
         {/* 탭 */}
         <div className="flex gap-2 mb-6 bg-slate-800/50 rounded-lg p-1 border border-slate-700">
           <button
-            onClick={() => setActiveTab('solves')}
+            onClick={() => {
+              setActiveTab('solves');
+              setCurrentPage(1);
+            }}
             className={`flex-1 py-2 px-4 rounded-md transition-all font-medium ${
               activeTab === 'solves'
                 ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-lg'
@@ -279,7 +326,10 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
             {t.ranking.problemSolves}
           </button>
           <button
-            onClick={() => setActiveTab('hearts')}
+            onClick={() => {
+              setActiveTab('hearts');
+              setCurrentPage(1);
+            }}
             className={`flex-1 py-2 px-4 rounded-md transition-all font-medium ${
               activeTab === 'hearts'
                 ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
@@ -294,37 +344,89 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
         {/* 문제 맞춘 수 랭킹 */}
         {activeTab === 'solves' && (
           <div className="space-y-3">
+            {/* 자신의 등수 표시 */}
+            {myRank && myRank.data && 'solve_count' in myRank.data && (
+              <div className="bg-gradient-to-r from-teal-500/20 to-cyan-500/20 rounded-xl p-4 border border-teal-500/50 backdrop-blur-sm mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className="text-2xl font-bold text-white min-w-[3rem] text-center">
+                      {getRankIcon(myRank.rank)}
+                    </span>
+                    <div>
+                      <p className="text-lg font-semibold text-white flex items-center gap-2">
+                        {(myRank.data as ProblemSolveRanking).nickname || (myRank.data as ProblemSolveRanking).email?.split('@')[0] || (myRank.data as ProblemSolveRanking).user_id.substring(0, 8)}
+                        <span className="text-xs bg-teal-500/30 text-teal-300 px-2 py-0.5 rounded">나</span>
+                      </p>
+                      <p className="text-sm text-slate-400">
+                        {(myRank.data as ProblemSolveRanking).solve_count} {t.ranking.problems}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {solveRanking.length === 0 ? (
               <div className="text-center py-12 bg-slate-800/50 rounded-xl border border-slate-700">
                 <i className="ri-inbox-line text-4xl text-slate-600 mb-4"></i>
                 <p className="text-slate-400">{t.ranking.noSolves}</p>
               </div>
             ) : (
-              solveRanking.map((user, index) => {
-                const rank = index + 1;
-                return (
-                  <div
-                    key={user.user_id}
-                    className={`bg-gradient-to-r ${getRankColor(rank)} rounded-xl p-4 border backdrop-blur-sm`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <span className="text-2xl font-bold text-white min-w-[3rem] text-center">
-                          {getRankIcon(rank)}
-                        </span>
-                        <div>
-                          <p className="text-lg font-semibold text-white">
-                            {user.nickname || user.email?.split('@')[0] || user.user_id.substring(0, 8)}
-                          </p>
-                          <p className="text-sm text-slate-400">
-                            {user.solve_count} {t.ranking.problems}
-                          </p>
+              <>
+                {solveRanking
+                  .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+                  .map((userItem, index) => {
+                    const globalIndex = (currentPage - 1) * ITEMS_PER_PAGE + index;
+                    const rank = globalIndex + 1;
+                    const isMyRank = user && userItem.user_id === user.id;
+                    
+                    return (
+                      <div
+                        key={userItem.user_id}
+                        className={`bg-gradient-to-r ${getRankColor(rank)} rounded-xl p-4 border backdrop-blur-sm ${isMyRank ? 'ring-2 ring-teal-500/50' : ''}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <span className="text-2xl font-bold text-white min-w-[3rem] text-center">
+                              {getRankIcon(rank)}
+                            </span>
+                            <div>
+                              <p className="text-lg font-semibold text-white">
+                                {userItem.nickname || userItem.email?.split('@')[0] || userItem.user_id.substring(0, 8)}
+                              </p>
+                              <p className="text-sm text-slate-400">
+                                {userItem.solve_count} {t.ranking.problems}
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    );
+                  })}
+                
+                {/* 페이지네이션 */}
+                {solveRanking.length > ITEMS_PER_PAGE && (
+                  <div className="flex items-center justify-center gap-2 mt-6">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 bg-slate-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-all"
+                    >
+                      <i className="ri-arrow-left-line"></i>
+                    </button>
+                    <span className="text-slate-400 px-4">
+                      {currentPage} / {Math.ceil(solveRanking.length / ITEMS_PER_PAGE)}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(Math.ceil(solveRanking.length / ITEMS_PER_PAGE), prev + 1))}
+                      disabled={currentPage >= Math.ceil(solveRanking.length / ITEMS_PER_PAGE)}
+                      className="px-4 py-2 bg-slate-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-all"
+                    >
+                      <i className="ri-arrow-right-line"></i>
+                    </button>
                   </div>
-                );
-              })
+                )}
+              </>
             )}
           </div>
         )}
@@ -332,36 +434,89 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
         {/* 받은 하트 랭킹 */}
         {activeTab === 'hearts' && (
           <div className="space-y-3">
+            {/* 자신의 등수 표시 */}
+            {myRank && myRank.data && 'total_likes' in myRank.data && (
+              <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl p-4 border border-purple-500/50 backdrop-blur-sm mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className="text-2xl font-bold text-white min-w-[3rem] text-center">
+                      {getRankIcon(myRank.rank)}
+                    </span>
+                    <div>
+                      <p className="text-lg font-semibold text-white flex items-center gap-2">
+                        {(myRank.data as ProblemAuthorRanking).author}
+                        <span className="text-xs bg-purple-500/30 text-purple-300 px-2 py-0.5 rounded">나</span>
+                      </p>
+                      <p className="text-sm text-slate-400">
+                        <i className="ri-heart-fill text-red-400 mr-1"></i>
+                        {(myRank.data as ProblemAuthorRanking).total_likes} {t.ranking.hearts} · {(myRank.data as ProblemAuthorRanking).problem_count} {t.ranking.problems}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {problemRanking.length === 0 ? (
               <div className="text-center py-12 bg-slate-800/50 rounded-xl border border-slate-700">
                 <i className="ri-inbox-line text-4xl text-slate-600 mb-4"></i>
                 <p className="text-slate-400">{t.ranking.noHearts}</p>
               </div>
             ) : (
-              problemRanking.map((author, index) => {
-                const rank = index + 1;
-                return (
-                  <div
-                    key={author.user_id || `author_${author.author}`}
-                    className={`bg-gradient-to-r ${getRankColor(rank)} rounded-xl p-4 border backdrop-blur-sm`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <span className="text-2xl font-bold text-white min-w-[3rem] text-center">
-                          {getRankIcon(rank)}
-                        </span>
-                        <div>
-                          <p className="text-lg font-semibold text-white">{author.author}</p>
-                          <p className="text-sm text-slate-400">
-                            <i className="ri-heart-fill text-red-400 mr-1"></i>
-                            {author.total_likes} {t.ranking.hearts} · {author.problem_count} {t.ranking.problems}
-                          </p>
+              <>
+                {problemRanking
+                  .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+                  .map((author, index) => {
+                    const globalIndex = (currentPage - 1) * ITEMS_PER_PAGE + index;
+                    const rank = globalIndex + 1;
+                    const isMyRank = user && author.user_id === user.id;
+                    
+                    return (
+                      <div
+                        key={author.user_id || `author_${author.author}`}
+                        className={`bg-gradient-to-r ${getRankColor(rank)} rounded-xl p-4 border backdrop-blur-sm ${isMyRank ? 'ring-2 ring-purple-500/50' : ''}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <span className="text-2xl font-bold text-white min-w-[3rem] text-center">
+                              {getRankIcon(rank)}
+                            </span>
+                            <div>
+                              <p className="text-lg font-semibold text-white">{author.author}</p>
+                              <p className="text-sm text-slate-400">
+                                <i className="ri-heart-fill text-red-400 mr-1"></i>
+                                {author.total_likes} {t.ranking.hearts} · {author.problem_count} {t.ranking.problems}
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    );
+                  })}
+                
+                {/* 페이지네이션 */}
+                {problemRanking.length > ITEMS_PER_PAGE && (
+                  <div className="flex items-center justify-center gap-2 mt-6">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 bg-slate-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-all"
+                    >
+                      <i className="ri-arrow-left-line"></i>
+                    </button>
+                    <span className="text-slate-400 px-4">
+                      {currentPage} / {Math.ceil(problemRanking.length / ITEMS_PER_PAGE)}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(Math.ceil(problemRanking.length / ITEMS_PER_PAGE), prev + 1))}
+                      disabled={currentPage >= Math.ceil(problemRanking.length / ITEMS_PER_PAGE)}
+                      className="px-4 py-2 bg-slate-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-all"
+                    >
+                      <i className="ri-arrow-right-line"></i>
+                    </button>
                   </div>
-                );
-              })
+                )}
+              </>
             )}
           </div>
         )}

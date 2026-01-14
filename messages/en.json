@@ -33,7 +33,7 @@
     "tutorial": "Tutorial"
   },
   "home": {
-    "title": "Turtle Soup",
+    "title": "Pelican Soup Riddle",
     "subtitle": "A deduction game where you uncover the truth through questions",
     "multiplayer": "Multiplayer",
     "multiplayerDesc": "Play with friends in real-time",
@@ -283,7 +283,7 @@
     "emailAlreadyRegistered": "Email is already registered.",
     "loggingIn": "Logging in...",
     "signingUp": "Signing up...",
-    "welcomeMessage": "Welcome to Turtle Soup",
+    "welcomeMessage": "Welcome to Pelican Soup Riddle",
     "or": "or"
   },
   "room": {
@@ -379,7 +379,7 @@
     "startGameAsHost": "Start a game as host",
     "hostNickname": "Host nickname",
     "surfaceStory": "Surface Story (shown to participants)",
-    "surfaceStoryPlaceholder": "Example: A man ate turtle soup at a restaurant and committed suicide. Why?",
+    "surfaceStoryPlaceholder": "Example: A man ate pelican soup at a restaurant and committed suicide. Why?",
     "truth": "Truth (Answer Story)",
     "truthPlaceholder": "Enter the actual truth. This content will be hidden until the answer is guessed correctly.",
     "roomPasswordOptional": "Room Password (Optional)",
@@ -414,7 +414,7 @@
     "maxQuestionsReachedAlert": "Maximum questions ({count}) reached. You cannot ask more questions."
   },
   "tutorial": {
-    "title": "SEA TURTLE SOUP",
+    "title": "PELICAN SOUP RIDDLE",
     "subtitle": "The Art of Deduction & Mystery",
     "phase01": "Phase 01",
     "whatIsGame": "What is this game?",
@@ -427,7 +427,7 @@
     "step03": "Truth Revealed",
     "step03Desc": "Reconstruct the case when all puzzles fit together.",
     "classicCase": "Classic Case",
-    "classicExample": "A man ate sea turtle soup, went home, and committed suicide. Why?",
+    "classicExample": "A man ate pelican soup, went home, and committed suicide. Why?",
     "hint": "Hint: The taste of the soup itself wasn't the problem.",
     "startMultiplayer": "Start Multiplayer",
     "playAlone": "Play Alone"

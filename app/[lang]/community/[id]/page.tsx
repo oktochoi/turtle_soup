@@ -31,6 +31,7 @@ type Comment = {
   user_id: string | null;
   created_at: string;
   updated_at: string;
+  is_pinned?: boolean;
 };
 
 export default function PostDetailPage({ params }: { params: Promise<{ lang: string; id: string }> }) {
@@ -114,6 +115,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
         .from('post_comments')
         .select('*')
         .eq('post_id', postId)
+        .order('is_pinned', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -285,6 +287,24 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
     } catch (error) {
       console.error('댓글 삭제 오류:', error);
       alert(t.community.deleteCommentFailed);
+    }
+  };
+
+  const handleTogglePinComment = async (commentId: string, currentPinned: boolean) => {
+    if (!isAuthor) return;
+
+    try {
+      const { error } = await supabase
+        .from('post_comments')
+        .update({ is_pinned: !currentPinned })
+        .eq('id', commentId);
+
+      if (error) throw error;
+
+      await loadComments();
+    } catch (error) {
+      console.error('댓글 고정 오류:', error);
+      alert('댓글 고정에 실패했습니다.');
     }
   };
 
@@ -496,13 +516,25 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
             comments.map((comment) => {
               const isCommentAuthor = user && comment.user_id === user.id;
               const isEditing = editingCommentId === comment.id;
+              const isPinned = comment.is_pinned || false;
               return (
                 <div
                   key={comment.id}
-                  className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-4 sm:p-5 border border-slate-700/50"
+                  className={`bg-slate-800/50 backdrop-blur-xl rounded-xl p-4 sm:p-5 border ${
+                    isPinned 
+                      ? 'border-yellow-500/50 bg-yellow-500/5' 
+                      : 'border-slate-700/50'
+                  }`}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2 text-sm text-slate-400 flex-wrap">
+                      {isPinned && (
+                        <>
+                          <i className="ri-pushpin-fill text-yellow-400"></i>
+                          <span className="text-xs text-yellow-400 font-semibold">고정</span>
+                          <span>·</span>
+                        </>
+                      )}
                       {commentGameUserIds.get(comment.id) ? (
                         <Link href={`/${lang}/profile/${commentGameUserIds.get(comment.id)}`} className="hover:opacity-80 transition-opacity">
                           <UserLabel
@@ -525,15 +557,21 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
                         </>
                       )}
                     </div>
-                    {isCommentAuthor && !isEditing && (
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      {isAuthor && !isEditing && (
                         <button
-                          onClick={() => handleStartEdit(comment)}
-                          className="text-xs text-slate-400 hover:text-blue-400 transition-colors"
-                          title={t.common.edit}
+                          onClick={() => handleTogglePinComment(comment.id, isPinned)}
+                          className={`text-xs transition-colors ${
+                            isPinned 
+                              ? 'text-yellow-400 hover:text-yellow-300' 
+                              : 'text-slate-400 hover:text-yellow-400'
+                          }`}
+                          title={isPinned ? '고정 해제' : '고정'}
                         >
-                          <i className="ri-edit-line"></i>
+                          <i className={`ri-pushpin-${isPinned ? 'fill' : 'line'}`}></i>
                         </button>
+                      )}
+                      {isAuthor && !isEditing && (
                         <button
                           onClick={() => handleDeleteComment(comment.id)}
                           className="text-xs text-slate-400 hover:text-red-400 transition-colors"
@@ -541,8 +579,26 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
                         >
                           <i className="ri-delete-bin-line"></i>
                         </button>
-                      </div>
-                    )}
+                      )}
+                      {isCommentAuthor && !isEditing && !isAuthor && (
+                        <>
+                          <button
+                            onClick={() => handleStartEdit(comment)}
+                            className="text-xs text-slate-400 hover:text-blue-400 transition-colors"
+                            title={t.common.edit}
+                          >
+                            <i className="ri-edit-line"></i>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteComment(comment.id)}
+                            className="text-xs text-slate-400 hover:text-red-400 transition-colors"
+                            title={t.common.delete}
+                          >
+                            <i className="ri-delete-bin-line"></i>
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                   {isEditing ? (
                     <div className="space-y-3">

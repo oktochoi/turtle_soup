@@ -1807,7 +1807,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                   const url = `${window.location.origin}/${lang}/problem/${problemId}`;
                   const text = lang === 'ko' 
                     ? `${problem.title} - 거북이 국물 문제를 풀어보세요!`
-                    : `${problem.title} - Try solving this Turtle Soup problem!`;
+                    : `${problem.title} - Try solving this Pelican Soup Riddle problem!`;
                   const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
                   window.open(twitterUrl, '_blank', 'width=550,height=420');
                   setShowShareModal(false);
