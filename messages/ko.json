@@ -270,7 +270,8 @@
     "checkingNickname": "중복 확인 중...",
     "nicknameInUse": "이미 사용 중인 닉네임입니다",
     "setupNicknameButton": "닉네임 설정하기",
-    "settingUp": "설정 중..."
+    "settingUp": "설정 중...",
+    "nicknameSetupFail": "닉네임 설정에 실패했습니다"
   },
   "room": {
     "createRoom": "방 만들기",

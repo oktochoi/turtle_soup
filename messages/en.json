@@ -270,7 +270,8 @@
     "checkingNickname": "Checking availability...",
     "nicknameInUse": "This nickname is already in use",
     "setupNicknameButton": "Set Nickname",
-    "settingUp": "Setting up..."
+    "settingUp": "Setting up...",
+    "nicknameSetupFail": "Failed to set nickname"
   },
   "room": {
     "createRoom": "Create Room",
