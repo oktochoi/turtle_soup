@@ -120,7 +120,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
       const allTags = new Set<string>();
       problemsWithRatings.forEach(p => {
         if (p.tags && Array.isArray(p.tags)) {
-          p.tags.forEach(tag => allTags.add(tag));
+          p.tags.forEach((tag: string) => allTags.add(tag));
         }
       });
       setAvailableTags(Array.from(allTags).sort());
