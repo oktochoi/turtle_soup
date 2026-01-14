@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -20,20 +20,30 @@ export default function Home() {
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [checkInMessage, setCheckInMessage] = useState<string | null>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
-  useEffect(() => {
-    // Google OAuth 콜백 처리: code 파라미터가 있으면 콜백 라우트로 리다이렉트
+  // Google OAuth 콜백 처리: code 파라미터가 있으면 즉시 콜백 라우트로 리다이렉트
+  // useLayoutEffect를 사용하여 렌더링 전에 처리
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
-    if (code) {
-      // 콜백 라우트로 리다이렉트 (code 파라미터 유지)
-      window.location.href = `/${lang}/auth/callback?code=${code}`;
-      return;
+    
+    if (code && !isRedirecting) {
+      setIsRedirecting(true);
+      // 즉시 리다이렉트 (렌더링 전에 처리, replace로 히스토리 교체)
+      window.location.replace(`/${lang}/auth/callback?code=${encodeURIComponent(code)}`);
     }
+  }, [lang, isRedirecting]);
+
+  useEffect(() => {
+    // 리다이렉트 중이면 다른 작업 수행하지 않음
+    if (isRedirecting) return;
 
     loadTodayProblem();
     checkTodayCheckIn();
-  }, [user, lang]);
+  }, [user, lang, isRedirecting]);
 
   const loadTodayProblem = async () => {
     try {
