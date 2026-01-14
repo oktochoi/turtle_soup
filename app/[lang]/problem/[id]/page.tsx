@@ -68,44 +68,96 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   };
 
   const loadNextProblem = async () => {
-    if (!problem) return;
+    if (!problem) {
+      console.log('loadNextProblem: problem이 없습니다.');
+      return;
+    }
     try {
       const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
-      // ID 순서로 다음 문제 찾기 (현재 ID보다 큰 것 중 가장 작은 것)
+      // int_id 기준으로 다음 문제 찾기
+      const currentIntId = (problem as any).int_id;
+      
+      console.log('loadNextProblem:', { 
+        problemId: problem.id, 
+        currentIntId, 
+        lang: currentLang,
+        problemData: problem 
+      });
+      
+      // int_id가 없으면 다음 문제도 없음
+      if (currentIntId === null || currentIntId === undefined) {
+        console.warn('현재 문제에 int_id가 없습니다. 다음 문제를 찾을 수 없습니다.', { problem });
+        setNextProblem(null);
+        return;
+      }
+      
       const { data: next, error } = await supabase
         .from('problems')
         .select('*')
         .eq('lang', currentLang)
-        .gt('id', problemId)
-        .order('id', { ascending: true })
+        .gt('int_id', currentIntId)
+        .order('int_id', { ascending: true })
         .limit(1)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('다음 문제 로드 오류:', error);
+        setNextProblem(null);
+        return;
+      }
+      
+      console.log('loadNextProblem 결과:', { next, found: !!next });
       setNextProblem(next || null);
     } catch (error) {
       console.error('다음 문제 로드 오류:', error);
+      setNextProblem(null);
     }
   };
 
   const loadPreviousProblem = async () => {
-    if (!problem) return;
+    if (!problem) {
+      console.log('loadPreviousProblem: problem이 없습니다.');
+      return;
+    }
     try {
       const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
-      // ID 순서로 이전 문제 찾기 (현재 ID보다 작은 것 중 가장 큰 것)
+      // int_id 기준으로 이전 문제 찾기
+      const currentIntId = (problem as any).int_id;
+      
+      console.log('loadPreviousProblem:', { 
+        problemId: problem.id, 
+        currentIntId, 
+        lang: currentLang,
+        problemData: problem 
+      });
+      
+      // int_id가 없거나 0이면 이전 문제 없음
+      if (currentIntId === null || currentIntId === undefined || currentIntId <= 0) {
+        console.log('현재 문제에 int_id가 없거나 첫 번째 문제입니다. 이전 문제를 찾을 수 없습니다.', { currentIntId });
+        setPreviousProblem(null);
+        return;
+      }
+      
       const { data: previous, error } = await supabase
         .from('problems')
         .select('*')
         .eq('lang', currentLang)
-        .lt('id', problemId)
-        .order('id', { ascending: false })
+        .lt('int_id', currentIntId)
+        .order('int_id', { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('이전 문제 로드 오류:', error);
+        setPreviousProblem(null);
+        return;
+      }
+      
+      console.log('loadPreviousProblem 결과:', { previous, found: !!previous });
       setPreviousProblem(previous || null);
     } catch (error) {
       console.error('이전 문제 로드 오류:', error);
+      setPreviousProblem(null);
     }
   };
 
@@ -118,6 +170,13 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   const handleCreateRoomFromProblem = async () => {
     if (!problem) {
       alert(lang === 'ko' ? '문제 정보를 불러올 수 없습니다.' : 'Cannot load problem information.');
+      return;
+    }
+
+    // 로그인 체크
+    if (!user) {
+      alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Login required.');
+      router.push(`/${lang}/auth/login`);
       return;
     }
 
@@ -442,6 +501,13 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       if (error) throw error;
       setProblem(data);
       
+      console.log('문제 로드 완료:', { 
+        id: data.id, 
+        int_id: (data as any).int_id, 
+        lang: data.lang,
+        hasIntId: (data as any).int_id !== null && (data as any).int_id !== undefined
+      });
+      
       // 작성자의 game_user_id 찾기
       if (data.user_id) {
         const { data: gameUser } = await supabase
@@ -455,8 +521,68 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
         }
       }
       
-      // 문제 로드 후 다음 문제 로드
-      loadNextProblem();
+      // 문제 로드 후 다음/이전 문제 로드 (data를 직접 사용하여 state 업데이트 대기 불필요)
+      // React state 업데이트는 비동기이므로, data를 직접 전달하는 방식으로 변경
+      const loadNextWithData = async () => {
+        const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
+        const currentIntId = (data as any).int_id;
+        
+        if (currentIntId === null || currentIntId === undefined) {
+          console.warn('현재 문제에 int_id가 없습니다.');
+          setNextProblem(null);
+          return;
+        }
+        
+        const { data: next, error: nextError } = await supabase
+          .from('problems')
+          .select('*')
+          .eq('lang', currentLang)
+          .gt('int_id', currentIntId)
+          .order('int_id', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        
+        if (nextError) {
+          console.error('다음 문제 로드 오류:', nextError);
+          setNextProblem(null);
+          return;
+        }
+        
+        console.log('다음 문제 찾음:', { next, currentIntId });
+        setNextProblem(next || null);
+      };
+      
+      const loadPreviousWithData = async () => {
+        const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
+        const currentIntId = (data as any).int_id;
+        
+        if (currentIntId === null || currentIntId === undefined || currentIntId <= 0) {
+          console.log('이전 문제 없음 (첫 번째 문제 또는 int_id 없음)');
+          setPreviousProblem(null);
+          return;
+        }
+        
+        const { data: previous, error: prevError } = await supabase
+          .from('problems')
+          .select('*')
+          .eq('lang', currentLang)
+          .lt('int_id', currentIntId)
+          .order('int_id', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (prevError) {
+          console.error('이전 문제 로드 오류:', prevError);
+          setPreviousProblem(null);
+          return;
+        }
+        
+        console.log('이전 문제 찾음:', { previous, currentIntId });
+        setPreviousProblem(previous || null);
+      };
+      
+      loadNextWithData();
+      loadPreviousWithData();
       
       // 문제 로드 시 knowledge 생성 (언어에 따라 다른 분석기 사용)
       if (data && data.content && data.answer) {
@@ -2342,8 +2468,16 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
             )}
           </button>
 
-          {/* Secondary 버튼 3개 */}
+          {/* Secondary 버튼 3개: 이전 문제, 초대 링크, 다음 문제 */}
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <button
+              onClick={handlePreviousProblem}
+              disabled={!previousProblem}
+              className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all duration-200 touch-manipulation active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-700/80"
+            >
+              <i className="ri-arrow-left-line text-base sm:text-lg"></i>
+              <span className="text-xs sm:text-sm font-medium">{lang === 'ko' ? '이전 문제' : 'Previous'}</span>
+            </button>
             <button
               onClick={handleCopyInviteLink}
               className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all duration-200 touch-manipulation active:scale-95"
@@ -2353,18 +2487,12 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
             </button>
             <button
               onClick={handleNextProblem}
-              className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all duration-200 touch-manipulation active:scale-95"
+              disabled={!nextProblem}
+              className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all duration-200 touch-manipulation active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-700/80"
             >
               <i className="ri-arrow-right-line text-base sm:text-lg"></i>
               <span className="text-xs sm:text-sm font-medium">{lang === 'ko' ? '다음 문제' : 'Next'}</span>
             </button>
-            <Link
-              href={`/${lang}/ranking${problemId ? `?highlightProblem=${problemId}` : ''}`}
-              className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all duration-200 touch-manipulation active:scale-95"
-            >
-              <i className="ri-trophy-line text-base sm:text-lg"></i>
-              <span className="text-xs sm:text-sm font-medium">{lang === 'ko' ? '랭킹' : 'Ranking'}</span>
-            </Link>
           </div>
         </div>
       </div>

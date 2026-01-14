@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth-helpers';
 
 /**
  * 전체 AI 학습 사이클 실행 (분석 + 적용 + 통계 업데이트)
  * POST /api/ai/learning/cycle
+ * 관리자 전용
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const { supabase } = await requireAdmin();
     
     // 전체 학습 사이클 실행
     const { data, error } = await supabase.rpc('run_ai_learning_cycle');
@@ -26,6 +27,15 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('API 오류:', error);
+    
+    // 인증/권한 오류 처리
+    if (error.message?.includes('Unauthorized') || error.message?.includes('Forbidden')) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message?.includes('Unauthorized') ? 401 : 403 }
+      );
+    }
+    
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.', details: error.message },
       { status: 500 }

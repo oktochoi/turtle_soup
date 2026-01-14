@@ -25,10 +25,9 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
 
   useEffect(() => {
     if (!authLoading && !user) {
-      // 로그인하지 않아도 방 생성 가능 (선택적)
-      // 필요시 아래 주석을 해제하여 로그인 필수로 변경
-      // alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Login required.');
-      // router.push(`/${lang}/auth/login`);
+      // 로그인 필수
+      alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Login required.');
+      router.push(`/${lang}/auth/login`);
     }
   }, [user, authLoading, router, lang]);
 
@@ -354,7 +353,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
 
           <button
             onClick={handleCreate}
-            disabled={isCreating}
+            disabled={isCreating || !user}
             className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-teal-500/50 mt-6 sm:mt-8 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
           >
             <i className="ri-door-open-line mr-2"></i>

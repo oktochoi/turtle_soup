@@ -43,6 +43,11 @@ export async function loadLearnedSynonyms(): Promise<Map<string, string[]>> {
       .order('confidence_score', { ascending: false });
 
     if (error) {
+      // 테이블이 없거나 RLS 문제인 경우 조용히 빈 Map 반환
+      if (error.code === '42P01' || error.code === 'PGRST116' || error.message?.includes('permission')) {
+        console.warn('학습된 유의어 테이블이 없거나 접근 권한이 없습니다. 빈 데이터를 반환합니다.');
+        return new Map();
+      }
       console.error('학습된 유의어 로드 오류:', error);
       return new Map();
     }
@@ -92,6 +97,11 @@ export async function loadLearnedAntonyms(): Promise<Map<string, string[]>> {
       .order('confidence_score', { ascending: false });
 
     if (error) {
+      // 테이블이 없거나 RLS 문제인 경우 조용히 빈 Map 반환
+      if (error.code === '42P01' || error.code === 'PGRST116' || error.message?.includes('permission')) {
+        console.warn('학습된 반의어 테이블이 없거나 접근 권한이 없습니다. 빈 데이터를 반환합니다.');
+        return new Map();
+      }
       console.error('학습된 반의어 로드 오류:', error);
       return new Map();
     }
@@ -143,6 +153,11 @@ export async function loadLearnedThresholds(): Promise<Map<string, number>> {
       .order('confidence_score', { ascending: false });
 
     if (error) {
+      // 테이블이 없거나 RLS 문제인 경우 조용히 빈 Map 반환
+      if (error.code === '42P01' || error.code === 'PGRST116' || error.message?.includes('permission')) {
+        console.warn('학습된 threshold 테이블이 없거나 접근 권한이 없습니다. 빈 데이터를 반환합니다.');
+        return new Map();
+      }
       console.error('학습된 threshold 로드 오류:', error);
       return new Map();
     }
