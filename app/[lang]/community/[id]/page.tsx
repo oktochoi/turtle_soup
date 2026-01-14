@@ -137,32 +137,41 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
 
   const loadComments = async () => {
     try {
-      // 먼저 고정된 댓글을 가져오고, 그 다음 일반 댓글을 가져와서 합치기
-      const { data: pinnedComments, error: pinnedError } = await supabase
+      // 모든 댓글을 가져온 후 클라이언트에서 정렬 (더 안전함)
+      const { data, error } = await supabase
         .from('post_comments')
         .select('*')
         .eq('post_id', postId)
-        .eq('is_pinned', true)
         .order('created_at', { ascending: true });
 
-      if (pinnedError) throw pinnedError;
+      if (error) {
+        console.error('댓글 조회 에러 상세:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
 
-      const { data: normalComments, error: normalError } = await supabase
-        .from('post_comments')
-        .select('*')
-        .eq('post_id', postId)
-        .eq('is_pinned', false)
-        .order('created_at', { ascending: true });
-
-      if (normalError) throw normalError;
-
-      // 고정된 댓글을 먼저, 그 다음 일반 댓글을 합치기
-      const allComments = [...(pinnedComments || []), ...(normalComments || [])];
-      setComments(allComments);
+      // 클라이언트에서 정렬: 고정된 댓글 먼저, 그 다음 일반 댓글
+      const sortedComments = (data || []).sort((a, b) => {
+        // is_pinned가 true인 댓글이 먼저 오도록
+        const aPinned = a.is_pinned === true;
+        const bPinned = b.is_pinned === true;
+        
+        if (aPinned && !bPinned) return -1;
+        if (!aPinned && bPinned) return 1;
+        
+        // 같은 타입이면 created_at 순서 유지
+        return 0;
+      });
+      
+      setComments(sortedComments);
 
       // 각 댓글 작성자의 game_user_id 찾기
       const userIds = new Map<string, string>();
-      for (const comment of allComments) {
+      for (const comment of sortedComments) {
         if (comment.user_id) {
           try {
             const { data: gameUser } = await supabase
