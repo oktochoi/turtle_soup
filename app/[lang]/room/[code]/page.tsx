@@ -595,6 +595,19 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
                 }, 300);
               }
             }
+            
+            // 참가자 퇴장 알림 (호스트에게만)
+            if (isHost && payload.eventType === 'DELETE') {
+              const leftPlayer = payload.old as { nickname: string };
+              if (leftPlayer.nickname !== nickname) {
+                // 토스트 알림
+                setTimeout(() => {
+                  alert(lang === 'ko' 
+                    ? `👋 ${leftPlayer.nickname}님이 나갔습니다.` 
+                    : `👋 ${leftPlayer.nickname} left.`);
+                }, 300);
+              }
+            }
           }
         }
       )
@@ -1172,7 +1185,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
         }
       }
 
-      // players 테이블에서 제거
+      // players 테이블에서 제거 (실시간으로 다른 사용자들에게 반영됨)
       const { error: leaveError } = await supabase
         .from('players')
         .delete()
@@ -1182,6 +1195,9 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
       if (leaveError) {
         console.error('방 나가기 오류:', leaveError);
         // 에러가 발생해도 계속 진행 (이미 나간 상태일 수 있음)
+      } else {
+        // 성공적으로 나간 경우, 참가자 목록에서도 즉시 제거 (Optimistic UI)
+        setPlayers(prev => prev.filter(p => p.nickname !== nickname));
       }
 
       // 호스트가 나간 경우 다른 플레이어에게 호스트 권한 위임 시도

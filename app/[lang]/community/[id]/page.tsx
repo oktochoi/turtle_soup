@@ -72,10 +72,17 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
     loadComments();
     checkLike();
     
-    // 조회수는 한 번만 증가
+    // 조회수는 한 번만 증가 (약간의 지연을 두어 페이지 로드 후 실행)
     if (!hasIncrementedView.current) {
-      incrementViewCount();
-      hasIncrementedView.current = true;
+      // 페이지가 완전히 로드된 후 조회수 증가
+      const timer = setTimeout(() => {
+        incrementViewCount();
+        hasIncrementedView.current = true;
+      }, 500);
+      
+      return () => {
+        clearTimeout(timer);
+      };
     }
 
     // 실시간 업데이트를 위한 구독 설정
@@ -225,11 +232,43 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
 
   const incrementViewCount = async () => {
     try {
-      await supabase.rpc('increment_post_view_count', { post_uuid: postId });
+      // RPC 함수 시도
+      const { error: rpcError } = await supabase.rpc('increment_post_view_count', { post_uuid: postId });
+      
+      // RPC 함수가 없거나 실패하면 직접 UPDATE
+      if (rpcError) {
+        console.warn('RPC 함수 실패, 직접 UPDATE 시도:', rpcError);
+        
+        // 현재 조회수 가져오기
+        const { data: currentPost, error: selectError } = await supabase
+          .from('posts')
+          .select('view_count')
+          .eq('id', postId)
+          .single();
+        
+        if (selectError) {
+          console.error('조회수 조회 오류:', selectError);
+          return;
+        }
+        
+        // 조회수 증가
+        const { error: updateError } = await supabase
+          .from('posts')
+          .update({ view_count: (currentPost?.view_count || 0) + 1 })
+          .eq('id', postId);
+        
+        if (updateError) {
+          console.error('조회수 직접 업데이트 오류:', updateError);
+          return;
+        }
+      }
+      
       // 조회수 업데이트 후 게시글 다시 로드
-      loadPost();
+      await loadPost();
     } catch (error) {
       console.error('조회수 증가 오류:', error);
+      // 에러가 발생해도 게시글은 로드
+      await loadPost();
     }
   };
 
