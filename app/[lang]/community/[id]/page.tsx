@@ -137,34 +137,60 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
 
   const loadComments = async () => {
     try {
-      const { data, error } = await supabase
+      // 먼저 고정된 댓글을 가져오고, 그 다음 일반 댓글을 가져와서 합치기
+      const { data: pinnedComments, error: pinnedError } = await supabase
         .from('post_comments')
         .select('*')
         .eq('post_id', postId)
-        .order('is_pinned', { ascending: false, nullsFirst: false })
+        .eq('is_pinned', true)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
-      setComments(data || []);
+      if (pinnedError) throw pinnedError;
+
+      const { data: normalComments, error: normalError } = await supabase
+        .from('post_comments')
+        .select('*')
+        .eq('post_id', postId)
+        .eq('is_pinned', false)
+        .order('created_at', { ascending: true });
+
+      if (normalError) throw normalError;
+
+      // 고정된 댓글을 먼저, 그 다음 일반 댓글을 합치기
+      const allComments = [...(pinnedComments || []), ...(normalComments || [])];
+      setComments(allComments);
 
       // 각 댓글 작성자의 game_user_id 찾기
       const userIds = new Map<string, string>();
-      for (const comment of data || []) {
+      for (const comment of allComments) {
         if (comment.user_id) {
-          const { data: gameUser } = await supabase
-            .from('game_users')
-            .select('id')
-            .eq('auth_user_id', comment.user_id)
-            .maybeSingle();
+          try {
+            const { data: gameUser } = await supabase
+              .from('game_users')
+              .select('id')
+              .eq('auth_user_id', comment.user_id)
+              .maybeSingle();
 
-          if (gameUser) {
-            userIds.set(comment.id, gameUser.id);
+            if (gameUser) {
+              userIds.set(comment.id, gameUser.id);
+            }
+          } catch (userError) {
+            // 개별 사용자 조회 실패는 무시하고 계속 진행
+            console.warn('사용자 ID 조회 실패:', comment.user_id, userError);
           }
         }
       }
       setCommentGameUserIds(userIds);
-    } catch (error) {
-      console.error('댓글 로드 오류:', error);
+    } catch (error: any) {
+      console.error('댓글 로드 오류:', {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+        error: error
+      });
+      // 에러가 발생해도 빈 배열로 설정하여 UI가 깨지지 않도록
+      setComments([]);
     }
   };
 
