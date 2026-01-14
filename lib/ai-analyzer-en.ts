@@ -933,6 +933,35 @@ export async function buildProblemKnowledge(
 }
 
 // -------------------------
+// Learned data cache (동적 학습 데이터)
+// -------------------------
+let learnedSynonymsCacheEn: Map<string, string[]> | null = null;
+let learnedAntonymsCacheEn: Map<string, string[]> | null = null;
+let learnedDataLoadPromiseEn: Promise<void> | null = null;
+
+async function loadLearnedDataOnceEn(): Promise<void> {
+  if (learnedDataLoadPromiseEn) return learnedDataLoadPromiseEn;
+  
+  learnedDataLoadPromiseEn = (async () => {
+    try {
+      // 동적 import로 클라이언트 사이드에서만 로드
+      if (typeof window !== 'undefined') {
+        const { loadAllLearningData } = await import('./ai-learning-loader');
+        const { synonyms, antonyms } = await loadAllLearningData();
+        learnedSynonymsCacheEn = synonyms;
+        learnedAntonymsCacheEn = antonyms;
+      }
+    } catch (error) {
+      console.warn('학습 데이터 로드 실패 (무시):', error);
+      learnedSynonymsCacheEn = new Map();
+      learnedAntonymsCacheEn = new Map();
+    }
+  })();
+  
+  return learnedDataLoadPromiseEn;
+}
+
+// -------------------------
 // Synonym expansion
 // -------------------------
 async function getConceptVecCached(concept: string, knowledge: ProblemKnowledge): Promise<Float32Array> {
@@ -949,8 +978,22 @@ async function getOrBuildSynonymsForToken(token: string, knowledge: ProblemKnowl
   const cached = knowledge.synonymMap.get(key);
   if (cached) return cached;
 
+  // 학습 데이터 로드 (한 번만)
+  await loadLearnedDataOnceEn();
+
+  // 1) global synonyms first
   const globalSyns = GLOBAL_SYNONYMS.get(token);
   const synonyms: string[] = globalSyns ? [...globalSyns] : [];
+
+  // 1-1) learned synonyms (버그 리포트에서 학습한 유의어)
+  if (learnedSynonymsCacheEn) {
+    const learnedSyns = learnedSynonymsCacheEn.get(token);
+    if (learnedSyns) {
+      for (const syn of learnedSyns) {
+        if (!synonyms.includes(syn)) synonyms.push(syn);
+      }
+    }
+  }
 
   const candidates = [...knowledge.entitySet].filter(t => t !== token && !synonyms.includes(t));
   if (candidates.length > 0) {
