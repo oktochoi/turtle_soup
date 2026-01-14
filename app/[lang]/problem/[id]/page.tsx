@@ -56,6 +56,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   const [showHints, setShowHints] = useState<boolean[]>([false, false, false]); // 힌트 1, 2, 3 표시 여부
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [nextProblem, setNextProblem] = useState<Problem | null>(null);
+  const [previousProblem, setPreviousProblem] = useState<Problem | null>(null);
   const [showBugReportModal, setShowBugReportModal] = useState(false);
   const [bugReportType, setBugReportType] = useState<'wrong_answer' | 'wrong_yes_no' | 'wrong_irrelevant' | 'wrong_similarity' | 'other'>('wrong_yes_no');
   const [bugReportExpected, setBugReportExpected] = useState('');
@@ -70,22 +71,47 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
     if (!problem) return;
     try {
       const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
-      const { data: problems, error } = await supabase
+      // ID 순서로 다음 문제 찾기 (현재 ID보다 큰 것 중 가장 작은 것)
+      const { data: next, error } = await supabase
         .from('problems')
         .select('*')
         .eq('lang', currentLang)
-        .neq('id', problemId)
-        .order('created_at', { ascending: false })
-        .limit(10);
+        .gt('id', problemId)
+        .order('id', { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
       if (error) throw error;
-      if (problems && problems.length > 0) {
-        // 랜덤으로 다음 문제 선택
-        const randomIndex = Math.floor(Math.random() * problems.length);
-        setNextProblem(problems[randomIndex]);
-      }
+      setNextProblem(next || null);
     } catch (error) {
       console.error('다음 문제 로드 오류:', error);
+    }
+  };
+
+  const loadPreviousProblem = async () => {
+    if (!problem) return;
+    try {
+      const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
+      // ID 순서로 이전 문제 찾기 (현재 ID보다 작은 것 중 가장 큰 것)
+      const { data: previous, error } = await supabase
+        .from('problems')
+        .select('*')
+        .eq('lang', currentLang)
+        .lt('id', problemId)
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      setPreviousProblem(previous || null);
+    } catch (error) {
+      console.error('이전 문제 로드 오류:', error);
+    }
+  };
+
+  const handlePreviousProblem = () => {
+    if (previousProblem) {
+      router.push(`/${lang}/problem/${previousProblem.id}`);
     }
   };
 
@@ -259,11 +285,12 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   const handleSubmitBugReport = async () => {
     if (!problem) return;
 
-    // 질문과 답변이 있는지 확인 (AI 제안 답변이나 질문 내역에서 온 경우)
+    // 질문과 답변이 있는지 확인 (AI 제안 답변이나 질문 내역에서 온 경우, 또는 유사도 오류인 경우)
     const question = bugReportQuestion || questionText;
     const answer = bugReportAnswer || suggestedAnswer;
 
-    if (!question || !answer) {
+    // 유사도 오류인 경우 질문/답변 없이도 가능
+    if (bugReportType !== 'wrong_similarity' && (!question || !answer)) {
       alert(lang === 'ko' ? '질문과 답변 정보가 필요합니다.' : 'Question and answer information is required.');
       return;
     }
@@ -285,8 +312,8 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
         user_id: user?.id || null,
         user_identifier: userIdentifier,
         bug_type: bugReportType,
-        question_text: question,
-        ai_suggested_answer: answer,
+        question_text: question || (bugReportType === 'wrong_similarity' ? userGuess : null) || null,
+        ai_suggested_answer: answer || (bugReportType === 'wrong_similarity' ? 'similarity_error' : null) || null,
         expected_answer: bugReportExpected.trim() || null,
         user_answer: userGuess?.trim() || null,
         correct_answer: problem.answer,
@@ -1656,10 +1683,29 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
 
           {/* 정답 입력 칸 */}
           <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
-            <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
-              <i className="ri-checkbox-circle-line text-purple-400"></i>
-              {t.problem.submitAnswerTitle}
-            </h3>
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
+                <i className="ri-checkbox-circle-line text-purple-400"></i>
+                {t.problem.submitAnswerTitle}
+              </h3>
+              <button
+                onClick={() => {
+                  if (userGuess && problem) {
+                    setBugReportType('wrong_similarity');
+                    setBugReportQuestion(null);
+                    setBugReportAnswer(null);
+                    setShowBugReportModal(true);
+                  } else {
+                    alert(lang === 'ko' ? '정답을 입력한 후 오류를 신고할 수 있습니다.' : 'Please enter an answer before reporting an error.');
+                  }
+                }}
+                className="text-xs px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all touch-manipulation flex items-center gap-1"
+                title={lang === 'ko' ? '오류 리포트 보내기' : 'Send Error Report'}
+              >
+                <i className="ri-bug-line"></i>
+                <span className="hidden sm:inline">{lang === 'ko' ? '오류 리포트' : 'Report'}</span>
+              </button>
+            </div>
             <p className="text-xs sm:text-sm text-slate-400 mb-3 sm:mb-4">{t.problem.submitAnswerDescription}</p>
             
             <div className="space-y-3">
@@ -2324,7 +2370,10 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       </div>
 
       {/* 오류 리포트 모달 */}
-      {showBugReportModal && problem && (bugReportQuestion || questionText) && (bugReportAnswer || suggestedAnswer) && (
+      {showBugReportModal && problem && (
+        (bugReportType === 'wrong_similarity') || 
+        ((bugReportQuestion || questionText) && (bugReportAnswer || suggestedAnswer))
+      ) && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-800 rounded-xl p-4 sm:p-6 max-w-md w-full border border-slate-700 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
@@ -2372,29 +2421,55 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-                  {lang === 'ko' ? '질문' : 'Question'}
-                </label>
-                <div className="bg-slate-900 rounded-lg px-3 sm:px-4 py-2 text-sm text-slate-300 border border-slate-700">
-                  {bugReportQuestion || questionText}
+              {bugReportType !== 'wrong_similarity' && (bugReportQuestion || questionText) && (
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                    {lang === 'ko' ? '질문' : 'Question'}
+                  </label>
+                  <div className="bg-slate-900 rounded-lg px-3 sm:px-4 py-2 text-sm text-slate-300 border border-slate-700">
+                    {bugReportQuestion || questionText}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div>
-                <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-                  {lang === 'ko' ? 'AI 제안 답변' : 'AI Suggested Answer'}
-                </label>
-                <div className="bg-slate-900 rounded-lg px-3 sm:px-4 py-2 text-sm text-slate-300 border border-slate-700">
-                  {(() => {
-                    const answer = bugReportAnswer || suggestedAnswer;
-                    return answer === 'yes' ? (lang === 'ko' ? '예' : 'Yes') :
-                           answer === 'no' ? (lang === 'ko' ? '아니요' : 'No') :
-                           answer === 'irrelevant' ? (lang === 'ko' ? '무관' : 'Irrelevant') :
-                           answer === 'decisive' ? (lang === 'ko' ? '결정적인' : 'Decisive') : answer;
-                  })()}
+              {bugReportType !== 'wrong_similarity' && (bugReportAnswer || suggestedAnswer) && (
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                    {lang === 'ko' ? 'AI 제안 답변' : 'AI Suggested Answer'}
+                  </label>
+                  <div className="bg-slate-900 rounded-lg px-3 sm:px-4 py-2 text-sm text-slate-300 border border-slate-700">
+                    {(() => {
+                      const answer = bugReportAnswer || suggestedAnswer;
+                      return answer === 'yes' ? (lang === 'ko' ? '예' : 'Yes') :
+                             answer === 'no' ? (lang === 'ko' ? '아니요' : 'No') :
+                             answer === 'irrelevant' ? (lang === 'ko' ? '무관' : 'Irrelevant') :
+                             answer === 'decisive' ? (lang === 'ko' ? '결정적인' : 'Decisive') : answer;
+                    })()}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {bugReportType === 'wrong_similarity' && userGuess && (
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                    {lang === 'ko' ? '제출한 정답' : 'Submitted Answer'}
+                  </label>
+                  <div className="bg-slate-900 rounded-lg px-3 sm:px-4 py-2 text-sm text-slate-300 border border-slate-700">
+                    {userGuess}
+                  </div>
+                </div>
+              )}
+
+              {bugReportType === 'wrong_similarity' && similarityScore !== null && (
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                    {lang === 'ko' ? '계산된 유사도' : 'Calculated Similarity'}
+                  </label>
+                  <div className="bg-slate-900 rounded-lg px-3 sm:px-4 py-2 text-sm text-slate-300 border border-slate-700">
+                    {similarityScore}%
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
