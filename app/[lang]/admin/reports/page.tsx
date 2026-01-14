@@ -177,7 +177,8 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
       fake_account: { ko: '가짜 계정', en: 'Fake Account' },
       other: { ko: '기타', en: 'Other' },
     };
-    return labels[type]?.[lang] || type;
+    const langKey = lang === 'ko' || lang === 'en' ? lang : 'ko';
+    return labels[type]?.[langKey] || type;
   };
 
   const getStatusColor = (status: string) => {
