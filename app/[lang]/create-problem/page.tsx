@@ -12,6 +12,7 @@ import { useTranslations } from '@/hooks/useTranslations';
 export default function CreateProblem({ params }: { params: Promise<{ lang: string }> }) {
   const resolvedParams = use(params);
   const lang = resolvedParams.lang || 'ko';
+  const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
   const router = useRouter();
   const t = useTranslations();
   const { user, isLoading: authLoading } = useAuth();
@@ -73,7 +74,7 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         tags: [] as string[],
         author: authorName,
         user_id: user.id,
-        lang: (lang === 'ko' || lang === 'en') ? lang : 'ko',
+        lang: currentLang,
       };
       
       console.log('Insert 데이터 준비 완료:', { 

@@ -18,6 +18,7 @@ type Category = {
 export default function CreatePostPage({ params }: { params: Promise<{ lang: string }> }) {
   const resolvedParams = use(params);
   const lang = resolvedParams.lang || 'ko';
+  const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
   const router = useRouter();
   const { user } = useAuth();
   const t = useTranslations();
