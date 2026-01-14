@@ -11,6 +11,10 @@ if (!supabaseUrl || !supabaseKey) {
 export async function createClient() {
   const cookieStore = await cookies();
 
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+
   return createServerClient(
     supabaseUrl,
     supabaseKey,
