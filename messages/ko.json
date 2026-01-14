@@ -257,6 +257,7 @@
     "emailPlaceholder": "이메일을 입력하세요",
     "passwordPlaceholder": "비밀번호를 입력하세요",
     "nicknamePlaceholder": "닉네임을 입력하세요",
+    "nicknameRequired": "닉네임을 입력해주세요",
     "loginWithGoogle": "Google로 로그인",
     "signupWithGoogle": "Google로 회원가입",
     "noAccount": "계정이 없으신가요?",

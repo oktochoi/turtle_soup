@@ -257,6 +257,7 @@
     "emailPlaceholder": "Enter your email",
     "passwordPlaceholder": "Enter your password",
     "nicknamePlaceholder": "Enter your nickname",
+    "nicknameRequired": "Please enter your nickname",
     "loginWithGoogle": "Login with Google",
     "signupWithGoogle": "Sign up with Google",
     "noAccount": "Don't have an account?",
