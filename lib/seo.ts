@@ -5,6 +5,14 @@ const twitterHandle = '@turtlesoup'; // 실제 트위터 계정이 있으면 변
 
 export type Locale = 'ko' | 'en';
 
+type RobotsInfo = {
+  index?: boolean;
+  follow?: boolean;
+  'max-video-preview'?: number;
+  'max-image-preview'?: 'large' | 'none' | 'standard';
+  'max-snippet'?: number;
+};
+
 const getSiteName = (locale: Locale = 'ko') => {
   return locale === 'ko' ? '바다거북스프' : 'Turtle Soup';
 };
@@ -66,9 +74,9 @@ export function generateMetadata({
         index: !noindex,
         follow: !noindex,
         'max-video-preview': -1,
-        'max-image-preview': 'large',
+        'max-image-preview': 'large' as const,
         'max-snippet': -1,
-      },
+      } as RobotsInfo,
     },
     openGraph: {
       type,
