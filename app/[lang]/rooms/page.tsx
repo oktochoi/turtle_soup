@@ -18,6 +18,8 @@ type Room = {
   game_ended?: boolean;
   status?: string;
   player_count: number;
+  last_activity_at?: string | null;
+  last_chat_at?: string | null;
 };
 
 export default function RoomsPage({ params }: { params: Promise<{ lang: string }> }) {
@@ -79,7 +81,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
       
       let query = supabase
         .from('rooms')
-        .select('code, story, host_nickname, password, max_questions, created_at, game_ended, status, lang')
+        .select('code, story, host_nickname, password, max_questions, created_at, game_ended, status, lang, last_activity_at')
         .in('status', ['active', 'done']);
       
       // lang 컬럼으로 필터링 시도
@@ -91,7 +93,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
         // lang 컬럼 없이 모든 방 가져오기
         const allResult = await supabase
           .from('rooms')
-          .select('code, story, host_nickname, password, max_questions, created_at, game_ended, status')
+          .select('code, story, host_nickname, password, max_questions, created_at, game_ended, status, last_activity_at')
           .in('status', ['active', 'done'])
           .order('created_at', { ascending: false });
         
@@ -100,7 +102,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
         // 클라이언트 사이드에서 필터링 (lang 필드가 있는 경우만)
         const filteredData = (allResult.data || []).filter((r: any) => !r.lang || r.lang === currentLang);
         
-        // 각 방의 플레이어 수 가져오기
+        // 각 방의 플레이어 수와 최근 대화 시간 가져오기
         const roomsWithPlayerCount = await Promise.all(
           filteredData.map(async (room) => {
             const { count } = await supabase
@@ -108,9 +110,19 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
               .select('*', { count: 'exact', head: true })
               .eq('room_code', room.code);
 
+            // 최근 대화 시간 가져오기
+            const { data: lastChat } = await supabase
+              .from('room_chats')
+              .select('created_at')
+              .eq('room_code', room.code)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
             return {
               ...room,
               player_count: count || 0,
+              last_chat_at: lastChat?.created_at || null,
             };
           })
         );
@@ -124,7 +136,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
       
       const roomsData = result.data;
 
-      // 각 방의 플레이어 수 가져오기
+      // 각 방의 플레이어 수와 최근 대화 시간 가져오기
       const roomsWithPlayerCount = await Promise.all(
         (roomsData || []).map(async (room) => {
           const { count } = await supabase
@@ -132,9 +144,19 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
             .select('*', { count: 'exact', head: true })
             .eq('room_code', room.code);
 
+          // 최근 대화 시간 가져오기
+          const { data: lastChat } = await supabase
+            .from('room_chats')
+            .select('created_at')
+            .eq('room_code', room.code)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
           return {
             ...room,
             player_count: count || 0,
+            last_chat_at: lastChat?.created_at || null,
           };
         })
       );
@@ -472,15 +494,54 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                     </div>
                   </div>
                   <p className="text-sm text-slate-300 line-clamp-2 mb-3">{room.story}</p>
-                  <div className="flex items-center gap-4 text-xs text-slate-400">
-                    <span>
-                      <i className="ri-user-line mr-1"></i>
-                      {t.room.host}: {room.host_nickname}
-                    </span>
-                    <span>
-                      <i className="ri-group-line mr-1"></i>
-                      {room.player_count}{lang === 'ko' ? t.room.playersCount : ''}
-                    </span>
+                  <div className="flex flex-col gap-2 text-xs text-slate-400 mb-3">
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <span>
+                        <i className="ri-user-line mr-1"></i>
+                        {t.room.host}: {room.host_nickname}
+                      </span>
+                      <span>
+                        <i className="ri-group-line mr-1"></i>
+                        {room.player_count}{lang === 'ko' ? t.room.playersCount : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 flex-wrap pt-2 border-t border-slate-700/50">
+                      {room.created_at && (
+                        <span className="flex items-center gap-1">
+                          <i className="ri-time-line text-teal-400"></i>
+                          <span className="text-slate-300">
+                            {lang === 'ko' ? '생성' : 'Created'}: {new Date(room.created_at).toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </span>
+                      )}
+                      {room.last_chat_at ? (
+                        <span className="flex items-center gap-1">
+                          <i className="ri-chat-3-line text-cyan-400"></i>
+                          <span className="text-slate-300">
+                            {lang === 'ko' ? '최근 대화' : 'Last Chat'}: {new Date(room.last_chat_at).toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <i className="ri-chat-3-line text-slate-500"></i>
+                          <span className="text-slate-500">
+                            {lang === 'ko' ? '아직 대화가 없습니다' : 'No chat yet'}
+                          </span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-2">
