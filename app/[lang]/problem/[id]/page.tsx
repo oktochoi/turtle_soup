@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase/client';
 import type { Problem, ProblemQuestion, ProblemComment } from '@/lib/types';
 import { buildProblemKnowledge, analyzeQuestionV8, calculateAnswerSimilarity, initializeModel, type ProblemKnowledge } from '@/lib/ai-analyzer';
-import { buildProblemKnowledge as buildProblemKnowledgeEn, analyzeQuestionV8 as analyzeQuestionV8En, calculateAnswerSimilarity as calculateAnswerSimilarityEn, initializeModel as initializeModelEn, type ProblemKnowledge as ProblemKnowledgeEn } from '@/lib/ai-analyzer-en';
+import { buildProblemKnowledge as buildProblemKnowledgeEn, analyzeQuestionV8 as analyzeQuestionV8En, calculateAnswerSimilarityEn, initializeModel as initializeModelEn, type ProblemKnowledge as ProblemKnowledgeEn } from '@/lib/ai-analyzer-en';
 import ProblemAdminButtons from './ProblemAdminButtons';
 import { useAuth } from '@/lib/hooks/useAuth';
 import UserLabel from '@/components/UserLabel';

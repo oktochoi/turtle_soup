@@ -1480,9 +1480,23 @@ export function clearCache(): void {
 // -------------------------
 // Compatibility: calculateAnswerSimilarity
 // -------------------------
-export async function calculateAnswerSimilarity(
+export async function calculateAnswerSimilarityEn(
   userAnswer: string,
   correctAnswer: string,
+  problemContent?: string,
+  knowledge?: ProblemKnowledge | null
+): Promise<number> {
+  return calculateAnswerSimilarityV9({
+    userAnswer,
+    correctAnswer,
+    problemContent,
+    knowledge: knowledge || undefined,
+  });
+}
+
+export async function calculateAnswerSimilarity(
+  userAnswer: string, 
+  correctAnswer: string, 
   problemContent?: string
 ): Promise<number> {
   return calculateAnswerSimilarityV9({
