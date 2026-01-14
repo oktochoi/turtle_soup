@@ -70,10 +70,6 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
         provider: 'google',
         options: {
           redirectTo: redirectUrl,
-          queryParams: {
-            // 추가 파라미터로 origin을 명시적으로 전달
-            redirect_to: redirectUrl,
-          },
         },
       });
 

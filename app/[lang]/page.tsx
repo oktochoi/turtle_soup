@@ -22,9 +22,18 @@ export default function Home() {
   const [checkInMessage, setCheckInMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    // Google OAuth 콜백 처리: code 파라미터가 있으면 콜백 라우트로 리다이렉트
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (code) {
+      // 콜백 라우트로 리다이렉트 (code 파라미터 유지)
+      window.location.href = `/${lang}/auth/callback?code=${code}`;
+      return;
+    }
+
     loadTodayProblem();
     checkTodayCheckIn();
-  }, [user]);
+  }, [user, lang]);
 
   const loadTodayProblem = async () => {
     try {
