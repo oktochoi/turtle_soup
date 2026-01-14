@@ -22,7 +22,8 @@ const CONFIG = {
     YES: 0.60,
     NO_CONTENT: 0.44,
     NO_ANSWER_MAX: 0.32,
-    IRRELEVANT_MAX: 0.26,
+    IRRELEVANT_MAX: 0.35, // 상향 조정: 문맥에 따라 완전히 바뀔 수 있으므로 더 관대하게
+    IRRELEVANT_CONTENT_MAX: 0.30, // 내용 유사도가 낮을 때 irrelevant 판단
   },
 
   ADJUST: {
@@ -893,7 +894,17 @@ export async function buildProblemKnowledge(
   const { hypernymMap, hyponymMap } = buildTaxonomyMaps(taxonomyEdges);
 
   const antonymAxes = buildActiveAntonymAxes(content, answer);
+  
+  // 학습된 반의어 병합
+  await loadLearnedDataOnceEn();
   const antonymLexicon = new Map<string, string[]>(GLOBAL_ANTONYM_LEXICON);
+  if (learnedAntonymsCacheEn) {
+    for (const [token, antonyms] of learnedAntonymsCacheEn.entries()) {
+      const existing = antonymLexicon.get(token) || [];
+      const merged = [...new Set([...existing, ...antonyms])];
+      antonymLexicon.set(token, merged);
+    }
+  }
 
   const synonymMap = new Map<string, string[]>();
   const antonymMap = new Map<string, string[]>();
@@ -966,6 +977,59 @@ async function getOrBuildSynonymsForToken(token: string, knowledge: ProblemKnowl
 // -------------------------
 // Concepts extraction (English)
 // -------------------------
+// 문맥적 불일치 감지 (V9+)
+// 질문과 문제 내용/답변 간의 문맥적 거리를 계산하여 irrelevant 판단 보조
+function detectContextualMismatch(
+  question: string,
+  knowledge: ProblemKnowledge,
+  simAnswer: number,
+  simContent: number
+): { isIrrelevant: boolean; reason?: string } {
+  const qNorm = normalizeText(question).toLowerCase();
+  const qTokens = new Set(tokenizeEn(question));
+  const contentTokens = new Set([...knowledge.contentTokens, ...knowledge.answerTokens]);
+  
+  // 1) 공통 토큰이 매우 적은 경우 (문맥적 불일치)
+  const commonTokens = [...qTokens].filter(t => contentTokens.has(t));
+  const commonRatio = qTokens.size > 0 ? commonTokens.length / qTokens.size : 0;
+  
+  // 2) 질문이 문제와 완전히 다른 주제인 경우 감지
+  const problemDomainKeywords = new Set([
+    ...knowledge.contentTokens.slice(0, 20), // 상위 20개 토큰
+    ...knowledge.answerTokens.slice(0, 10),  // 상위 10개 토큰
+  ]);
+  
+  const questionDomainMatch = [...qTokens].filter(t => 
+    problemDomainKeywords.has(t) ||
+    [...problemDomainKeywords].some(pt => t.includes(pt) || pt.includes(t))
+  ).length;
+  
+  const domainMatchRatio = qTokens.size > 0 ? questionDomainMatch / qTokens.size : 0;
+  
+  // 3) 유사도가 낮고 공통 토큰도 적은 경우
+  if (simAnswer <= 0.30 && simContent <= 0.35 && commonRatio < 0.15) {
+    return { isIrrelevant: true, reason: 'low_similarity_and_tokens' };
+  }
+  
+  // 4) 도메인 매칭이 매우 낮고 유사도도 낮은 경우
+  if (domainMatchRatio < 0.10 && simAnswer <= 0.32 && simContent <= 0.38) {
+    return { isIrrelevant: true, reason: 'domain_mismatch' };
+  }
+  
+  // 5) 질문이 너무 일반적이거나 추상적인 경우 (문제와 관련 없을 가능성)
+  const genericQuestions = [
+    'what', 'where', 'when', 'who', 'why', 'how', 'which'
+  ];
+  const isGenericQuestion = genericQuestions.some(gq => qNorm.includes(gq)) && 
+                           commonRatio < 0.20 && simAnswer <= 0.35;
+  
+  if (isGenericQuestion) {
+    return { isIrrelevant: true, reason: 'generic_question_low_match' };
+  }
+  
+  return { isIrrelevant: false };
+}
+
 // 문맥 기반 개념 확장 (V9+)
 function extractContextualConcepts(question: string, knowledge: ProblemKnowledge): Set<string> {
   const concepts = new Set<string>();
@@ -1281,21 +1345,29 @@ export async function analyzeQuestionV9(
       result = "yes";
     } else if (simContentFinal >= CONFIG.THRESHOLD.NO_CONTENT && simAnswerFinal <= CONFIG.THRESHOLD.NO_ANSWER_MAX) {
       result = "no";
-    } else if (simAnswerFinal <= CONFIG.THRESHOLD.IRRELEVANT_MAX && simContentFinal <= CONFIG.THRESHOLD.IRRELEVANT_MAX) {
-      result = "irrelevant";
     } else {
-      const inAmbiguous = simAnswerFinal >= CONFIG.AMBIGUOUS_RANGE.min && simAnswerFinal <= CONFIG.AMBIGUOUS_RANGE.max;
-
-      if (inAmbiguous && fallbackJudge && hasStrongAntonymMismatch) {
-        const fb = await fallbackJudge({
-          question: q,
-          problemContent: knowledge.content,
-          problemAnswer: knowledge.answer,
-        });
-        if (fb) result = fb;
-        else result = simAnswerFinal >= simContentFinal ? "yes" : "no";
+      // 문맥적 불일치 감지: 질문과 문제 내용/답변 간의 문맥적 거리 계산
+      const contextMismatch = detectContextualMismatch(q, knowledge, simAnswerFinal, simContentFinal);
+      
+      // irrelevant 판단: 유사도가 낮거나 문맥적 불일치가 있을 때
+      if (contextMismatch.isIrrelevant || 
+          (simAnswerFinal <= CONFIG.THRESHOLD.IRRELEVANT_MAX && simContentFinal <= CONFIG.THRESHOLD.IRRELEVANT_CONTENT_MAX) ||
+          (simAnswerFinal <= CONFIG.THRESHOLD.IRRELEVANT_MAX && simContentFinal < 0.40)) {
+        result = "irrelevant";
       } else {
-        result = simAnswerFinal >= simContentFinal ? "yes" : "no";
+        const inAmbiguous = simAnswerFinal >= CONFIG.AMBIGUOUS_RANGE.min && simAnswerFinal <= CONFIG.AMBIGUOUS_RANGE.max;
+
+        if (inAmbiguous && fallbackJudge && hasStrongAntonymMismatch) {
+          const fb = await fallbackJudge({
+            question: q,
+            problemContent: knowledge.content,
+            problemAnswer: knowledge.answer,
+          });
+          if (fb) result = fb;
+          else result = simAnswerFinal >= simContentFinal ? "yes" : "no";
+        } else {
+          result = simAnswerFinal >= simContentFinal ? "yes" : "no";
+        }
       }
     }
 
