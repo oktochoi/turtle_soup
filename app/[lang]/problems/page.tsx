@@ -28,6 +28,17 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
   const [difficultyFilter, setDifficultyFilter] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('latest');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  
+  // 페이지네이션
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
+  const totalPages = Math.ceil(filteredProblems.length / itemsPerPage);
+  const paginatedProblems = filteredProblems.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   useEffect(() => {
     loadProblems();
@@ -35,7 +46,8 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
 
   useEffect(() => {
     filterAndSortProblems();
-  }, [problems, difficultyFilter, searchQuery, sortOption]);
+    setCurrentPage(1); // 필터 변경 시 첫 페이지로 리셋
+  }, [problems, difficultyFilter, searchQuery, sortOption, selectedTags]);
 
   const loadProblems = async () => {
     try {
@@ -103,6 +115,15 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
       );
 
       setProblems(problemsWithRatings);
+      
+      // 사용 가능한 태그 추출
+      const allTags = new Set<string>();
+      problemsWithRatings.forEach(p => {
+        if (p.tags && Array.isArray(p.tags)) {
+          p.tags.forEach(tag => allTags.add(tag));
+        }
+      });
+      setAvailableTags(Array.from(allTags).sort());
     } catch (error: any) {
       // AbortError는 무해한 에러이므로 무시 (컴포넌트 언마운트 시 발생 가능)
       if (error?.name !== 'AbortError' && error?.message?.includes('aborted') === false) {
@@ -132,7 +153,15 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(p => 
         p.title.toLowerCase().includes(query) ||
-        p.content.toLowerCase().includes(query)
+        p.content.toLowerCase().includes(query) ||
+        (p.tags && Array.isArray(p.tags) && p.tags.some(tag => tag.toLowerCase().includes(query)))
+      );
+    }
+
+    // 태그 필터
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(p => 
+        p.tags && Array.isArray(p.tags) && selectedTags.every(tag => p.tags!.includes(tag))
       );
     }
 
@@ -311,8 +340,9 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
         ) : filteredProblems.length === 0 ? (
           <ProblemsEmptyState lang={lang} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-            {filteredProblems.map(problem => {
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+              {paginatedProblems.map(problem => {
               const averageRating = (problem as any).average_rating || 0;
               const ratingCount = (problem as any).rating_count || 0;
               const difficultyBadge = getDifficultyFromRating(averageRating);
@@ -366,14 +396,66 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                 </div>
               );
             })}
-          </div>
-        )}
+            </div>
 
-        {/* 결과 개수 */}
-        {!isLoading && (
-          <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-slate-400">
-            {lang === 'ko' ? `총 ${filteredProblems.length}개의 문제` : `Total ${filteredProblems.length} problems`}
-          </div>
+            {/* 페이지네이션 */}
+            {totalPages > 1 && (
+              <div className="mt-6 sm:mt-8 flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all text-sm font-semibold"
+                >
+                  <i className="ri-arrow-left-line"></i>
+                </button>
+                
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-sm font-semibold ${
+                        currentPage === pageNum
+                          ? 'bg-teal-500 text-white'
+                          : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all text-sm font-semibold"
+                >
+                  <i className="ri-arrow-right-line"></i>
+                </button>
+              </div>
+            )}
+
+            {/* 결과 개수 */}
+            {!isLoading && (
+              <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-slate-400">
+                {lang === 'ko' 
+                  ? `총 ${filteredProblems.length}개의 문제 (${(currentPage - 1) * itemsPerPage + 1}-${Math.min(currentPage * itemsPerPage, filteredProblems.length)} / ${filteredProblems.length})`
+                  : `Total ${filteredProblems.length} problems (${(currentPage - 1) * itemsPerPage + 1}-${Math.min(currentPage * itemsPerPage, filteredProblems.length)} / ${filteredProblems.length})`
+                }
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

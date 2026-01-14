@@ -39,8 +39,18 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
   const [searchQuery, setSearchQuery] = useState('');
   const [privacyFilter, setPrivacyFilter] = useState<'all' | 'public' | 'private'>('all');
   const [minPlayers, setMinPlayers] = useState<number>(0);
+  const [sortOption, setSortOption] = useState<'latest' | 'oldest' | 'most_players' | 'recent_activity'>('latest');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [error, setError] = useState<string>('');
+  
+  // 페이지네이션
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredRooms.length / itemsPerPage);
+  const paginatedRooms = filteredRooms.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   useEffect(() => {
     loadRooms();
@@ -180,6 +190,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
   // 검색 및 필터링
   useEffect(() => {
     let filtered = [...rooms];
+    setCurrentPage(1); // 필터 변경 시 첫 페이지로 리셋
 
     // 검색 필터
     if (searchQuery.trim()) {
@@ -203,8 +214,32 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
       filtered = filtered.filter(room => room.player_count >= minPlayers);
     }
 
+    // 정렬
+    switch (sortOption) {
+      case 'latest':
+        filtered.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        break;
+      case 'oldest':
+        filtered.sort((a, b) => 
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        break;
+      case 'most_players':
+        filtered.sort((a, b) => b.player_count - a.player_count);
+        break;
+      case 'recent_activity':
+        filtered.sort((a, b) => {
+          const aTime = a.last_chat_at ? new Date(a.last_chat_at).getTime() : new Date(a.created_at).getTime();
+          const bTime = b.last_chat_at ? new Date(b.last_chat_at).getTime() : new Date(b.created_at).getTime();
+          return bTime - aTime;
+        });
+        break;
+    }
+
     setFilteredRooms(filtered);
-  }, [searchQuery, privacyFilter, minPlayers, rooms]);
+  }, [searchQuery, privacyFilter, minPlayers, sortOption, rooms]);
 
   const handleJoinRoom = (roomCode: string, hasPassword: boolean) => {
     if (hasPassword) {
@@ -361,20 +396,36 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
             </div>
           </div>
 
-          {/* 필터 초기화 */}
-          <div className="flex items-end">
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setPrivacyFilter('all');
-                setMinPlayers(0);
-              }}
-              className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-lg transition-all"
+          {/* 정렬 */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-2">{lang === 'ko' ? '정렬' : 'Sort'}</label>
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value as any)}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             >
-              <i className="ri-refresh-line mr-2"></i>
-              {t.room.resetFilters}
-            </button>
+              <option value="latest">{lang === 'ko' ? '최신순' : 'Latest'}</option>
+              <option value="oldest">{lang === 'ko' ? '오래된순' : 'Oldest'}</option>
+              <option value="most_players">{lang === 'ko' ? '인원 많은순' : 'Most Players'}</option>
+              <option value="recent_activity">{lang === 'ko' ? '최근 활동순' : 'Recent Activity'}</option>
+            </select>
           </div>
+        </div>
+
+        {/* 필터 초기화 */}
+        <div className="mb-4">
+          <button
+            onClick={() => {
+              setSearchQuery('');
+              setPrivacyFilter('all');
+              setMinPlayers(0);
+              setSortOption('latest');
+            }}
+            className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-lg transition-all"
+          >
+            <i className="ri-refresh-line mr-2"></i>
+            {t.room.resetFilters}
+          </button>
         </div>
 
         {error && (
@@ -429,8 +480,9 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
             }}
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredRooms.map((room) => (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {paginatedRooms.map((room) => (
               <div
                 key={room.code}
                 className="bg-slate-800/50 rounded-xl p-4 sm:p-5 border border-slate-700 hover:border-teal-500/50 transition-all"
@@ -530,7 +582,56 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+
+            {/* 페이지네이션 */}
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all text-sm font-semibold"
+                >
+                  <i className="ri-arrow-left-line"></i>
+                </button>
+                
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-sm font-semibold ${
+                        currentPage === pageNum
+                          ? 'bg-teal-500 text-white'
+                          : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all text-sm font-semibold"
+                >
+                  <i className="ri-arrow-right-line"></i>
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

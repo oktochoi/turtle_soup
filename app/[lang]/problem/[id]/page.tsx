@@ -316,53 +316,27 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       console.log('problem_cta_invite_copy', { problemId });
     }
 
-    // 공유 모달 열기
-    setShowShareModal(true);
+    const url = `${window.location.origin}/${lang}/problem/${problemId}`;
     
-    // 모달이 열린 후 카카오톡 공유 실행
-    setTimeout(() => {
-      const url = `${window.location.origin}/${lang}/problem/${problemId}`;
-      const title = problem.title;
-      const text = `${title}\n\n${problem.content.substring(0, 100)}...\n\n${url}`;
-      
-      // 모바일: 카카오톡 앱으로 직접 공유
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobile) {
-        // 카카오톡 URL 스킴 시도
-        const kakaoTalkUrl = `kakaotalk://send?text=${encodeURIComponent(text)}`;
-        window.location.href = kakaoTalkUrl;
-        
-        // 앱이 없으면 3초 후 웹으로 폴백
-        setTimeout(() => {
-          const kakaoWebUrl = `https://story.kakao.com/share?url=${encodeURIComponent(url)}`;
-          window.open(kakaoWebUrl, '_blank');
-        }, 3000);
-      } else {
-        // 데스크톱: 카카오 SDK 또는 웹 공유
-        const kakao = (window as any).Kakao;
-        if (kakao && kakao.isInitialized && kakao.isInitialized()) {
-          kakao.Share.sendDefault({
-            objectType: 'feed',
-            content: {
-              title: title,
-              description: problem.content.substring(0, 100),
-              imageUrl: `${window.location.origin}/og-image.png`,
-              link: {
-                mobileWebUrl: url,
-                webUrl: url,
-              },
-            },
-          });
-        } else {
-          // 카카오톡 웹 공유
-          const kakaoWebUrl = `https://story.kakao.com/share?url=${encodeURIComponent(url)}`;
-          window.open(kakaoWebUrl, '_blank');
-        }
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast(lang === 'ko' ? '링크가 복사되었습니다!' : 'Link copied!', 'success');
+    } catch (error) {
+      // 폴백: 텍스트 영역 사용
+      const textArea = document.createElement('textarea');
+      textArea.value = url;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showToast(lang === 'ko' ? '링크가 복사되었습니다!' : 'Link copied!', 'success');
+      } catch (err) {
+        showToast(lang === 'ko' ? '링크 복사에 실패했습니다. URL을 직접 복사해주세요.' : 'Failed to copy link. Please copy the URL manually.', 'error');
       }
-      
-      // 공유 실행 후 모달 닫기
-      setShowShareModal(false);
-    }, 100);
+      document.body.removeChild(textArea);
+    }
   };
 
   const handleNextProblem = () => {
@@ -2339,53 +2313,36 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
 
             {/* 공유 옵션 */}
             <div className="space-y-3">
-              {/* 카카오톡 공유 */}
+              {/* URL 복사 (카카오스토리 공유 대체) */}
               <button
                 onClick={async () => {
                   const url = `${window.location.origin}/${lang}/problem/${problemId}`;
-                  const title = problem.title;
-                  const text = `${title}\n\n${problem.content.substring(0, 100)}...\n\n${url}`;
-                  
-                  // 모바일: 카카오톡 앱으로 직접 공유
-                  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                  if (isMobile) {
-                    // 카카오톡 URL 스킴 시도
-                    const kakaoTalkUrl = `kakaotalk://send?text=${encodeURIComponent(text)}`;
-                    window.location.href = kakaoTalkUrl;
-                    
-                    // 앱이 없으면 3초 후 웹으로 폴백
-                    setTimeout(() => {
-                      const kakaoWebUrl = `https://story.kakao.com/share?url=${encodeURIComponent(url)}`;
-                      window.open(kakaoWebUrl, '_blank');
-                    }, 3000);
-                  } else {
-                    // 데스크톱: 카카오 SDK 또는 웹 공유
-                    const kakao = (window as any).Kakao;
-                    if (kakao && kakao.isInitialized && kakao.isInitialized()) {
-                      kakao.Share.sendDefault({
-                        objectType: 'feed',
-                        content: {
-                          title: title,
-                          description: problem.content.substring(0, 100),
-                          imageUrl: `${window.location.origin}/og-image.png`,
-                          link: {
-                            mobileWebUrl: url,
-                            webUrl: url,
-                          },
-                        },
-                      });
-                    } else {
-                      // 카카오톡 웹 공유
-                      const kakaoWebUrl = `https://story.kakao.com/share?url=${encodeURIComponent(url)}`;
-                      window.open(kakaoWebUrl, '_blank');
+                  try {
+                    await navigator.clipboard.writeText(url);
+                    showToast(lang === 'ko' ? '링크가 복사되었습니다! 카카오스토리에 직접 등록해보세요.' : 'Link copied! You can now paste it in KakaoStory.', 'success');
+                    setShowShareModal(false);
+                  } catch (error) {
+                    // 폴백: 텍스트 영역 사용
+                    const textArea = document.createElement('textarea');
+                    textArea.value = url;
+                    textArea.style.position = 'fixed';
+                    textArea.style.opacity = '0';
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    try {
+                      document.execCommand('copy');
+                      showToast(lang === 'ko' ? '링크가 복사되었습니다! 카카오스토리에 직접 등록해보세요.' : 'Link copied! You can now paste it in KakaoStory.', 'success');
+                      setShowShareModal(false);
+                    } catch (err) {
+                      showToast(lang === 'ko' ? '링크 복사에 실패했습니다. URL을 직접 복사해주세요.' : 'Failed to copy link. Please copy the URL manually.', 'error');
                     }
+                    document.body.removeChild(textArea);
                   }
-                  setShowShareModal(false);
                 }}
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition-all font-medium shadow-lg"
               >
-                <i className="ri-message-3-line text-xl"></i>
-                <span>{t.problem.kakaoShare}</span>
+                <i className="ri-file-copy-line text-xl"></i>
+                <span>{lang === 'ko' ? '링크 복사 (카카오스토리)' : 'Copy Link (KakaoStory)'}</span>
               </button>
 
               {/* 인스타그램 공유 */}

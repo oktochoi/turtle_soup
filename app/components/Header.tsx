@@ -17,6 +17,7 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userNickname, setUserNickname] = useState<string | null>(null);
   const [gameUserId, setGameUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   // 현재 언어 추출
   const currentLang = pathname?.split('/')[1] || 'ko';
@@ -73,6 +74,30 @@ export default function Header() {
     };
 
     loadNickname();
+  }, [user]);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+
+      try {
+        const supabase = createClient();
+        const { data: userData } = await supabase
+          .from('users')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single();
+
+        setIsAdmin(userData?.is_admin || false);
+      } catch (error) {
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdmin();
   }, [user]);
 
   const handleSignOut = async () => {
@@ -145,6 +170,14 @@ export default function Header() {
               </div>
             ) : user ? (
               <div className="flex items-center gap-3 ml-2">
+                {isAdmin && (
+                  <Link href={getLocalizedPath('/admin/reports')}>
+                    <button className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30">
+                      <i className="ri-shield-user-line mr-1"></i>
+                      {currentLang === 'ko' ? '관리자' : 'Admin'}
+                    </button>
+                  </Link>
+                )}
                 {gameUserId && (
                   <Link href={getLocalizedPath(`/profile/${gameUserId}`)}>
                     <button className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-slate-800 text-slate-300 hover:bg-slate-700">
@@ -211,6 +244,17 @@ export default function Header() {
                   </div>
                 ) : user ? (
                   <>
+                    {isAdmin && (
+                      <Link
+                        href={getLocalizedPath('/admin/reports')}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <button className="w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30 mb-2">
+                          <i className="ri-shield-user-line mr-2"></i>
+                          {currentLang === 'ko' ? '관리자' : 'Admin'}
+                        </button>
+                      </Link>
+                    )}
                     {gameUserId && (
                       <Link
                         href={getLocalizedPath(`/profile/${gameUserId}`)}
