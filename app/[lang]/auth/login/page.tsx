@@ -32,12 +32,12 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
       if (error) {
         // 이메일 확인 오류인 경우 더 친절한 메시지
         if (error.message?.includes('Email not confirmed') || error.message?.includes('email_not_confirmed')) {
-          setError(lang === 'ko' ? '이메일 확인이 필요합니다. 회원가입 시 발송된 이메일을 확인해주세요.' : 'Email confirmation required. Please check the email sent during signup.');
+          setError(t.auth.emailNotConfirmed);
           return;
         }
         // 잘못된 로그인 정보 에러 처리
         if (error.message?.includes('Invalid login credentials') || error.message?.includes('invalid') || error.message?.includes('credentials')) {
-          setError(lang === 'ko' ? '이메일 또는 비밀번호가 올바르지 않습니다.' : 'Invalid email or password.');
+          setError(t.auth.invalidCredentials);
           return;
         }
         throw error;
@@ -49,7 +49,7 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
       }
     } catch (error: any) {
       console.error('로그인 오류:', error);
-      setError(error.message || (lang === 'ko' ? '로그인에 실패했습니다.' : 'Login failed.'));
+      setError(error.message || t.auth.loginFail);
     } finally {
       setIsLoading(false);
     }
@@ -70,13 +70,13 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
 
       if (error) {
         console.error('Google 로그인 오류:', error);
-        setError(lang === 'ko' ? 'Google 로그인에 실패했습니다.' : 'Google login failed.');
+        setError(t.auth.googleLoginFail);
         setIsLoading(false);
       }
       // 성공 시 리디렉션되므로 여기서는 아무것도 하지 않음
     } catch (error: any) {
       console.error('Google 로그인 오류:', error);
-      setError(error.message || (lang === 'ko' ? 'Google 로그인에 실패했습니다.' : 'Google login failed.'));
+      setError(error.message || t.auth.googleLoginFail);
       setIsLoading(false);
     }
   };
@@ -88,7 +88,7 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
           <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
             {t.auth.login}
           </h1>
-          <p className="text-slate-400 text-sm">{lang === 'ko' ? '바다거북스프에 오신 것을 환영합니다' : 'Welcome to Turtle Soup'}</p>
+          <p className="text-slate-400 text-sm">{t.auth.welcomeMessage}</p>
         </div>
 
         <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-slate-700 shadow-xl">
@@ -132,7 +132,7 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
               disabled={isLoading}
               className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-teal-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? (lang === 'ko' ? '로그인 중...' : 'Logging in...') : t.auth.login}
+              {isLoading ? t.auth.loggingIn : t.auth.login}
             </button>
           </form>
 
@@ -142,7 +142,7 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
                 <div className="w-full border-t border-slate-600"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-slate-800 text-slate-400">{lang === 'ko' ? '또는' : 'or'}</span>
+                <span className="px-2 bg-slate-800 text-slate-400">{t.auth.or}</span>
               </div>
             </div>
 

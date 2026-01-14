@@ -159,7 +159,7 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
     } catch (error: any) {
       console.error('회원가입 오류:', error);
       if (error.message?.includes('already registered') || error.message?.includes('이미 등록')) {
-        setError(lang === 'ko' ? '이메일이 이미 등록된 메일입니다.' : 'Email is already registered.');
+        setError(t.auth.emailAlreadyRegistered);
       } else {
         setError(error.message || t.auth.signupFail);
       }
@@ -277,7 +277,7 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
               disabled={isLoading}
               className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-teal-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? (lang === 'ko' ? '회원가입 중...' : 'Signing up...') : t.auth.signup}
+              {isLoading ? t.auth.signingUp : t.auth.signup}
             </button>
           </form>
 

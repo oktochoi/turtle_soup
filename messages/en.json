@@ -271,7 +271,19 @@
     "nicknameInUse": "This nickname is already in use",
     "setupNicknameButton": "Set Nickname",
     "settingUp": "Setting up...",
-    "nicknameSetupFail": "Failed to set nickname"
+    "nicknameSetupFail": "Failed to set nickname",
+    "passwordMismatch": "Passwords do not match",
+    "passwordMinLength": "Password must be at least 6 characters",
+    "signupFail": "Sign up failed",
+    "loginFail": "Login failed",
+    "emailNotConfirmed": "Email confirmation required. Please check the email sent during signup.",
+    "invalidCredentials": "Invalid email or password.",
+    "googleLoginFail": "Google login failed.",
+    "emailAlreadyRegistered": "Email is already registered.",
+    "loggingIn": "Logging in...",
+    "signingUp": "Signing up...",
+    "welcomeMessage": "Welcome to Turtle Soup",
+    "or": "or"
   },
   "room": {
     "createRoom": "Create Room",
