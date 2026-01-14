@@ -55,6 +55,29 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
 
   useEffect(() => {
     loadPosts();
+    
+    // 실시간 업데이트를 위한 구독 설정
+    const channel = supabase
+      .channel('posts-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'post_likes' },
+        () => {
+          // 좋아요 변경 시 게시글 목록 새로고침
+          loadPosts();
+        }
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'post_comments' },
+        () => {
+          // 댓글 변경 시 게시글 목록 새로고침
+          loadPosts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [selectedCategory]);
 
   const loadPosts = async () => {
@@ -153,8 +176,8 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-6xl">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+        <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
             {t.community.title}
           </h1>
           <button
@@ -165,7 +188,7 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
                 router.push(`/${lang}/auth/login`);
               }
             }}
-            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all font-semibold text-sm sm:text-base"
+            className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all font-semibold text-sm sm:text-base touch-manipulation active:scale-95"
           >
             <i className="ri-pencil-line mr-2"></i>
             {t.community.createPost}
@@ -173,7 +196,7 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
         </div>
 
         {/* 카테고리 탭 */}
-        <div className="mb-6 overflow-x-auto">
+        <div className="mb-4 sm:mb-6 overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
           <div className="flex gap-2 pb-2 min-w-max">
             {CATEGORIES.map((category) => (
               <button
@@ -182,14 +205,15 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
                   setSelectedCategory(category.id);
                   setIsLoading(true);
                 }}
-                className={`px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all flex items-center gap-2 ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm whitespace-nowrap transition-all flex items-center gap-1.5 sm:gap-2 touch-manipulation ${
                   selectedCategory === category.id
                     ? `bg-gradient-to-r ${category.color} text-white shadow-lg`
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 active:bg-slate-600'
                 }`}
               >
                 <i className={category.icon}></i>
-                {category.label}
+                <span className="hidden xs:inline">{category.label}</span>
+                <span className="xs:hidden">{category.label.length > 4 ? category.label.substring(0, 4) : category.label}</span>
               </button>
             ))}
           </div>
@@ -242,22 +266,22 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
                   <div
                     key={post.id}
                     onClick={() => router.push(`/${lang}/community/${post.id}`)}
-                    className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-5 sm:p-6 border border-slate-700/50 hover:border-blue-500/50 transition-all cursor-pointer hover:shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1"
+                    className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-4 sm:p-5 lg:p-6 border border-slate-700/50 hover:border-blue-500/50 active:border-blue-500 transition-all cursor-pointer hover:shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1 active:translate-y-0 touch-manipulation"
                   >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-2 py-1 rounded-md text-xs font-semibold bg-gradient-to-r ${categoryInfo.color} text-white`}>
+                    <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                      <span className={`px-2 py-1 rounded-md text-xs font-semibold bg-gradient-to-r ${categoryInfo.color} text-white whitespace-nowrap`}>
                         <i className={`${categoryInfo.icon} mr-1`}></i>
                         {categoryInfo.label}
                       </span>
                     </div>
-                    <h2 className="text-lg sm:text-xl font-bold text-white mb-2 line-clamp-2">
+                    <h2 className="text-base sm:text-lg lg:text-xl font-bold text-white mb-2 sm:mb-3 line-clamp-2 leading-tight">
                       {post.title}
                     </h2>
-                    <p className="text-sm sm:text-base text-slate-300 mb-4 line-clamp-3">
+                    <p className="text-xs sm:text-sm lg:text-base text-slate-300 mb-3 sm:mb-4 line-clamp-2 sm:line-clamp-3 leading-relaxed">
                       {post.content}
                     </p>
-                    <div className="flex items-center justify-between text-xs sm:text-sm text-slate-400">
-                      <div className="flex items-center gap-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 text-xs sm:text-sm text-slate-400">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                         {postGameUserIds.get(post.id) ? (
                           <div
                             onClick={(e) => {
@@ -275,21 +299,21 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
                         ) : (
                           <span className="flex items-center gap-1">
                             <i className="ri-user-line"></i>
-                            {post.author}
+                            <span className="truncate max-w-[100px] sm:max-w-none">{post.author}</span>
                           </span>
                         )}
-                        <span>{formatDate(post.created_at)}</span>
+                        <span className="whitespace-nowrap">{formatDate(post.created_at)}</span>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <span className="flex items-center gap-1">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <span className="flex items-center gap-1 whitespace-nowrap">
                           <i className="ri-eye-line"></i>
                           {post.view_count}
                         </span>
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 whitespace-nowrap">
                           <i className="ri-heart-line"></i>
                           {post.like_count}
                         </span>
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 whitespace-nowrap">
                           <i className="ri-chat-3-line"></i>
                           {post.comment_count}
                         </span>

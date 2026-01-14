@@ -28,6 +28,7 @@ export default function CreatePostPage({ params }: { params: Promise<{ lang: str
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const CATEGORIES: Category[] = [
+    { id: 'notice', label: t.community.notice, icon: 'ri-megaphone-line', color: 'from-red-500 to-pink-500' },
     { id: 'daily', label: t.community.daily, icon: 'ri-calendar-check-line', color: 'from-yellow-500 to-orange-500' },
     { id: 'recommend', label: t.community.recommend, icon: 'ri-share-forward-line', color: 'from-green-500 to-emerald-500' },
     { id: 'free', label: t.community.free, icon: 'ri-chat-3-line', color: 'from-blue-500 to-cyan-500' },

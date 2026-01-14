@@ -161,8 +161,9 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
         );
         break;
       case 'popular':
+        // 인기순은 하트(like_count) 개수로 정렬
         filtered.sort((a, b) => 
-          (b.like_count + b.comment_count) - (a.like_count + a.comment_count)
+          (b.like_count || 0) - (a.like_count || 0)
         );
         break;
       case 'difficulty':

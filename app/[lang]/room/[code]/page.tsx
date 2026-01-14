@@ -49,7 +49,9 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
   const [maxQuestions, setMaxQuestions] = useState<number | null>(30);
   const [questions, setQuestions] = useState<LocalQuestion[]>([]);
   const [guesses, setGuesses] = useState<LocalGuess[]>([]);
-  const [players, setPlayers] = useState<Array<{ nickname: string; is_host: boolean }>>([]);
+  const [players, setPlayers] = useState<Array<{ nickname: string; is_host: boolean; is_ready?: boolean }>>([]);
+  const [isReady, setIsReady] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
   const [nickname, setNickname] = useState('');
   const [showNicknameModal, setShowNicknameModal] = useState(true);
@@ -551,6 +553,50 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
         }
       });
 
+    // Players 실시간 구독 (참가자 입장/퇴장 감지)
+    const playersChannel = supabase
+      .channel(`players:${roomCode}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'players',
+          filter: `room_code=eq.${roomCode}`,
+        },
+        async (payload) => {
+          console.log('🔔 Players Realtime 이벤트:', payload.eventType);
+          // 참가자 목록 다시 로드
+          const { data: playersData } = await supabase
+            .from('players')
+            .select('nickname, is_host')
+            .eq('room_code', roomCode);
+          
+          if (playersData) {
+            const newPlayers = playersData.map(p => ({
+              nickname: p.nickname,
+              is_host: p.is_host,
+              is_ready: false,
+            }));
+            setPlayers(newPlayers);
+            
+            // 새 참가자 입장 알림 (호스트에게만)
+            if (isHost && payload.eventType === 'INSERT') {
+              const newPlayer = payload.new as { nickname: string };
+              if (newPlayer.nickname !== nickname) {
+                // 토스트 알림 (간단하게 alert 사용)
+                setTimeout(() => {
+                  alert(lang === 'ko' 
+                    ? `🎉 ${newPlayer.nickname}님이 참가했습니다!` 
+                    : `🎉 ${newPlayer.nickname} joined!`);
+                }, 300);
+              }
+            }
+          }
+        }
+      )
+      .subscribe();
+
     // 기존 데이터 로드
     const loadInitialData = async () => {
       try {
@@ -642,6 +688,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
           setPlayers(playersRes.data.map(p => ({
             nickname: p.nickname,
             is_host: p.is_host,
+            is_ready: false,
           })));
         }
       } catch (err) {
@@ -695,6 +742,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
       questionsChannel.unsubscribe();
       guessesChannel.unsubscribe();
       roomChannel.unsubscribe();
+      playersChannel.unsubscribe();
       clearInterval(pollInterval);
     };
   }, [roomCode, showNicknameModal]);
@@ -1222,28 +1270,95 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <div className="container mx-auto px-3 sm:px-4 py-4 max-w-6xl">
+        {/* 호스트인 경우 초대 중심 UI */}
+        {isHost && (
+          <div className="mb-4 sm:mb-6 bg-gradient-to-br from-green-500/10 via-emerald-500/10 to-teal-500/10 rounded-xl p-4 sm:p-6 border border-green-500/30">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="text-sm sm:text-base font-semibold text-green-400 mb-2 sm:mb-3">
+                  <i className="ri-group-line mr-2"></i>
+                  {lang === 'ko' ? '친구 초대하기' : 'Invite Friends'}
+                </h3>
+                <div className="bg-slate-900/50 rounded-lg p-3 sm:p-4 border border-slate-700 mb-3">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <div className="flex-1">
+                      <span className="text-xs sm:text-sm text-slate-400 block mb-1">{t.room.roomCode}</span>
+                      <div className="font-mono font-bold text-green-400 text-2xl sm:text-3xl lg:text-4xl tracking-wider">
+                        {roomCode}
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleCopyRoomCode}
+                      className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 active:from-green-700 active:to-emerald-700 text-white font-bold rounded-lg transition-all duration-200 shadow-lg hover:shadow-green-500/50 touch-manipulation active:scale-95 text-sm sm:text-base"
+                    >
+                      <i className="ri-file-copy-line mr-2"></i>
+                      {lang === 'ko' ? '코드 복사' : 'Copy Code'}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={handleShareRoom}
+                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all text-xs sm:text-sm touch-manipulation active:scale-95"
+                  >
+                    <i className="ri-link mr-1.5"></i>
+                    {lang === 'ko' ? '링크 복사' : 'Copy Link'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const roomUrl = `${window.location.origin}/${lang}/room/${roomCode}`;
+                      if (navigator.share) {
+                        navigator.share({
+                          title: lang === 'ko' ? '바다거북스프 방에 초대합니다' : 'Join my Pelican Soup Riddle room',
+                          text: lang === 'ko' ? `방 코드: ${roomCode}` : `Room code: ${roomCode}`,
+                          url: roomUrl,
+                        }).catch(() => {});
+                      } else {
+                        handleShareRoom();
+                      }
+                    }}
+                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all text-xs sm:text-sm touch-manipulation active:scale-95"
+                  >
+                    <i className="ri-share-line mr-1.5"></i>
+                    {lang === 'ko' ? '공유하기' : 'Share'}
+                  </button>
+                </div>
+              </div>
+              <div className="bg-slate-800/50 rounded-lg p-3 sm:p-4 border border-slate-700 min-w-[120px] sm:min-w-[140px]">
+                <div className="text-center">
+                  <div className="text-xs sm:text-sm text-slate-400 mb-1">{lang === 'ko' ? '참가자' : 'Players'}</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-teal-400">{players.length}</div>
+                  <div className="text-xs text-slate-500 mt-1">/ 8</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <div className="bg-slate-800 px-3 sm:px-4 py-2 rounded-lg border border-slate-700 flex items-center gap-2">
-              <div>
-              <span className="text-slate-400 text-xs">{t.room.roomCode}</span>
-                <div className="font-mono font-bold text-teal-400 text-base sm:text-lg">{roomCode}</div>
+            {!isHost && (
+              <div className="bg-slate-800 px-3 sm:px-4 py-2 rounded-lg border border-slate-700 flex items-center gap-2">
+                <div>
+                  <span className="text-slate-400 text-xs">{t.room.roomCode}</span>
+                  <div className="font-mono font-bold text-teal-400 text-base sm:text-lg">{roomCode}</div>
+                </div>
+                <button
+                  onClick={handleCopyRoomCode}
+                  className="ml-2 p-1.5 hover:bg-slate-700 rounded-lg transition-colors touch-manipulation"
+                  title={t.room.copyRoomCode}
+                >
+                  <i className="ri-file-copy-line text-teal-400 text-sm"></i>
+                </button>
+                <button
+                  onClick={handleShareRoom}
+                  className="ml-2 p-1.5 hover:bg-slate-700 rounded-lg transition-colors touch-manipulation"
+                  title={t.room.shareRoomLink}
+                >
+                  <i className="ri-share-line text-teal-400 text-sm"></i>
+                </button>
               </div>
-              <button
-                onClick={handleCopyRoomCode}
-                className="ml-2 p-1.5 hover:bg-slate-700 rounded-lg transition-colors"
-                title={t.room.copyRoomCode}
-              >
-                <i className="ri-file-copy-line text-teal-400 text-sm"></i>
-              </button>
-              <button
-                onClick={handleShareRoom}
-                className="ml-2 p-1.5 hover:bg-slate-700 rounded-lg transition-colors"
-                title={t.room.shareRoomLink}
-              >
-                <i className="ri-share-line text-teal-400 text-sm"></i>
-              </button>
-            </div>
+            )}
             {isHost && (
               <div className="bg-gradient-to-r from-teal-500/20 to-cyan-500/20 px-3 py-2 rounded-lg border border-teal-500/50">
                 <span className="text-teal-400 text-xs font-semibold">
@@ -1342,7 +1457,76 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
             )}
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
+            {/* 참가자 리스트 */}
+            {players.length > 0 && (
+              <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-3 sm:p-4 border border-slate-700/50">
+                <h3 className="text-xs sm:text-sm font-semibold text-slate-300 mb-2 sm:mb-3 flex items-center gap-2">
+                  <i className="ri-group-line text-teal-400 text-sm sm:text-base"></i>
+                  {lang === 'ko' ? '참가자' : 'Players'} ({players.length})
+                </h3>
+                <div className="space-y-1.5 sm:space-y-2">
+                  {players.map((player, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex items-center justify-between p-2 sm:p-2.5 rounded-lg ${
+                        player.is_host
+                          ? 'bg-gradient-to-r from-teal-500/20 to-cyan-500/20 border border-teal-500/30'
+                          : 'bg-slate-700/30'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+                        {player.is_host && (
+                          <i className="ri-vip-crown-line text-yellow-400 text-xs sm:text-sm flex-shrink-0"></i>
+                        )}
+                        <span className={`text-xs sm:text-sm truncate ${
+                          player.is_host ? 'text-teal-400 font-semibold' : 'text-slate-300'
+                        }`}>
+                          {player.nickname}
+                        </span>
+                      </div>
+                      {player.is_ready && (
+                        <div className="flex items-center gap-1 text-green-400 text-xs">
+                          <i className="ri-checkbox-circle-fill"></i>
+                          <span className="hidden sm:inline">{lang === 'ko' ? '준비완료' : 'Ready'}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 준비 완료 버튼 (참가자용) */}
+            {!isHost && !isSpectator && !gameEnded && (
+              <button
+                onClick={async () => {
+                  setIsReady(!isReady);
+                  // 준비 상태를 서버에 저장 (간단하게 localStorage에 저장)
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem(`ready_${roomCode}_${nickname}`, String(!isReady));
+                  }
+                }}
+                className={`w-full py-2.5 sm:py-3 rounded-lg font-semibold transition-all duration-200 touch-manipulation active:scale-95 text-xs sm:text-sm ${
+                  isReady
+                    ? 'bg-green-500 hover:bg-green-600 text-white'
+                    : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                }`}
+              >
+                {isReady ? (
+                  <>
+                    <i className="ri-checkbox-circle-fill mr-2"></i>
+                    {lang === 'ko' ? '준비 완료' : 'Ready'}
+                  </>
+                ) : (
+                  <>
+                    <i className="ri-checkbox-blank-circle-line mr-2"></i>
+                    {lang === 'ko' ? '준비하기' : 'Get Ready'}
+                  </>
+                )}
+              </button>
+            )}
+
             {/* 채팅 패널 */}
             <ChatPanel roomCode={roomCode} nickname={nickname} lang={lang} />
 

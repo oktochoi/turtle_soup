@@ -77,6 +77,31 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
       incrementViewCount();
       hasIncrementedView.current = true;
     }
+
+    // 실시간 업데이트를 위한 구독 설정
+    const channel = supabase
+      .channel(`post-${postId}-changes`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'post_likes', filter: `post_id=eq.${postId}` },
+        async () => {
+          // 좋아요 변경 시 게시글과 좋아요 상태 새로고침
+          await loadPost();
+          await checkLike();
+        }
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'post_comments', filter: `post_id=eq.${postId}` },
+        async () => {
+          // 댓글 변경 시 게시글과 댓글 목록 새로고침
+          await loadPost();
+          await loadComments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [postId, user]);
 
   const loadPost = async () => {
@@ -436,24 +461,24 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
         </div>
 
         {/* 게시글 */}
-        <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 sm:p-8 border border-slate-700/50 mb-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
+        <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-4 sm:p-6 lg:p-8 border border-slate-700/50 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2 sm:mb-3">
                 {post.category && CATEGORIES[post.category] && (
-                  <span className={`px-3 py-1 rounded-md text-sm font-semibold bg-gradient-to-r ${CATEGORIES[post.category].color} text-white`}>
+                  <span className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-semibold bg-gradient-to-r ${CATEGORIES[post.category].color} text-white whitespace-nowrap`}>
                     <i className={`${CATEGORIES[post.category].icon} mr-1`}></i>
                     {CATEGORIES[post.category].label}
                   </span>
                 )}
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white break-words leading-tight">
                 {post.title}
               </h1>
             </div>
             {isAuthor && (
-              <Link href={`/${lang}/community/${postId}/edit`}>
-                <button className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm">
+              <Link href={`/${lang}/community/${postId}/edit`} className="flex-shrink-0">
+                <button className="w-full sm:w-auto px-3 py-1.5 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg text-xs sm:text-sm touch-manipulation">
                   <i className="ri-edit-line mr-1"></i>
                   {t.community.edit}
                 </button>
@@ -461,7 +486,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
             )}
           </div>
 
-          <div className="flex items-center gap-4 text-sm text-slate-400 mb-6">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-slate-400 mb-4 sm:mb-6">
             {authorGameUserId ? (
               <Link href={`/${lang}/profile/${authorGameUserId}`} className="hover:opacity-80 transition-opacity">
                 <UserLabel
@@ -473,60 +498,60 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
             ) : (
               <span className="flex items-center gap-1">
                 <i className="ri-user-line"></i>
-                {post.author}
+                <span className="truncate max-w-[120px] sm:max-w-none">{post.author}</span>
               </span>
             )}
-            <span>{formatDate(post.created_at)}</span>
-            <span className="flex items-center gap-1">
+            <span className="whitespace-nowrap">{formatDate(post.created_at)}</span>
+            <span className="flex items-center gap-1 whitespace-nowrap">
               <i className="ri-eye-line"></i>
               {post.view_count}
             </span>
           </div>
 
-          <div className="prose prose-invert max-w-none mb-6">
-            <p className="text-slate-300 whitespace-pre-wrap leading-relaxed">
+          <div className="prose prose-invert max-w-none mb-4 sm:mb-6">
+            <p className="text-sm sm:text-base text-slate-300 whitespace-pre-wrap leading-relaxed break-words">
               {post.content}
             </p>
           </div>
 
-          <div className="flex items-center gap-4 pt-4 border-t border-slate-700">
+          <div className="flex items-center gap-3 sm:gap-4 pt-3 sm:pt-4 border-t border-slate-700">
             <button
               onClick={handleLike}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-all touch-manipulation active:scale-95 ${
                 isLiked
                   ? 'bg-red-500/20 text-red-400 border border-red-500/50'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600 active:bg-slate-500'
               }`}
             >
-              <i className={`ri-heart-${isLiked ? 'fill' : 'line'}`}></i>
-              <span>{post.like_count}</span>
+              <i className={`ri-heart-${isLiked ? 'fill' : 'line'} text-base sm:text-lg`}></i>
+              <span className="text-sm sm:text-base font-semibold">{post.like_count}</span>
             </button>
             <div className="flex items-center gap-2 text-slate-400">
-              <i className="ri-chat-3-line"></i>
-              <span>{post.comment_count}</span>
+              <i className="ri-chat-3-line text-base sm:text-lg"></i>
+              <span className="text-sm sm:text-base font-semibold">{post.comment_count}</span>
             </div>
           </div>
         </div>
 
         {/* 댓글 작성 */}
         {user && (
-          <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700/50 mb-6">
-            <h2 className="text-lg font-bold mb-4">{t.community.writeCommentTitle}</h2>
+          <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-4 sm:p-6 border border-slate-700/50 mb-4 sm:mb-6">
+            <h2 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">{t.community.writeCommentTitle}</h2>
             <form onSubmit={handleSubmitComment}>
               <textarea
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder={t.community.enterComment}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 h-24 resize-none mb-3"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 h-20 sm:h-24 resize-none mb-3"
                 maxLength={1000}
                 required
               />
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                 <span className="text-xs text-slate-500">{commentText.length} / 1000</span>
                 <button
                   type="submit"
                   disabled={isSubmittingComment || !commentText.trim()}
-                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 active:from-blue-700 active:to-cyan-700 text-white rounded-lg transition-all font-semibold text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation active:scale-95"
                 >
                   {isSubmittingComment ? (
                     <>
@@ -546,8 +571,8 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
         )}
 
         {/* 댓글 목록 */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-bold">{t.community.commentsCount} ({comments.length})</h2>
+        <div className="space-y-3 sm:space-y-4">
+          <h2 className="text-base sm:text-lg font-bold">{t.community.commentsCount} ({comments.length})</h2>
           {comments.length === 0 ? (
             <div className="text-center py-8 bg-slate-800/50 rounded-xl border border-slate-700">
               <p className="text-slate-400">{t.community.noComments}</p>
@@ -560,14 +585,14 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
               return (
                 <div
                   key={comment.id}
-                  className={`bg-slate-800/50 backdrop-blur-xl rounded-xl p-4 sm:p-5 border ${
+                  className={`bg-slate-800/50 backdrop-blur-xl rounded-xl p-3 sm:p-4 lg:p-5 border ${
                     isPinned 
                       ? 'border-yellow-500/50 bg-yellow-500/5' 
                       : 'border-slate-700/50'
                   }`}
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2 text-sm text-slate-400 flex-wrap">
+                  <div className="flex items-start justify-between mb-2 sm:mb-3 gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-slate-400 flex-wrap min-w-0 flex-1">
                       {isPinned && (
                         <>
                           <i className="ri-pushpin-fill text-yellow-400"></i>

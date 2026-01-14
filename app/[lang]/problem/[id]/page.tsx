@@ -54,6 +54,202 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   const [authorGameUserId, setAuthorGameUserId] = useState<string | null>(null);
   const [commentGameUserIds, setCommentGameUserIds] = useState<Map<string, string>>(new Map());
   const [showHints, setShowHints] = useState<boolean[]>([false, false, false]); // 힌트 1, 2, 3 표시 여부
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const [nextProblem, setNextProblem] = useState<Problem | null>(null);
+
+  const generateRoomCode = () => {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  };
+
+  const loadNextProblem = async () => {
+    if (!problem) return;
+    try {
+      const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
+      const { data: problems, error } = await supabase
+        .from('problems')
+        .select('*')
+        .eq('lang', currentLang)
+        .neq('id', problemId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      if (problems && problems.length > 0) {
+        // 랜덤으로 다음 문제 선택
+        const randomIndex = Math.floor(Math.random() * problems.length);
+        setNextProblem(problems[randomIndex]);
+      }
+    } catch (error) {
+      console.error('다음 문제 로드 오류:', error);
+    }
+  };
+
+  const handleCreateRoomFromProblem = async () => {
+    if (!problem) {
+      alert(lang === 'ko' ? '문제 정보를 불러올 수 없습니다.' : 'Cannot load problem information.');
+      return;
+    }
+
+    setIsCreatingRoom(true);
+    try {
+      // 닉네임 가져오기
+      let nickname = '';
+      if (user) {
+        const { data: gameUser } = await supabase
+          .from('game_users')
+          .select('nickname')
+          .eq('auth_user_id', user.id)
+          .maybeSingle();
+        nickname = gameUser?.nickname || user.email?.split('@')[0] || `User${user.id.substring(0, 6)}`;
+      } else {
+        // 게스트인 경우 임시 닉네임
+        nickname = lang === 'ko' ? `게스트${Math.random().toString(36).substring(2, 6)}` : `Guest${Math.random().toString(36).substring(2, 6)}`;
+      }
+
+      // 방 코드 생성
+      let roomCode = generateRoomCode();
+      let attempts = 0;
+      while (attempts < 10) {
+        const { data: existing } = await supabase
+          .from('rooms')
+          .select('code')
+          .eq('code', roomCode)
+          .maybeSingle();
+        
+        if (!existing) break;
+        roomCode = generateRoomCode();
+        attempts++;
+      }
+
+      if (attempts >= 10) {
+        throw new Error('방 코드 생성 실패');
+      }
+
+      // 방 생성 (문제 기반)
+      const insertData: any = {
+        code: roomCode,
+        story: problem.content,
+        truth: problem.answer,
+        host_nickname: nickname,
+        max_questions: 30,
+        lang: lang === 'ko' || lang === 'en' ? lang : 'ko',
+        hints: problem.hints || null,
+      };
+
+      const { data: room, error: roomError } = await supabase
+        .from('rooms')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (roomError) {
+        // lang 컬럼이 없을 수 있으므로 재시도
+        if (roomError.code === '42703' || roomError.message?.includes('column') || roomError.message?.includes('lang')) {
+          delete insertData.lang;
+          const retryResult = await supabase
+            .from('rooms')
+            .insert(insertData)
+            .select()
+            .single();
+          
+          if (retryResult.error) throw retryResult.error;
+          
+          // 호스트를 players 테이블에 추가
+          await supabase
+            .from('players')
+            .insert({
+              room_code: roomCode,
+              nickname: nickname,
+              is_host: true,
+            });
+
+          // 이벤트 로깅
+          if (typeof window !== 'undefined') {
+            console.log('problem_cta_create_room_click', { problemId, roomCode });
+          }
+
+          router.push(`/${lang}/room/${roomCode}?host=true&nickname=${encodeURIComponent(nickname)}`);
+          return;
+        }
+        throw roomError;
+      }
+
+      // 호스트를 players 테이블에 추가
+      await supabase
+        .from('players')
+        .insert({
+          room_code: roomCode,
+          nickname: nickname,
+          is_host: true,
+        });
+
+      // 이벤트 로깅
+      if (typeof window !== 'undefined') {
+        console.log('problem_cta_create_room_click', { problemId, roomCode });
+      }
+
+      router.push(`/${lang}/room/${roomCode}?host=true&nickname=${encodeURIComponent(nickname)}`);
+    } catch (error: any) {
+      console.error('방 생성 오류:', error);
+      alert(lang === 'ko' ? '방 생성에 실패했습니다. 다시 시도해주세요.' : 'Failed to create room. Please try again.');
+    } finally {
+      setIsCreatingRoom(false);
+    }
+  };
+
+  const handleCopyInviteLink = async () => {
+    if (!problem) return;
+
+    try {
+      // 먼저 방이 있는지 확인, 없으면 생성
+      let roomCode = '';
+      
+      // 최근 생성된 방 확인 (같은 문제로 생성된 방)
+      const { data: recentRooms } = await supabase
+        .from('rooms')
+        .select('code')
+        .eq('story', problem.content)
+        .eq('truth', problem.answer)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (recentRooms) {
+        roomCode = recentRooms.code;
+      } else {
+        // 방이 없으면 생성
+        await handleCreateRoomFromProblem();
+        return; // 방 생성 후 리다이렉트되므로 여기서 종료
+      }
+
+      // 방 링크 복사
+      const roomUrl = `${window.location.origin}/${lang}/room/${roomCode}`;
+      await navigator.clipboard.writeText(roomUrl);
+      
+      // 이벤트 로깅
+      if (typeof window !== 'undefined') {
+        console.log('problem_cta_invite_copy', { problemId, roomCode });
+      }
+
+      alert(lang === 'ko' ? '초대 링크가 복사되었습니다!' : 'Invite link copied!');
+    } catch (error) {
+      console.error('링크 복사 오류:', error);
+      alert(lang === 'ko' ? '링크 복사에 실패했습니다.' : 'Failed to copy link.');
+    }
+  };
+
+  const handleNextProblem = () => {
+    if (nextProblem) {
+      // 이벤트 로깅
+      if (typeof window !== 'undefined') {
+        console.log('problem_cta_next_problem', { fromProblemId: problemId, toProblemId: nextProblem.id });
+      }
+      router.push(`/${lang}/problem/${nextProblem.id}`);
+    } else {
+      // 다음 문제가 없으면 문제 목록으로
+      router.push(`/${lang}/problems`);
+    }
+  };
 
   useEffect(() => {
     loadProblem();
@@ -62,6 +258,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
     checkLike();
     loadLocalQuestions();
     loadRating();
+    loadNextProblem();
     
     // AI 모델을 백그라운드에서 미리 로드 (첫 질문 속도 개선)
     if (lang === 'en') {
@@ -164,6 +361,9 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
           setAuthorGameUserId(gameUser.id);
         }
       }
+      
+      // 문제 로드 후 다음 문제 로드
+      loadNextProblem();
       
       // 문제 로드 시 knowledge 생성 (언어에 따라 다른 분석기 사용)
       if (data && data.content && data.answer) {
@@ -946,7 +1146,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-4xl">
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-3 sm:py-4 lg:py-6 xl:py-8 max-w-4xl">
         <div className="mb-4 sm:mb-6">
           <Link href={`/${lang}`}>
             <button className="text-slate-400 hover:text-white transition-colors text-xs sm:text-sm">
@@ -1959,6 +2159,57 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
         </div>
       )}
 
+      {/* 고정 CTA 바 - 모바일 우선 */}
+      <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 via-slate-800 to-slate-800/95 backdrop-blur-xl border-t border-slate-700/50 z-50 shadow-2xl">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 max-w-4xl">
+          {/* Primary 버튼: 이 문제로 방 만들기 */}
+          <button
+            onClick={handleCreateRoomFromProblem}
+            disabled={isCreatingRoom}
+            className="w-full mb-2 sm:mb-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 active:from-green-700 active:to-emerald-700 text-white font-bold py-3 sm:py-3.5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-green-500/50 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation active:scale-95 text-sm sm:text-base"
+          >
+            {isCreatingRoom ? (
+              <>
+                <i className="ri-loader-4-line animate-spin mr-2"></i>
+                {lang === 'ko' ? '방 생성 중...' : 'Creating room...'}
+              </>
+            ) : (
+              <>
+                <i className="ri-group-line mr-2"></i>
+                {lang === 'ko' ? '이 문제로 방 만들기' : 'Create Room with This Problem'}
+              </>
+            )}
+          </button>
+
+          {/* Secondary 버튼 3개 */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <button
+              onClick={handleCopyInviteLink}
+              className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all duration-200 touch-manipulation active:scale-95"
+            >
+              <i className="ri-share-line text-base sm:text-lg"></i>
+              <span className="text-xs sm:text-sm font-medium">{lang === 'ko' ? '초대 링크' : 'Invite'}</span>
+            </button>
+            <button
+              onClick={handleNextProblem}
+              className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all duration-200 touch-manipulation active:scale-95"
+            >
+              <i className="ri-arrow-right-line text-base sm:text-lg"></i>
+              <span className="text-xs sm:text-sm font-medium">{lang === 'ko' ? '다음 문제' : 'Next'}</span>
+            </button>
+            <Link
+              href={`/${lang}/ranking${problemId ? `?highlightProblem=${problemId}` : ''}`}
+              className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all duration-200 touch-manipulation active:scale-95"
+            >
+              <i className="ri-trophy-line text-base sm:text-lg"></i>
+              <span className="text-xs sm:text-sm font-medium">{lang === 'ko' ? '랭킹' : 'Ranking'}</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* CTA 바 공간 확보 (모바일에서 하단 버튼이 콘텐츠에 가려지지 않도록) */}
+      <div className="h-24 sm:h-28"></div>
     </div>
   );
 }
