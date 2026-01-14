@@ -27,6 +27,7 @@ export type Room = {
   game_ended: boolean;
   status: 'active' | 'done';
   created_at: string;
+  hints?: string[] | null; // 최대 3개의 힌트
 };
 
 export type Player = {
@@ -51,6 +52,7 @@ export type Problem = {
   created_at: string;
   updated_at: string;
   user_id?: string;
+  hints?: string[] | null; // 최대 3개의 힌트
   // 별점 관련 (계산된 값)
   average_rating?: number;
   rating_count?: number;

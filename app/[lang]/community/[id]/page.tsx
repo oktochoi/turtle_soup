@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/hooks/useAuth';
 import UserLabel from '@/components/UserLabel';
 import { useTranslations } from '@/hooks/useTranslations';
+import { createNotification } from '@/lib/notifications';
 
 type Post = {
   id: string;
@@ -208,8 +209,17 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
         if (error) throw error;
       }
 
-      // 최신 좋아요 수 로드 (트리거로 업데이트된 like_count 반영)
-      await loadPost();
+      // 최신 좋아요 수 로드
+      const { data: updatedPost } = await supabase
+        .from('posts')
+        .select('like_count, comment_count, view_count')
+        .eq('id', postId)
+        .single();
+      
+      if (updatedPost) {
+        setPost(prev => prev ? { ...prev, ...updatedPost } : null);
+      }
+      
       await checkLike(); // 좋아요 상태도 다시 확인
     } catch (error: any) {
       console.error('좋아요 오류:', error);
@@ -262,7 +272,30 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
 
       setCommentText('');
       await loadComments();
-      await loadPost(); // 댓글 수 업데이트
+      
+      // 댓글 수 직접 업데이트
+      const { count: commentCount } = await supabase
+        .from('post_comments')
+        .select('*', { count: 'exact', head: true })
+        .eq('post_id', postId);
+      
+      setPost(prev => prev ? { ...prev, comment_count: commentCount || 0 } : null);
+
+      // 게시글 작성자에게 알림 생성
+      if (post && post.user_id && post.user_id !== user.id) {
+        const postTitle = post.title || (lang === 'ko' ? '게시글' : 'Post');
+        await createNotification({
+          userId: post.user_id,
+          type: 'comment_on_post',
+          title: lang === 'ko'
+            ? `"${postTitle}"에 댓글이 달렸습니다`
+            : `New comment on "${postTitle}"`,
+          message: lang === 'ko'
+            ? `${author}님이 댓글을 남겼습니다: ${commentText.trim().substring(0, 50)}${commentText.trim().length > 50 ? '...' : ''}`
+            : `${author} commented: ${commentText.trim().substring(0, 50)}${commentText.trim().length > 50 ? '...' : ''}`,
+          link: `/${lang}/community/${postId}`,
+        });
+      }
     } catch (error) {
       console.error('댓글 작성 오류:', error);
       alert(t.community.commentFailed);
@@ -283,7 +316,14 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
       if (error) throw error;
 
       await loadComments();
-      await loadPost();
+      
+      // 댓글 수 직접 업데이트
+      const { count: commentCount } = await supabase
+        .from('post_comments')
+        .select('*', { count: 'exact', head: true })
+        .eq('post_id', postId);
+      
+      setPost(prev => prev ? { ...prev, comment_count: commentCount || 0 } : null);
     } catch (error) {
       console.error('댓글 삭제 오류:', error);
       alert(t.community.deleteCommentFailed);

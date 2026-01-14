@@ -73,7 +73,29 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
       const { data, error } = await query;
 
       if (error) throw error;
-      setPosts(data || []);
+      
+      // 뷰, 하트, 댓글 수를 최신 상태로 업데이트
+      const postsWithCounts = await Promise.all((data || []).map(async (post) => {
+        // 댓글 수 직접 계산
+        const { count: commentCount } = await supabase
+          .from('post_comments')
+          .select('*', { count: 'exact', head: true })
+          .eq('post_id', post.id);
+        
+        // 좋아요 수 직접 계산
+        const { count: likeCount } = await supabase
+          .from('post_likes')
+          .select('*', { count: 'exact', head: true })
+          .eq('post_id', post.id);
+        
+        return {
+          ...post,
+          comment_count: commentCount || 0,
+          like_count: likeCount || 0,
+        };
+      }));
+      
+      setPosts(postsWithCounts);
 
       // 각 게시글 작성자의 game_user_id 찾기
       const userIds = new Map<string, string>();

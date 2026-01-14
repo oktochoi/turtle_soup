@@ -7,10 +7,12 @@ import { supabase } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase/client';
 import type { Problem, ProblemQuestion, ProblemComment } from '@/lib/types';
 import { buildProblemKnowledge, analyzeQuestionV8, calculateAnswerSimilarity, initializeModel, type ProblemKnowledge } from '@/lib/ai-analyzer';
+import { buildProblemKnowledge as buildProblemKnowledgeEn, analyzeQuestionV8 as analyzeQuestionV8En, calculateAnswerSimilarity as calculateAnswerSimilarityEn, initializeModel as initializeModelEn, type ProblemKnowledge as ProblemKnowledgeEn } from '@/lib/ai-analyzer-en';
 import ProblemAdminButtons from './ProblemAdminButtons';
 import { useAuth } from '@/lib/hooks/useAuth';
 import UserLabel from '@/components/UserLabel';
 import { useTranslations } from '@/hooks/useTranslations';
+import { createNotification } from '@/lib/notifications';
 
 export default function ProblemPage({ params }: { params: Promise<{ lang: string; id: string }> }) {
   const resolvedParams = use(params);
@@ -46,11 +48,12 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   const { user } = useAuth();
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
-  const [problemKnowledge, setProblemKnowledge] = useState<ProblemKnowledge | null>(null);
+  const [problemKnowledge, setProblemKnowledge] = useState<ProblemKnowledge | ProblemKnowledgeEn | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [hasSubmittedAnswer, setHasSubmittedAnswer] = useState(false);
   const [authorGameUserId, setAuthorGameUserId] = useState<string | null>(null);
   const [commentGameUserIds, setCommentGameUserIds] = useState<Map<string, string>>(new Map());
+  const [showHints, setShowHints] = useState<boolean[]>([false, false, false]); // 힌트 1, 2, 3 표시 여부
 
   useEffect(() => {
     loadProblem();
@@ -61,10 +64,16 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
     loadRating();
     
     // AI 모델을 백그라운드에서 미리 로드 (첫 질문 속도 개선)
-    initializeModel().catch(err => {
-      console.error('AI 모델 사전 로딩 실패 (첫 질문 시 자동 로드됨):', err);
-    });
-  }, [problemId]);
+    if (lang === 'en') {
+      initializeModelEn().catch(err => {
+        console.error('AI 모델 사전 로딩 실패 (첫 질문 시 자동 로드됨):', err);
+      });
+    } else {
+      initializeModel().catch(err => {
+        console.error('AI 모델 사전 로딩 실패 (첫 질문 시 자동 로드됨):', err);
+      });
+    }
+  }, [problemId, lang]);
 
   // 작성자 확인 (user_id 기반)
   useEffect(() => {
@@ -156,11 +165,18 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
         }
       }
       
-      // 문제 로드 시 knowledge 생성 (V8 방식)
+      // 문제 로드 시 knowledge 생성 (언어에 따라 다른 분석기 사용)
       if (data && data.content && data.answer) {
         try {
-          const knowledge = await buildProblemKnowledge(data.content, data.answer);
-          setProblemKnowledge(knowledge);
+          const hints = (data as any).hints as string[] | null | undefined;
+          // 영어 문제는 영어 분석기 사용, 한국어는 기존 분석기 사용
+          if (lang === 'en') {
+            const knowledge = await buildProblemKnowledgeEn(data.content, data.answer, undefined, hints);
+            setProblemKnowledge(knowledge);
+          } else {
+            const knowledge = await buildProblemKnowledge(data.content, data.answer, undefined, hints);
+            setProblemKnowledge(knowledge);
+          }
         } catch (err) {
           console.error('Knowledge 생성 오류:', err);
           // knowledge 생성 실패해도 계속 진행
@@ -353,20 +369,27 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
 
     setIsAnalyzing(true);
     try {
-      // V8 방식: knowledge가 있으면 재사용, 없으면 생성
+      // 언어에 따라 적절한 분석기 사용
       let knowledge = problemKnowledge;
       if (!knowledge && problem.content && problem.answer) {
-        knowledge = await buildProblemKnowledge(problem.content, problem.answer);
+        const hints = (problem as any).hints as string[] | null | undefined;
+        if (lang === 'en') {
+          knowledge = await buildProblemKnowledgeEn(problem.content, problem.answer, undefined, hints);
+        } else {
+          knowledge = await buildProblemKnowledge(problem.content, problem.answer, undefined, hints);
+        }
         setProblemKnowledge(knowledge);
       }
       
       if (knowledge) {
-        const answer = await analyzeQuestionV8(questionText, knowledge);
+        const answer = lang === 'en' 
+          ? await analyzeQuestionV8En(questionText, knowledge as ProblemKnowledgeEn)
+          : await analyzeQuestionV8(questionText, knowledge as ProblemKnowledge);
         setSuggestedAnswer(answer);
       } else {
         // fallback: knowledge 생성 실패 시 기존 방식 사용
-        const { analyzeQuestion } = await import('@/lib/ai-analyzer');
-        const answer = await analyzeQuestion(questionText, problem.content, problem.answer);
+        const analyzer = lang === 'en' ? await import('@/lib/ai-analyzer-en') : await import('@/lib/ai-analyzer');
+        const answer = await analyzer.analyzeQuestion(questionText, problem.content, problem.answer);
         setSuggestedAnswer(answer);
       }
     } catch (error) {
@@ -390,7 +413,8 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       // V8 방식: knowledge가 있으면 재사용, 없으면 생성
       let knowledge = problemKnowledge;
       if (!knowledge && problem.content && problem.answer) {
-        knowledge = await buildProblemKnowledge(problem.content, problem.answer);
+        const hints = (problem as any).hints as string[] | null | undefined;
+        knowledge = await buildProblemKnowledge(problem.content, problem.answer, undefined, hints);
         setProblemKnowledge(knowledge);
       }
       
@@ -429,7 +453,8 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       // V8 방식: knowledge가 있으면 재사용, 없으면 생성
       let knowledge = problemKnowledge;
       if (!knowledge && problem.content && problem.answer) {
-        knowledge = await buildProblemKnowledge(problem.content, problem.answer);
+        const hints = (problem as any).hints as string[] | null | undefined;
+        knowledge = await buildProblemKnowledge(problem.content, problem.answer, undefined, hints);
         setProblemKnowledge(knowledge);
       }
       
@@ -501,6 +526,22 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
 
       setCommentText('');
       loadComments();
+
+      // 문제 작성자에게 알림 생성
+      if (problem && problem.user_id && problem.user_id !== user.id) {
+        const problemTitle = problem.title || (lang === 'ko' ? '문제' : 'Problem');
+        await createNotification({
+          userId: problem.user_id,
+          type: 'comment_on_problem',
+          title: lang === 'ko' 
+            ? `"${problemTitle}"에 댓글이 달렸습니다`
+            : `New comment on "${problemTitle}"`,
+          message: lang === 'ko'
+            ? `${nickname}님이 댓글을 남겼습니다: ${commentText.trim().substring(0, 50)}${commentText.trim().length > 50 ? '...' : ''}`
+            : `${nickname} commented: ${commentText.trim().substring(0, 50)}${commentText.trim().length > 50 ? '...' : ''}`,
+          link: `/${lang}/problem/${problemId}`,
+        });
+      }
     } catch (error) {
       console.error('댓글 제출 오류:', error);
       alert(t.problem.commentSubmitFail);
@@ -1346,7 +1387,14 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                     setIsCalculatingSimilarity(true);
                     try {
                       // 문제 내용도 전달하여 맥락을 고려한 정답률 계산
-                      const similarity = await calculateAnswerSimilarity(
+                      const similarity = lang === 'en'
+                        ? await calculateAnswerSimilarityEn(
+                            userGuess.trim(),
+                            problem.answer,
+                            problem.content,
+                            problemKnowledge as ProblemKnowledgeEn | null
+                          )
+                        : await calculateAnswerSimilarity(
                         userGuess.trim(), 
                         problem.answer,
                         problem.content
@@ -1454,6 +1502,41 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                       ? t.problem.mediumMatchDesc
                       : t.problem.lowMatchDesc}
                   </p>
+                </div>
+              )}
+
+              {/* 힌트 보기 */}
+              {problem && (problem as any).hints && Array.isArray((problem as any).hints) && (problem as any).hints.length > 0 && (
+                <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
+                  <h3 className="text-sm sm:text-base font-semibold mb-3 text-yellow-400">
+                    <i className="ri-lightbulb-line mr-2"></i>
+                    {lang === 'ko' ? '힌트' : 'Hints'}
+                  </h3>
+                  <div className="space-y-2">
+                    {((problem as any).hints as string[]).map((hint, index) => (
+                      <div key={index} className="bg-slate-800/50 rounded-lg border border-slate-700">
+                        <button
+                          onClick={() => {
+                            const newShowHints = [...showHints];
+                            newShowHints[index] = !newShowHints[index];
+                            setShowHints(newShowHints);
+                          }}
+                          className="w-full px-4 py-2.5 flex items-center justify-between text-left hover:bg-slate-700/50 transition-colors rounded-lg"
+                        >
+                          <span className="text-sm sm:text-base text-slate-300">
+                            <i className="ri-lightbulb-flash-line mr-2 text-yellow-400"></i>
+                            {lang === 'ko' ? `힌트 ${index + 1}` : `Hint ${index + 1}`}
+                          </span>
+                          <i className={`ri-${showHints[index] ? 'eye-off' : 'eye'}-line text-slate-400`}></i>
+                        </button>
+                        {showHints[index] && (
+                          <div className="px-4 pb-3 pt-2 border-t border-slate-700">
+                            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">{hint}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/hooks/useAuth';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import NotificationBell from '../components/NotificationBell';
 import { useTranslations } from '@/hooks/useTranslations';
 
 export default function Header() {
@@ -133,6 +134,9 @@ export default function Header() {
             
             {/* 언어 전환 버튼 */}
             <LanguageSwitcher />
+            
+            {/* 알림 벨 */}
+            {user && <NotificationBell lang={currentLang} />}
             
             {/* 로그인/로그아웃 버튼 */}
             {authLoading ? (

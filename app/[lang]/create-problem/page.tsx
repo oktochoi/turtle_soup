@@ -19,6 +19,7 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [answer, setAnswer] = useState('');
+  const [hints, setHints] = useState<string[]>(['', '', '']); // 최대 3개
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -66,7 +67,11 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
       // author 필드 자동 설정 (user_id 기반 또는 이메일)
       const authorName = user.email?.split('@')[0] || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User');
       
-      const insertData = {
+      // 힌트 필터링 (빈 문자열 제거, 최대 3개)
+      const validHints = hints.filter(h => h && h.trim()).slice(0, 3);
+      const hintsData = validHints.length > 0 ? validHints : null;
+      
+      const insertData: any = {
         title: title.trim(),
         content: content.trim(),
         answer: answer.trim(),
@@ -76,6 +81,11 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         user_id: user.id,
         lang: currentLang,
       };
+      
+      // hints 컬럼이 있으면 추가
+      if (hintsData) {
+        insertData.hints = hintsData;
+      }
       
       console.log('Insert 데이터 준비 완료:', { 
         titleLength: insertData.title.length,
@@ -249,6 +259,36 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
             />
             <div className="text-right text-xs text-slate-500 mt-1">
               {answer.length} / 2000
+            </div>
+          </div>
+
+          {/* 힌트 섹션 */}
+          <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-700/50">
+            <label className="block text-xs sm:text-sm font-medium mb-3 text-slate-300">
+              <i className="ri-lightbulb-line mr-1 text-yellow-400"></i>
+              {lang === 'ko' ? '힌트 (선택사항, 최대 3개)' : 'Hints (Optional, max 3)'}
+            </label>
+            <div className="space-y-2">
+              {hints.map((hint, index) => (
+                <input
+                  key={index}
+                  type="text"
+                  value={hint}
+                  onChange={(e) => {
+                    const newHints = [...hints];
+                    newHints[index] = e.target.value;
+                    setHints(newHints);
+                  }}
+                  placeholder={lang === 'ko' ? `힌트 ${index + 1} (선택사항)` : `Hint ${index + 1} (optional)`}
+                  className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 sm:px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500/50 text-sm sm:text-base"
+                  maxLength={200}
+                />
+              ))}
+            </div>
+            <div className="text-xs text-slate-400 mt-2">
+              {lang === 'ko' 
+                ? '💡 힌트는 AI가 질문에 답변할 때 참고하는 추가 정보입니다. 비워두면 사용되지 않습니다.'
+                : '💡 Hints are additional information that AI uses when answering questions. Leave blank if not needed.'}
             </div>
           </div>
 

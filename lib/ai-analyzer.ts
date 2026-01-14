@@ -1,13 +1,17 @@
-// AI 질문 분석기 - Semantic + Problem-Knowledge Engine V8.7 (Synonym + Antonym + Ontology + Quantity)
-// 목표:
-// - 문제별(콘텐츠+정답) 지식(ProblemKnowledge)을 1회 생성해서 질문 판정을 안정화/고속화
-// - 유의어 사전 수동 관리 최소화(문제 내부에서 embedding으로 자동 확장)
-// - 반의어(대립 개념) 감지로 "임베딩이 반의어도 가깝게 보는" 문제 방어
-// - 부분-전체(손 vs 손톱) / 양쪽-한쪽(양발 vs 한발) 같은 일반화 질문을 NO로 안정화
-// - (옵션) 애매 + 모순 의심 구간에서만 fallbackJudge(NLI/LLM) 호출
+// AI 질문 분석기 - Semantic + Problem-Knowledge Engine V9
+// (Upgraded from V8.7) - Unified KO+EN+Mixed
 //
-// 실행 환경: Next.js/Vercel 브라우저 (@xenova/transformers)
-// 주의: 형태소 분석은 브라우저에서 무거움 → roughStemKo + embedding 기반으로 커버
+// Runtime: Next.js/Vercel Browser (@xenova/transformers)
+// Embedding model: Xenova/paraphrase-multilingual-MiniLM-L12-v2 (quantized)
+//
+// V9 주요 변경사항:
+// [A] ProblemKnowledge 확장: taxonomyEdges, hypernymMap, hyponymMap, antonymLexicon, conceptVecCache
+// [B] taxonomy 구축: GLOBAL_TAXONOMY + heuristic extraction
+// [C] QuestionConcepts 확장: synonyms + (limited) hyper/hypo, concept explosion guard
+// [D] Force-NO/YES: shouldForceNoByOntologyV9 (quantity mismatch, generalization guard)
+// [E] Antonym 강화: axes 확장 + antonymLexicon + 2-of-3 signal gating
+// [F] Answer Similarity V9: embedding + knowledge bonus(유의어/상하위어) + antonym penalty
+// [G] KO+EN+Mixed 토큰화 + canonical concept layer
 
 type Pipeline = any;
 
@@ -40,7 +44,13 @@ const CONFIG = {
 
     // ✅ Antonym / contradiction control
     ANTONYM_PENALTY: 0.30,
-    ANTONYM_FORCE_NO_SIM: 0.55,
+    ANTONYM_FORCE_NO_SIM_BASE: 0.55,
+    ANTONYM_FORCE_NO_SIM_EARLY_DELTA: +0.00,
+    ANTONYM_FORCE_NO_SIM_LATE_DELTA: -0.05,
+
+    // taxonomy bonus/penalty
+    TAXONOMY_MATCH_BONUS: 0.10,
+    TAXONOMY_GENERALIZATION_PENALTY: 0.18,
   },
 
   LEXICON: {
@@ -51,7 +61,26 @@ const CONFIG = {
   },
 
   AMBIGUOUS_RANGE: { min: 0.40, max: 0.62 },
-};
+
+  V9: {
+    // concept explosion guard
+    MAX_CONCEPTS_TOTAL: 180,
+    MAX_HYPERNYM_PER_TOKEN: 3,
+    MAX_HYPONYM_PER_TOKEN: 3,
+    TAXONOMY_MAX_DEPTH: 3,
+
+    // antonym false positive guard
+    ANTONYM_REQUIRE_SIGNALS: 2, // text/concept/lexicon 중 2개 이상일 때만 강한 mismatch
+
+    // answer similarity bonus/penalty
+    ANSWER_SYNONYM_BONUS: 0.10,
+    ANSWER_TAXONOMY_BONUS: 0.08,
+    ANSWER_ANTONYM_PENALTY: 0.35,
+
+    // embedding calls upper bound in AnswerSimilarityV9 (ua/ca/content)
+    ANSWER_SIM_MAX_EMBEDS: 3,
+  },
+} as const;
 
 // -------------------------
 // 모델 싱글톤
@@ -95,6 +124,124 @@ class LRUCache<K, V> {
 }
 
 const embeddingCache = new LRUCache<string, CacheValue>(CONFIG.CACHE_MAX);
+
+// -------------------------
+// 텍스트 정규화 / 토큰화 (KO+EN+Mixed)
+// -------------------------
+type Lang = "ko" | "en" | "mixed";
+type CanonicalConcept = string;
+
+function detectLang(text: string): Lang {
+  const hasKo = /[가-힣]/.test(text);
+  const hasEn = /[a-zA-Z]/.test(text);
+  if (hasKo && hasEn) return "mixed";
+  if (hasKo) return "ko";
+  if (hasEn) return "en";
+  return "mixed";
+}
+
+function tokenizeEn(text: string): string[] {
+  return normalizeText(text)
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .filter(t => t.length >= CONFIG.LEXICON.MIN_TOKEN_LEN)
+    .slice(0, CONFIG.LEXICON.MAX_TOKENS);
+}
+
+function tokenizeUniversal(text: string): { token: string; lang: Lang }[] {
+  const detectedLang = detectLang(text);
+  if (detectedLang === "ko") return tokenizeKo(text).map(t => ({ token: t, lang: "ko" as Lang }));
+  if (detectedLang === "en") return tokenizeEn(text).map(t => ({ token: t, lang: "en" as Lang }));
+  return [
+    ...tokenizeKo(text).map(t => ({ token: t, lang: "ko" as Lang })),
+    ...tokenizeEn(text).map(t => ({ token: t, lang: "en" as Lang })),
+  ];
+}
+
+// -------------------------
+// Canonical Concept Layer (KO+EN mapping)
+// -------------------------
+const CANONICAL_MAP: Map<string, CanonicalConcept> = new Map([
+  // person
+  ["사람", "person"],
+  ["남자", "person"],
+  ["여자", "person"],
+  ["아이", "person"],
+  ["인간", "person"],
+  ["human", "person"],
+  ["person", "person"],
+  ["man", "person"],
+  ["woman", "person"],
+  ["child", "person"],
+  ["kid", "person"],
+  ["boy", "person"],
+  ["girl", "person"],
+
+  // animal
+  ["동물", "animal"],
+  ["animal", "animal"],
+  ["개", "dog"],
+  ["고양이", "cat"],
+  ["dog", "dog"],
+  ["cat", "cat"],
+  ["강아지", "dog"],
+  ["냥이", "cat"],
+
+  // place
+  ["장소", "place"],
+  ["집", "home"],
+  ["가정", "home"],
+  ["house", "home"],
+  ["home", "home"],
+  ["학교", "school"],
+  ["school", "school"],
+  ["병원", "hospital"],
+  ["hospital", "hospital"],
+  ["교회", "church"],
+  ["church", "church"],
+
+  // alive / dead
+  ["살", "alive"],
+  ["살아", "alive"],
+  ["생존", "alive"],
+  ["alive", "alive"],
+  ["죽", "dead"],
+  ["사망", "dead"],
+  ["시체", "dead"],
+  ["dead", "dead"],
+
+  // open / closed
+  ["열", "open"],
+  ["열려", "open"],
+  ["open", "open"],
+  ["닫", "closed"],
+  ["잠겨", "closed"],
+  ["closed", "closed"],
+
+  // accident / intentional
+  ["사고", "accident"],
+  ["우발", "accident"],
+  ["실수", "accident"],
+  ["accident", "accident"],
+  ["고의", "intentional"],
+  ["의도", "intentional"],
+  ["계획", "intentional"],
+  ["intentional", "intentional"],
+
+  // crime-ish
+  ["살인", "murder"],
+  ["살인자", "killer"],
+  ["범인", "culprit"],
+  ["가해자", "culprit"],
+  ["murder", "murder"],
+  ["killer", "killer"],
+  ["culprit", "culprit"],
+]);
+
+function toCanonical(token: string): CanonicalConcept {
+  return CANONICAL_MAP.get(token) ?? token;
+}
 
 // -------------------------
 // 텍스트 정규화 / 토큰화 (가벼운 한국어 대응)
@@ -235,8 +382,22 @@ const NEGATION_PATTERNS = [
   "안했",
   "안 하는",
   "안하는",
+  // EN
+  "not ",
+  "no ",
+  "never",
+  "none",
+  "cannot",
+  "can't",
+  "won't",
+  "don't",
+  "didn't",
+  "isn't",
+  "aren't",
+  "wasn't",
+  "weren't",
 ];
-const MODALITY_PATTERNS = ["가능", "일 수도", "아마", "추정", "확실", "반드시", "모르", "불확실", "어쩌면"];
+const MODALITY_PATTERNS = ["가능", "일 수도", "아마", "추정", "확실", "반드시", "모르", "불확실", "어쩌면", "maybe", "perhaps", "possibly", "likely", "uncertain"];
 
 function hasAny(text: string, patterns: string[]) {
   const t = normalizeText(text);
@@ -256,11 +417,27 @@ function normalizeNegationQuestion(question: string): { normalized: string; inve
   if (!hasNegation(q)) return { normalized: q, invert: false };
 
   let nq = q;
+
+  // KO
   nq = nq.replace(/지\s*않/g, "");
   nq = nq.replace(/지않/g, "");
   nq = nq.replace(/안\s*/g, "");
   nq = nq.replace(/못\s*/g, "");
   nq = nq.replace(/없/g, "있");
+
+  // EN
+  nq = nq.replace(/\bnot\b/g, "");
+  nq = nq.replace(/\bnever\b/g, "");
+  nq = nq.replace(/\bno\b/g, "");
+  nq = nq.replace(/\bcan't\b/g, "can");
+  nq = nq.replace(/\bcannot\b/g, "can");
+  nq = nq.replace(/\bdon't\b/g, "");
+  nq = nq.replace(/\bdidn't\b/g, "");
+  nq = nq.replace(/\bisn't\b/g, "is");
+  nq = nq.replace(/\baren't\b/g, "are");
+  nq = nq.replace(/\bwasn't\b/g, "was");
+  nq = nq.replace(/\bweren't\b/g, "were");
+
   nq = normalizeText(nq);
 
   return { normalized: nq || q, invert: true };
@@ -278,6 +455,38 @@ const GLOBAL_ONTOLOGY: OntologyEdge[] = [
   { parent: "발가락", child: "발톱", rel: "part_of" },
   { parent: "얼굴", child: "눈", rel: "part_of" },
   { parent: "얼굴", child: "입", rel: "part_of" },
+  // EN alias
+  { parent: "hand", child: "finger", rel: "part_of" },
+  { parent: "finger", child: "nail", rel: "part_of" },
+  { parent: "foot", child: "toe", rel: "part_of" },
+  { parent: "toe", child: "toenail", rel: "part_of" },
+];
+
+// is_a (global minimal) - V9
+const GLOBAL_TAXONOMY: OntologyEdge[] = [
+  { parent: "사람", child: "남자", rel: "is_a" },
+  { parent: "사람", child: "여자", rel: "is_a" },
+  { parent: "사람", child: "아이", rel: "is_a" },
+  { parent: "동물", child: "개", rel: "is_a" },
+  { parent: "동물", child: "고양이", rel: "is_a" },
+  { parent: "교통수단", child: "자동차", rel: "is_a" },
+  { parent: "교통수단", child: "자전거", rel: "is_a" },
+  { parent: "범죄", child: "살인", rel: "is_a" },
+  { parent: "범죄", child: "도둑질", rel: "is_a" },
+  { parent: "장소", child: "집", rel: "is_a" },
+  { parent: "장소", child: "학교", rel: "is_a" },
+  { parent: "장소", child: "병원", rel: "is_a" },
+  { parent: "장소", child: "교회", rel: "is_a" },
+  // EN
+  { parent: "person", child: "man", rel: "is_a" },
+  { parent: "person", child: "woman", rel: "is_a" },
+  { parent: "person", child: "child", rel: "is_a" },
+  { parent: "animal", child: "dog", rel: "is_a" },
+  { parent: "animal", child: "cat", rel: "is_a" },
+  { parent: "place", child: "home", rel: "is_a" },
+  { parent: "place", child: "school", rel: "is_a" },
+  { parent: "place", child: "hospital", rel: "is_a" },
+  { parent: "place", child: "church", rel: "is_a" },
 ];
 
 // -------------------------
@@ -398,11 +607,11 @@ function extractAutoOntologyEdges(
   const allTokens = [...new Set([...contentTokens, ...answerTokens])];
   const text = normalizeText(`${content} ${answer}`).toLowerCase();
 
-  const partWholeKeywords = ["부위", "부분", "전체", "안에", "속에", "포함"];
+  const partWholeKeywords = ["부위", "부분", "전체", "안에", "속에", "포함", "part", "inside", "included", "contains"];
   const hasPartWholeContext = partWholeKeywords.some(kw => text.includes(kw));
   if (!hasPartWholeContext) return edges;
 
-  const existing = new Set(GLOBAL_ONTOLOGY.map(e => `${e.parent}::${e.child}`));
+  const existing = new Set(GLOBAL_ONTOLOGY.map(e => `${e.parent}::${e.child}::${e.rel}`));
 
   for (let i = 0; i < allTokens.length; i++) {
     for (let j = i + 1; j < allTokens.length; j++) {
@@ -410,15 +619,85 @@ function extractAutoOntologyEdges(
       const t2 = allTokens[j];
 
       if (t1.includes(t2) && t1.length > t2.length && t2.length >= 2) {
-        const key = `${t1}::${t2}`;
+        const key = `${t1}::${t2}::part_of`;
         if (!existing.has(key) && text.includes(t1) && text.includes(t2)) edges.push({ parent: t1, child: t2, rel: "part_of" });
       } else if (t2.includes(t1) && t2.length > t1.length && t1.length >= 2) {
-        const key = `${t2}::${t1}`;
+        const key = `${t2}::${t1}::part_of`;
         if (!existing.has(key) && text.includes(t1) && text.includes(t2)) edges.push({ parent: t2, child: t1, rel: "part_of" });
       }
     }
   }
-  return edges;
+  return edges.slice(0, 40);
+}
+
+// heuristic: auto taxonomy edges (is_a) - extremely gated (V9)
+function extractAutoTaxonomyEdges(
+  content: string,
+  answer: string,
+  contentTokens: string[],
+  answerTokens: string[]
+): OntologyEdge[] {
+  const text = normalizeText(`${content} ${answer}`).toLowerCase();
+  const ctxKeywords = ["종류", "분류", "중 하나", "이다", "인", "라고", "kind", "type", "category", "one of", "classified"];
+  const ok = ctxKeywords.some(k => text.includes(k));
+  if (!ok) return [];
+
+  const edges: OntologyEdge[] = [];
+  const all = [...new Set([...contentTokens, ...answerTokens])];
+
+  for (let i = 0; i < all.length; i++) {
+    for (let j = 0; j < all.length; j++) {
+      if (i === j) continue;
+      const child = all[i];
+      const parent = all[j];
+      if (child.length < 2 || parent.length < 2) continue;
+      if (child.includes(parent) && child.length > parent.length) {
+        edges.push({ parent, child, rel: "is_a" });
+      }
+    }
+  }
+
+  const set = new Set<string>();
+  const out = edges.filter(e => {
+    const k = `${e.parent}::${e.child}`;
+    if (set.has(k)) return false;
+    set.add(k);
+    return true;
+  });
+
+  return out.slice(0, 40);
+}
+
+// taxonomy maps (V9)
+function buildTaxonomyMaps(edges: OntologyEdge[]): { hypernymMap: Map<string, string[]>; hyponymMap: Map<string, string[]> } {
+  const hyper = new Map<string, string[]>();
+  const hypo = new Map<string, string[]>();
+  const isa = edges.filter(e => e.rel === "is_a");
+
+  for (const e of isa) {
+    if (!hyper.has(e.child)) hyper.set(e.child, []);
+    hyper.get(e.child)!.push(e.parent);
+
+    if (!hypo.has(e.parent)) hypo.set(e.parent, []);
+    hypo.get(e.parent)!.push(e.child);
+  }
+
+  for (const [k, v] of hyper.entries()) hyper.set(k, [...new Set(v)]);
+  for (const [k, v] of hypo.entries()) hypo.set(k, [...new Set(v)]);
+
+  return { hypernymMap: hyper, hyponymMap: hypo };
+}
+
+function isHypernymOf(parent: string, child: string, hypernymMap: Map<string, string[]>, depth = 3): boolean {
+  if (depth <= 0) return false;
+  const parents = hypernymMap.get(child) ?? [];
+  if (parents.includes(parent)) return true;
+  for (const p of parents) if (isHypernymOf(parent, p, hypernymMap, depth - 1)) return true;
+  return false;
+}
+
+function isHyponymOf(child: string, parent: string, hypernymMap: Map<string, string[]>, depth = 3): boolean {
+  return isHypernymOf(parent, child, hypernymMap, depth);
 }
 
 // -------------------------
@@ -427,12 +706,49 @@ function extractAutoOntologyEdges(
 type AntonymAxis = { label: string; pos: string[]; neg: string[] };
 
 const GLOBAL_ANTONYM_AXES: AntonymAxis[] = [
-  { label: "alive/dead", pos: ["살", "생존", "살아", "살아있"], neg: ["죽", "사망", "시체", "숨졌"] },
-  { label: "open/closed", pos: ["열", "열려", "개방", "열림"], neg: ["닫", "잠겨", "폐쇄", "닫힘"] },
-  { label: "possible/impossible", pos: ["가능", "할수있", "될수있"], neg: ["불가능", "할수없", "안되", "못하"] },
-  { label: "exist/not", pos: ["있", "존재"], neg: ["없", "부재"] },
-  { label: "intentional/accident", pos: ["고의", "일부러", "의도", "계획"], neg: ["사고", "우발", "실수", "뜻하지"] },
+  { label: "alive/dead", pos: ["살", "생존", "살아", "살아있", "alive", "survive"], neg: ["죽", "사망", "시체", "숨졌", "dead", "died", "corpse"] },
+  { label: "open/closed", pos: ["열", "열려", "개방", "열림", "open", "opened"], neg: ["닫", "잠겨", "폐쇄", "닫힘", "closed", "shut", "locked"] },
+  { label: "possible/impossible", pos: ["가능", "할수있", "될수있", "possible", "can"], neg: ["불가능", "할수없", "안되", "못하", "impossible", "cannot", "can't"] },
+  { label: "exist/not", pos: ["있", "존재", "exist", "exists", "present"], neg: ["없", "부재", "not exist", "none", "absent"] },
+  { label: "intentional/accident", pos: ["고의", "일부러", "의도", "계획", "intentional", "on purpose"], neg: ["사고", "우발", "실수", "뜻하지", "accident", "by accident"] },
+  // V9 추가 축
+  { label: "inside/outside", pos: ["안", "내부", "실내", "inside", "indoors"], neg: ["밖", "외부", "실외", "outside", "outdoors"] },
+  { label: "up/down", pos: ["위", "상", "올라", "up", "above"], neg: ["아래", "밑", "내려", "down", "below"] },
+  { label: "left/right", pos: ["왼쪽", "좌", "좌측", "left"], neg: ["오른쪽", "우", "우측", "right"] },
+  { label: "before/after", pos: ["이전", "전", "전에", "before", "earlier"], neg: ["이후", "후", "뒤에", "after", "later"] },
+  { label: "increase/decrease", pos: ["증가", "늘", "올라", "커져", "increase", "rise"], neg: ["감소", "줄", "내려", "작아져", "decrease", "drop"] },
 ];
+
+const GLOBAL_ANTONYM_LEXICON: Map<string, string[]> = new Map([
+  // KO
+  ["안", ["밖", "외부", "실외"]],
+  ["밖", ["안", "내부", "실내"]],
+  ["위", ["아래", "밑"]],
+  ["아래", ["위", "상"]],
+  ["왼쪽", ["오른쪽"]],
+  ["오른쪽", ["왼쪽"]],
+  ["이전", ["이후"]],
+  ["이후", ["이전"]],
+  ["증가", ["감소"]],
+  ["감소", ["증가"]],
+  ["고의", ["사고", "우발", "실수"]],
+  ["사고", ["고의", "의도"]],
+  // EN
+  ["inside", ["outside"]],
+  ["outside", ["inside"]],
+  ["up", ["down"]],
+  ["down", ["up"]],
+  ["left", ["right"]],
+  ["right", ["left"]],
+  ["before", ["after"]],
+  ["after", ["before"]],
+  ["increase", ["decrease"]],
+  ["decrease", ["increase"]],
+  ["alive", ["dead"]],
+  ["dead", ["alive"]],
+  ["open", ["closed", "shut"]],
+  ["closed", ["open"]],
+]);
 
 function axisAppearsInProblem(axis: AntonymAxis, text: string): boolean {
   const t = normalizeText(text).toLowerCase();
@@ -453,11 +769,11 @@ function buildActiveAntonymAxes(content: string, answer: string): AntonymAxis[] 
 }
 
 // exist/not gating (avoid high false positives)
-const EXIST_POS_ROOTS = ["있", "존재"];
-const EXIST_NEG_ROOTS = ["없", "부재"];
+const EXIST_POS_ROOTS = ["있", "존재", "exist", "present"];
+const EXIST_NEG_ROOTS = ["없", "부재", "absent", "none"];
 
 function hasExistTargetContext(text: string): boolean {
-  const tokens = tokenizeKo(text);
+  const tokens = [...tokenizeKo(text), ...tokenizeEn(text)];
   if (tokens.length < 2) return false;
 
   const hasExist = tokens.some(
@@ -475,10 +791,8 @@ function hasExistTargetContext(text: string): boolean {
   return hasTarget;
 }
 
-// 반의어(대립 개념) 감지 - 텍스트 기반
-// 목표: "임베딩이 반의어도 가깝게 보는" 문제 방어
-// - 문제별로 활성화된 반의어 축(antonymAxes)을 사용하여 질문-답변 간 대립 감지
-function detectAntonymMismatchByTextV87(
+// 반의어(대립 개념) 감지 - 텍스트 기반 (V9)
+function detectAntonymMismatchByTextV9(
   question: string,
   answer: string,
   activeAxes: AntonymAxis[]
@@ -501,10 +815,8 @@ function detectAntonymMismatchByTextV87(
   return { hit: false };
 }
 
-// 반의어(대립 개념) 감지 - 개념 기반
-// 목표: "임베딩이 반의어도 가깝게 보는" 문제 방어
-// - 질문과 답변의 개념 집합에서 반의어 축의 양극단이 대립되는지 확인
-function detectAntonymMismatchByConceptsV87(
+// 반의어(대립 개념) 감지 - 개념 기반 (V9)
+function detectAntonymMismatchByConceptsV9(
   qConcepts: Set<string>,
   aConcepts: Set<string>,
   activeAxes: AntonymAxis[],
@@ -529,6 +841,43 @@ function detectAntonymMismatchByConceptsV87(
   return { hit: false };
 }
 
+// 반의어(대립 개념) 감지 - lexicon 기반 (V9)
+function detectAntonymMismatchByLexiconV9(
+  question: string,
+  answer: string,
+  antonymLexicon: Map<string, string[]>
+): { hit: boolean; pairs?: [string, string][] } {
+  const qTok = [...tokenizeKo(question), ...tokenizeEn(question)];
+  const aTok = [...tokenizeKo(answer), ...tokenizeEn(answer)];
+  const pairs: [string, string][] = [];
+
+  for (const qt of qTok) {
+    const ants = antonymLexicon.get(qt);
+    if (!ants) continue;
+    for (const a of ants) {
+      if (aTok.some(t => t === a || t.includes(a) || a.includes(t))) {
+        pairs.push([qt, a]);
+        if (pairs.length >= 3) break;
+      }
+    }
+    if (pairs.length >= 3) break;
+  }
+
+  return pairs.length ? { hit: true, pairs } : { hit: false };
+}
+
+function antonymSignalCount(args: {
+  antiText: { hit: boolean };
+  antiConcept: { hit: boolean };
+  antiLex: { hit: boolean };
+}): number {
+  let s = 0;
+  if (args.antiText.hit) s++;
+  if (args.antiConcept.hit) s++;
+  if (args.antiLex.hit) s++;
+  return s;
+}
+
 // -------------------------
 // ProblemKnowledge
 // -------------------------
@@ -544,18 +893,26 @@ export type ProblemKnowledge = {
 
   synonymMap: Map<string, string[]>;
   antonymMap: Map<string, string[]>; // (reserved, optional future)
-  antonymAxes: AntonymAxis[]; // ✅ active axes per problem
+  antonymAxes: AntonymAxis[];
+  antonymLexicon: Map<string, string[]>; // V9
 
   entitySet: Set<string>;
-  ontology: OntologyEdge[];
+  ontology: OntologyEdge[]; // part_of + (optional) extra
+  taxonomyEdges: OntologyEdge[]; // is_a 중심 - V9
+
+  hypernymMap: Map<string, string[]>; // V9
+  hyponymMap: Map<string, string[]>; // V9
 
   inferredConcepts: Set<string>;
   quantityPatterns: QuantityPattern[];
+
+  conceptVecCache: Map<string, Float32Array>; // V9
 };
 
 export type KnowledgeBuilderLLM = (args: { content: string; answer: string }) => Promise<{
   entities?: string[];
   ontologyEdges?: OntologyEdge[];
+  taxonomyEdges?: OntologyEdge[];
   concepts?: string[];
 } | null>;
 
@@ -734,10 +1091,67 @@ function hasQuantityMismatch(question: string, answerText: string, quantityPatte
   return false;
 }
 
-// ontology/quantity force NO
-// 목표: 부분-전체(손 vs 손톱) / 양쪽-한쪽(양발 vs 한발) 같은 일반화 질문을 NO로 안정화
-// - 수량 불일치(양발 질문 vs 한쪽 답변) 우선 검사
-// - 일반화 질문에서 부분-전체 관계가 맞지 않으면 NO 반환
+// ontology/quantity force NO (V9)
+function shouldForceNoByOntologyV9(args: {
+  question: string;
+  qConcepts: Set<string>;
+  aConcepts: Set<string>;
+  knowledge: ProblemKnowledge;
+}): { forceNo: boolean; taxonomyHit: boolean; taxonomyBonus: number } {
+  const { question, qConcepts, aConcepts, knowledge } = args;
+
+  if (hasQuantityMismatch(question, knowledge.answer, knowledge.quantityPatterns)) {
+    return { forceNo: true, taxonomyHit: false, taxonomyBonus: 0 };
+  }
+
+  const generalized = isGeneralizationQuestion(question);
+  let taxonomyHit = false;
+  let taxonomyBonus = 0;
+
+  const hyper = knowledge.hypernymMap;
+
+  // taxonomy bonus
+  for (const q of qConcepts) {
+    for (const a of aConcepts) {
+      if (q === a) continue;
+      const qIsHyper = isHypernymOf(q, a, hyper, CONFIG.V9.TAXONOMY_MAX_DEPTH);
+      const qIsHypo = isHyponymOf(q, a, hyper, CONFIG.V9.TAXONOMY_MAX_DEPTH);
+      if (qIsHyper || qIsHypo) {
+        taxonomyHit = true;
+        taxonomyBonus = Math.max(taxonomyBonus, CONFIG.ADJUST.TAXONOMY_MATCH_BONUS);
+      }
+    }
+  }
+
+  if (generalized) {
+    for (const q of qConcepts) {
+      for (const a of aConcepts) {
+        if (q === a) continue;
+        const qIsHyper = isHypernymOf(q, a, hyper, CONFIG.V9.TAXONOMY_MAX_DEPTH);
+        if (qIsHyper) {
+          const answerHasParent = aConcepts.has(q);
+          if (!answerHasParent) {
+            return { forceNo: true, taxonomyHit, taxonomyBonus };
+          }
+        }
+      }
+    }
+  }
+
+  const abstractSupers = ["person", "animal", "place", "범죄", "crime", "사람", "동물", "장소"].map(toCanonical);
+  const qHasAbstract = [...qConcepts].some(c => abstractSupers.includes(c));
+  const aHasAbstract = [...aConcepts].some(c => abstractSupers.includes(c));
+
+  if (generalized && qHasAbstract && !aHasAbstract) {
+    if (aConcepts.size >= 2) {
+      return { forceNo: true, taxonomyHit, taxonomyBonus };
+    }
+  }
+
+  return { forceNo: false, taxonomyHit, taxonomyBonus };
+}
+
+// V8 호환성
 function shouldForceNoByOntologyV8(
   question: string,
   qConcepts: Set<string>,
@@ -746,23 +1160,14 @@ function shouldForceNoByOntologyV8(
   answerText: string,
   quantityPatterns: QuantityPattern[] = []
 ): boolean {
-  if (hasQuantityMismatch(question, answerText, quantityPatterns)) return true;
-
-  const generalized = isGeneralizationQuestion(question);
-  if (!generalized) return false;
-
-  const adj = buildAdjList(ontology);
-
-  for (const q of qConcepts) {
-    for (const a of aConcepts) {
-      if (q === a) continue;
-      if (isParentOf(q, a, adj, 3)) {
-        const answerHasParent = aConcepts.has(q);
-        if (!answerHasParent) return true;
-      }
-    }
-  }
-  return false;
+  // V9로 변환하여 호출
+  const knowledge = {
+    answer: answerText,
+    quantityPatterns,
+    hypernymMap: new Map(),
+  } as ProblemKnowledge;
+  const result = shouldForceNoByOntologyV9({ question, qConcepts, aConcepts, knowledge });
+  return result.forceNo;
 }
 
 // -------------------------
@@ -774,9 +1179,17 @@ function shouldForceNoByOntologyV8(
 export async function buildProblemKnowledge(
   problemContent: string,
   problemAnswer: string,
-  llmBuilder?: KnowledgeBuilderLLM
+  llmBuilder?: KnowledgeBuilderLLM,
+  hints?: string[] | null
 ): Promise<ProblemKnowledge> {
-  const content = normalizeText(problemContent ?? "");
+  // 힌트가 있으면 content에 포함 (힌트는 추가 맥락 정보로 활용)
+  let content = normalizeText(problemContent ?? "");
+  if (hints && hints.length > 0) {
+    const hintsText = hints.filter(h => h && h.trim()).map(h => h.trim()).join(' ');
+    if (hintsText) {
+      content = `${content} ${hintsText}`;
+    }
+  }
   const answer = normalizeText(problemAnswer ?? "");
 
   const contentSentences = content ? splitSentencesKo(content) : [];
@@ -797,28 +1210,34 @@ export async function buildProblemKnowledge(
   const entitySet = new Set(entityCandidates);
 
   let ontology: OntologyEdge[] = [...GLOBAL_ONTOLOGY];
+  let taxonomyEdges: OntologyEdge[] = [...GLOBAL_TAXONOMY];
 
   const inferredConcepts = inferConceptsFromTokens([...contentTokens, ...answerTokens]);
-
   const quantityPatterns = extractQuantityPatterns(content, answer);
 
-  const autoOntologyEdges = extractAutoOntologyEdges(content, answer, contentTokens, answerTokens);
-  ontology = ontology.concat(autoOntologyEdges);
+  ontology = ontology.concat(extractAutoOntologyEdges(content, answer, contentTokens, answerTokens));
+  taxonomyEdges = taxonomyEdges.concat(extractAutoTaxonomyEdges(content, answer, contentTokens, answerTokens));
 
   if (llmBuilder) {
     try {
       const extra = await llmBuilder({ content, answer });
       if (extra?.entities?.length) extra.entities.forEach(e => entitySet.add(e));
       if (extra?.ontologyEdges?.length) ontology = ontology.concat(extra.ontologyEdges);
+      if (extra?.taxonomyEdges?.length) taxonomyEdges = taxonomyEdges.concat(extra.taxonomyEdges);
       if (extra?.concepts?.length) extra.concepts.forEach(c => inferredConcepts.add(c));
     } catch {
       // ignore
     }
   }
 
+  const { hypernymMap, hyponymMap } = buildTaxonomyMaps(taxonomyEdges);
+
+  const antonymAxes = buildActiveAntonymAxes(content, answer);
+  const antonymLexicon = new Map<string, string[]>(GLOBAL_ANTONYM_LEXICON);
+
   const synonymMap = new Map<string, string[]>();
   const antonymMap = new Map<string, string[]>();
-  const antonymAxes = buildActiveAntonymAxes(content, answer);
+  const conceptVecCache = new Map<string, Float32Array>();
 
   return {
     content,
@@ -830,10 +1249,15 @@ export async function buildProblemKnowledge(
     synonymMap,
     antonymMap,
     antonymAxes,
+    antonymLexicon,
     entitySet,
     ontology,
+    taxonomyEdges,
+    hypernymMap,
+    hyponymMap,
     inferredConcepts,
     quantityPatterns,
+    conceptVecCache,
   };
 }
 
@@ -844,24 +1268,31 @@ export async function buildProblemKnowledge(
 // - 문제의 entitySet 내에서 embedding 유사도 기반으로 동적 유의어 발견
 // - CONFIG.LEXICON.SYNONYM_SIM_THRESHOLD 이상의 유사도를 가진 토큰들을 유의어로 확장
 // -------------------------
+async function getConceptVecCached(concept: string, knowledge: ProblemKnowledge): Promise<Float32Array> {
+  const key = concept;
+  const cached = knowledge.conceptVecCache.get(key);
+  if (cached) return cached;
+  const vec = await getEmbedding(concept);
+  knowledge.conceptVecCache.set(key, vec);
+  return vec;
+}
+
 async function getOrBuildSynonymsForToken(token: string, knowledge: ProblemKnowledge): Promise<string[]> {
   const key = token;
   const cached = knowledge.synonymMap.get(key);
   if (cached) return cached;
 
-  // 1) 전역 유의어 사전 확인 (우선 적용)
   const globalSyns = GLOBAL_SYNONYMS.get(token);
   const synonyms: string[] = globalSyns ? [...globalSyns] : [];
 
-  // 2) 문제 내부 entitySet에서 embedding 기반 유의어 찾기
   const candidates = [...knowledge.entitySet].filter(t => t !== token && !synonyms.includes(t));
   if (candidates.length > 0) {
-    const tokenVec = await getEmbedding(token);
+    const tokenVec = await getConceptVecCached(token, knowledge);
     const picked: { t: string; s: number }[] = [];
-
     const limited = candidates.slice(0, 120);
+
     for (const c of limited) {
-      const cVec = await getEmbedding(c);
+      const cVec = await getConceptVecCached(c, knowledge);
       const s = cosineSimilarity(tokenVec, cVec);
       if (s >= CONFIG.LEXICON.SYNONYM_SIM_THRESHOLD) picked.push({ t: c, s });
     }
@@ -871,35 +1302,75 @@ async function getOrBuildSynonymsForToken(token: string, knowledge: ProblemKnowl
     synonyms.push(...embeddingSyns);
   }
 
-  // 전역 유의어와 embedding 유의어를 합쳐서 최대 개수 제한
   const out = synonyms.slice(0, CONFIG.LEXICON.MAX_SYNONYMS_PER_TOKEN + (globalSyns?.length ?? 0));
-
   knowledge.synonymMap.set(key, out);
   return out;
 }
 
-async function extractQuestionConcepts(question: string, knowledge: ProblemKnowledge): Promise<Set<string>> {
-  const qTokens = tokenizeKo(question);
+async function extractQuestionConceptsV9(question: string, knowledge: ProblemKnowledge): Promise<Set<string>> {
+  const toks = tokenizeUniversal(question);
   const concepts = new Set<string>();
 
-  for (const t of qTokens) concepts.add(t);
-
-  for (const t of qTokens) {
-    const syns = await getOrBuildSynonymsForToken(t, knowledge);
-    syns.forEach(s => concepts.add(s));
+  // base tokens -> canonical
+  for (const { token } of toks) {
+    concepts.add(toCanonical(token));
+    if (concepts.size >= CONFIG.V9.MAX_CONCEPTS_TOTAL) return concepts;
   }
 
-  const qNorm = normalizeText(question);
-  if (qNorm.includes("사고") || qNorm.includes("우발") || qNorm.includes("실수")) concepts.add("accident");
-  if (qNorm.includes("고의") || qNorm.includes("일부러") || qNorm.includes("의도") || qNorm.includes("계획")) concepts.add("intentional");
+  // synonyms expansion
+  for (const { token } of toks) {
+    const syns = await getOrBuildSynonymsForToken(token, knowledge);
+    for (const s of syns) {
+      concepts.add(toCanonical(s));
+      if (concepts.size >= CONFIG.V9.MAX_CONCEPTS_TOTAL) return concepts;
+    }
+  }
+
+  // taxonomy expansion (limited)
+  for (const { token } of toks) {
+    const t = toCanonical(token);
+
+    const hypers = (knowledge.hypernymMap.get(token) ?? [])
+      .concat(knowledge.hypernymMap.get(t) ?? [])
+      .map(toCanonical);
+
+    for (const h of hypers.slice(0, CONFIG.V9.MAX_HYPERNYM_PER_TOKEN)) {
+      concepts.add(h);
+      if (concepts.size >= CONFIG.V9.MAX_CONCEPTS_TOTAL) return concepts;
+    }
+
+    const hypos = (knowledge.hyponymMap.get(token) ?? [])
+      .concat(knowledge.hyponymMap.get(t) ?? [])
+      .map(toCanonical);
+
+    for (const h of hypos.slice(0, CONFIG.V9.MAX_HYPONYM_PER_TOKEN)) {
+      concepts.add(h);
+      if (concepts.size >= CONFIG.V9.MAX_CONCEPTS_TOTAL) return concepts;
+    }
+  }
+
+  // infer concepts
+  const qNorm = normalizeText(question).toLowerCase();
+  if (qNorm.includes("사고") || qNorm.includes("우발") || qNorm.includes("실수") || qNorm.includes("accident")) concepts.add("accident");
+  if (qNorm.includes("고의") || qNorm.includes("일부러") || qNorm.includes("의도") || qNorm.includes("계획") || qNorm.includes("intentional") || qNorm.includes("on purpose")) concepts.add("intentional");
 
   return concepts;
 }
 
+// V8 호환성
+async function extractQuestionConcepts(question: string, knowledge: ProblemKnowledge): Promise<Set<string>> {
+  return extractQuestionConceptsV9(question, knowledge);
+}
+
+function extractAnswerConceptsV9(knowledge: ProblemKnowledge): Set<string> {
+  const base = new Set<string>();
+  for (const t of knowledge.answerTokens) base.add(toCanonical(t));
+  knowledge.inferredConcepts.forEach(c => base.add(c));
+  return base;
+}
+
 function extractAnswerConcepts(knowledge: ProblemKnowledge): Set<string> {
-  const s = new Set<string>(knowledge.answerTokens);
-  knowledge.inferredConcepts.forEach(c => s.add(c));
-  return s;
+  return extractAnswerConceptsV9(knowledge);
 }
 
 // -------------------------
@@ -940,13 +1411,16 @@ export async function analyzeQuestionV8(
     const qConcepts = await extractQuestionConcepts(q, knowledge);
     const aConcepts = extractAnswerConcepts(knowledge);
 
-    // 1-0) antonym/contradiction check (per-problem active axes + exist gating)
-    const antiText = detectAntonymMismatchByTextV87(q, knowledge.answer, knowledge.antonymAxes);
-    const antiConcept = detectAntonymMismatchByConceptsV87(qConcepts, aConcepts, knowledge.antonymAxes, q, knowledge.answer);
-    const hasAntonymMismatch = antiText.hit || antiConcept.hit;
+    // 1-0) antonym/contradiction check (V9: 2-of-3 signal gating)
+    const antiText = detectAntonymMismatchByTextV9(q, knowledge.answer, knowledge.antonymAxes);
+    const antiConcept = detectAntonymMismatchByConceptsV9(qConcepts, aConcepts, knowledge.antonymAxes, q, knowledge.answer);
+    const antiLex = detectAntonymMismatchByLexiconV9(q, knowledge.answer, knowledge.antonymLexicon);
+    const signalCount = antonymSignalCount({ antiText, antiConcept, antiLex });
+    const hasStrongAntonymMismatch = signalCount >= CONFIG.V9.ANTONYM_REQUIRE_SIGNALS;
 
-    // 1-1) force NO by ontology / quantity mismatch
-    if (shouldForceNoByOntologyV8(q, qConcepts, aConcepts, knowledge.ontology, knowledge.answer, knowledge.quantityPatterns)) {
+    // 1-1) force NO by ontology / quantity mismatch (V9)
+    const force = shouldForceNoByOntologyV9({ question: q, qConcepts, aConcepts, knowledge });
+    if (force.forceNo) {
       if (hasQuantityMismatch(q, knowledge.answer, knowledge.quantityPatterns)) return invert ? "yes" : "no";
       const hasExact = [...qConcepts].some(c => aConcepts.has(c));
       if (!hasExact) return invert ? "yes" : "no";
@@ -972,8 +1446,8 @@ export async function analyzeQuestionV8(
     let simAnswerAdj = simAnswerMax;
     let simContentAdj = simContentMax;
 
-    // ✅ antonym mismatch penalty (before rewarding synonyms)
-    if (hasAntonymMismatch) {
+    // ✅ antonym mismatch penalty (V9: strong only)
+    if (hasStrongAntonymMismatch) {
       simAnswerAdj -= CONFIG.ADJUST.ANTONYM_PENALTY;
     }
 
@@ -986,10 +1460,13 @@ export async function analyzeQuestionV8(
       (qConcepts.has("intentional") && aConcepts.has("intentional"));
     if (inferMatched) simAnswerAdj += CONFIG.ADJUST.INFER_MATCH_BONUS;
 
-    // generalization push-to-NO
-    if (isGeneralizationQuestion(q) && !conceptMatched) {
+    // 8) taxonomy bonus (V9)
+    if (force.taxonomyHit) simAnswerAdj += force.taxonomyBonus;
+
+    // generalization push-to-NO (V9: taxonomyHit 또는 conceptMatched면 약화)
+    if (isGeneralizationQuestion(q) && !conceptMatched && !force.taxonomyHit) {
       simContentAdj += CONFIG.ADJUST.GENERALIZATION_NO_BONUS;
-      simAnswerAdj -= CONFIG.ADJUST.GENERALIZATION_NO_BONUS * 0.55;
+      simAnswerAdj -= CONFIG.ADJUST.TAXONOMY_GENERALIZATION_PENALTY;
     }
 
     // modality mismatch small penalty
@@ -1003,8 +1480,9 @@ export async function analyzeQuestionV8(
     const simAnswerFinal = simAnswerAdj * 0.7 + simAnswerAvg * 0.3;
     const simContentFinal = simContentAdj * 0.7 + simContentAvg * 0.3;
 
-    // ✅ If contradiction + high similarity => force NO (avoid synonym flip)
-    if (hasAntonymMismatch && simAnswerFinal >= CONFIG.ADJUST.ANTONYM_FORCE_NO_SIM) {
+    // ✅ If contradiction + high similarity => force NO (V9)
+    const forceNoSim = CONFIG.ADJUST.ANTONYM_FORCE_NO_SIM_BASE;
+    if (hasStrongAntonymMismatch && simAnswerFinal >= forceNoSim) {
       return invert ? "yes" : "no";
     }
 
@@ -1022,8 +1500,8 @@ export async function analyzeQuestionV8(
     } else {
       const inAmbiguous = simAnswerFinal >= CONFIG.AMBIGUOUS_RANGE.min && simAnswerFinal <= CONFIG.AMBIGUOUS_RANGE.max;
 
-      // ✅ fallback only when ambiguous AND contradiction suspected (주석 목표에 맞춤)
-      if (inAmbiguous && fallbackJudge && hasAntonymMismatch) {
+      // ✅ fallback only when ambiguous AND contradiction suspected (V9)
+      if (inAmbiguous && fallbackJudge && hasStrongAntonymMismatch) {
         const fb = await fallbackJudge({
           question: q,
           problemContent: knowledge.content,
@@ -1090,94 +1568,135 @@ export function clearCache(): void {
 }
 
 // -------------------------
-// Answer similarity (unchanged)
+// Answer Similarity V9
 // -------------------------
-export async function calculateAnswerSimilarity(
-  userAnswer: string, 
-  correctAnswer: string, 
-  problemContent?: string
-): Promise<number> {
-  const ua = normalizeText(userAnswer);
-  const ca = normalizeText(correctAnswer);
+export async function calculateAnswerSimilarityV9(args: {
+  userAnswer: string;
+  correctAnswer: string;
+  problemContent?: string;
+  knowledge?: ProblemKnowledge;
+}): Promise<number> {
+  const ua = normalizeText(args.userAnswer);
+  const ca = normalizeText(args.correctAnswer);
   if (!ua || !ca) return 0;
 
   try {
     const userEmbedding = await getEmbedding(ua);
     const correctEmbedding = await getEmbedding(ca);
-    let similarity = cosineSimilarity(userEmbedding, correctEmbedding);
+    let sim = cosineSimilarity(userEmbedding, correctEmbedding);
 
-    // 문제 내용이 제공된 경우, 맥락 유사도도 고려
-    if (problemContent) {
-      const contentNormalized = normalizeText(problemContent);
+    if (args.problemContent) {
+      const contentNormalized = normalizeText(args.problemContent);
       if (contentNormalized) {
         const contentEmbedding = await getEmbedding(contentNormalized);
         const contentUserSim = cosineSimilarity(contentEmbedding, userEmbedding);
         const contentCorrectSim = cosineSimilarity(contentEmbedding, correctEmbedding);
-        
-        // 맥락 유사도가 높으면 보너스 (맥락상 맞는 경우)
         if (contentUserSim > 0.5 && contentCorrectSim > 0.5) {
           const contextBonus = Math.min(0.15, (contentUserSim + contentCorrectSim) / 2 * 0.2);
-          similarity = Math.min(1.0, similarity + contextBonus);
+          sim = Math.min(1.0, sim + contextBonus);
         }
       }
     }
 
-    // 키워드 매칭 보너스
-    const userWords = tokenizeKo(ua);
-    const correctWords = tokenizeKo(ca);
-    const correctSet = new Set(correctWords);
-    let keywordMatch = 0;
-    for (const w of userWords) {
-      if (correctSet.has(w)) keywordMatch++;
-      else {
-        const c = correctWords.find(x => x.includes(w) || w.includes(x));
-        if (c) keywordMatch += 0.5;
+    if (args.knowledge) {
+      const k = args.knowledge;
+      const uTokens = tokenizeUniversal(ua).map(x => x.token);
+      const cTokens = tokenizeUniversal(ca).map(x => x.token);
+      const uCanon = uTokens.map(toCanonical);
+      const cCanon = cTokens.map(toCanonical);
+
+      // synonym bonus
+      let synHit = 0;
+      for (const ut of uTokens) {
+        const syns = GLOBAL_SYNONYMS.get(ut) ?? (await getOrBuildSynonymsForToken(ut, k));
+        const synCanon = syns.map(toCanonical);
+        if (synCanon.some(s => cCanon.includes(s))) synHit++;
+      }
+      if (synHit > 0) sim = Math.min(1.0, sim + CONFIG.V9.ANSWER_SYNONYM_BONUS);
+
+      // taxonomy bonus
+      const hyper = k.hypernymMap;
+      let taxHit = 0;
+      for (const uc of uCanon) {
+        for (const cc of cCanon) {
+          if (uc === cc) continue;
+          if (isHypernymOf(uc, cc, hyper, CONFIG.V9.TAXONOMY_MAX_DEPTH) || isHyponymOf(uc, cc, hyper, CONFIG.V9.TAXONOMY_MAX_DEPTH)) {
+            taxHit++;
+            break;
+          }
+        }
+        if (taxHit >= 1) break;
+      }
+      if (taxHit > 0) sim = Math.min(1.0, sim + CONFIG.V9.ANSWER_TAXONOMY_BONUS);
+
+      // antonym penalty
+      const aText = detectAntonymMismatchByTextV9(ua, ca, k.antonymAxes);
+      const aConcept = detectAntonymMismatchByConceptsV9(new Set(uCanon), new Set(cCanon), k.antonymAxes, ua, ca);
+      const aLex = detectAntonymMismatchByLexiconV9(ua, ca, k.antonymLexicon);
+      const sig = antonymSignalCount({ antiText: aText, antiConcept: aConcept, antiLex: aLex });
+      if (sig >= CONFIG.V9.ANTONYM_REQUIRE_SIGNALS) {
+        sim = Math.max(-1, sim - CONFIG.V9.ANSWER_ANTONYM_PENALTY);
       }
     }
-    const keywordRatio = keywordMatch / Math.max(correctWords.length, userWords.length, 1);
+
+    const uWords = [...tokenizeKo(ua), ...tokenizeEn(ua)].map(toCanonical);
+    const cWords = [...tokenizeKo(ca), ...tokenizeEn(ca)].map(toCanonical);
+    const cSet = new Set(cWords);
+    let match = 0;
+    for (const w of uWords) {
+      if (cSet.has(w)) match++;
+      else {
+        const c = cWords.find(x => x.includes(w) || w.includes(x));
+        if (c) match += 0.5;
+      }
+    }
+    const keywordRatio = match / Math.max(cWords.length, uWords.length, 1);
     if (keywordRatio > 0.3) {
-      // 키워드가 30% 이상 일치하면 보너스
       const keywordBonus = Math.min(0.1, keywordRatio * 0.15);
-      similarity = Math.min(1.0, similarity + keywordBonus);
+      sim = Math.min(1.0, sim + keywordBonus);
     }
 
-    // 조정: 높은 유사도는 더 높게, 낮은 유사도는 약간 낮게
-    let adjusted = similarity;
-    if (similarity > 0.7) {
-      // 0.7 이상이면 더 관대하게 평가
-      adjusted = 0.7 + (similarity - 0.7) * 1.5;
-    } else if (similarity > 0.5) {
-      // 0.5~0.7 사이는 약간 보정
-      adjusted = 0.5 + (similarity - 0.5) * 1.2;
-    } else if (similarity <= 0.3) {
-      // 0.3 이하는 더 낮게
-      adjusted = similarity * 0.85;
-    }
+    let adjusted = sim;
+    if (sim > 0.7) adjusted = 0.7 + (sim - 0.7) * 1.5;
+    else if (sim > 0.5) adjusted = 0.5 + (sim - 0.5) * 1.2;
+    else if (sim <= 0.3) adjusted = sim * 0.85;
 
     const pct = Math.max(0, Math.min(100, adjusted * 100));
     return Math.round(pct * 10) / 10;
-  } catch (error) {
-    console.error("정답 유사도 계산 오류:", error);
-    return calculateSimpleMatch(userAnswer, correctAnswer);
+  } catch (e) {
+    console.error("calculateAnswerSimilarityV9 error:", e);
+    return calculateSimpleMatch(ua, ca);
   }
 }
 
-function calculateSimpleMatch(userAnswer: string, correctAnswer: string): number {
-  const userWords = tokenizeKo(userAnswer);
-  const correctWords = tokenizeKo(correctAnswer);
-  if (!correctWords.length) return 0;
+export async function calculateAnswerSimilarity(
+  userAnswer: string, 
+  correctAnswer: string, 
+  problemContent?: string
+): Promise<number> {
+  return calculateAnswerSimilarityV9({
+    userAnswer,
+    correctAnswer,
+    problemContent,
+  });
+}
 
-  const correctSet = new Set(correctWords);
+function calculateSimpleMatch(userAnswer: string, correctAnswer: string): number {
+  const uWords = [...tokenizeKo(userAnswer), ...tokenizeEn(userAnswer)].map(toCanonical);
+  const cWords = [...tokenizeKo(correctAnswer), ...tokenizeEn(correctAnswer)].map(toCanonical);
+  if (!cWords.length) return 0;
+
+  const cSet = new Set(cWords);
   let matched = 0;
-  for (const w of userWords) {
-    if (correctSet.has(w)) matched++;
+  for (const w of uWords) {
+    if (cSet.has(w)) matched++;
     else {
-      const c = correctWords.find(x => x.includes(w) || w.includes(x));
+      const c = cWords.find(x => x.includes(w) || w.includes(x));
       if (c) matched += 0.5;
     }
   }
 
-  const ratio = matched / Math.max(correctWords.length, userWords.length, 1);
+  const ratio = matched / Math.max(cWords.length, uWords.length, 1);
   return Math.round(ratio * 1000) / 10;
 }
 
