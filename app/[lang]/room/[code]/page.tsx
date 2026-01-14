@@ -1332,6 +1332,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
               selectedId={selectedQuestionId}
               onSelect={isHost ? setSelectedQuestionId : undefined}
               isHost={isHost}
+              lang={lang}
             />
 
             {isHost && selectedQuestionId && !gameEnded && (
