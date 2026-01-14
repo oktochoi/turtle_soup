@@ -198,7 +198,8 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
       resolved: { ko: '해결됨', en: 'Resolved' },
       dismissed: { ko: '기각됨', en: 'Dismissed' },
     };
-    return labels[status]?.[lang] || status;
+    const langKey = lang === 'ko' || lang === 'en' ? lang : 'ko';
+    return labels[status]?.[langKey] || status;
   };
 
   const formatDate = (dateString: string) => {
