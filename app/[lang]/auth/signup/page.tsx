@@ -174,10 +174,19 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
 
     try {
       const supabase = createClient();
+      
+      // 동적으로 현재 origin을 사용하여 리다이렉트 URL 설정
+      // localhost:3000과 turtle-soup-rust.vercel.app 모두 지원
+      const redirectUrl = `${window.location.origin}/${lang}/auth/callback`;
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/${lang}/auth/callback`,
+          redirectTo: redirectUrl,
+          queryParams: {
+            // 추가 파라미터로 origin을 명시적으로 전달
+            redirect_to: redirectUrl,
+          },
         },
       });
 
