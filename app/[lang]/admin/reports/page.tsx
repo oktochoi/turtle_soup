@@ -29,7 +29,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
   const resolvedParams = use(params);
   const lang = resolvedParams.lang || 'ko';
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const t = useTranslations();
   
   const [reports, setReports] = useState<UserReport[]>([]);
@@ -42,8 +42,11 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
-    checkAdminAccess();
-  }, [user]);
+    // 인증 로딩이 완료된 후에만 권한 확인
+    if (!authLoading) {
+      checkAdminAccess();
+    }
+  }, [user, authLoading]);
 
   useEffect(() => {
     if (user) {
