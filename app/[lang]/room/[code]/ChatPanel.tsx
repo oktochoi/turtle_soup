@@ -14,9 +14,10 @@ type ChatMessage = {
 interface ChatPanelProps {
   roomCode: string;
   nickname: string;
+  lang: string;
 }
 
-export default function ChatPanel({ roomCode, nickname }: ChatPanelProps) {
+export default function ChatPanel({ roomCode, nickname, lang }: ChatPanelProps) {
   const t = useTranslations();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageText, setMessageText] = useState('');
