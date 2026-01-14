@@ -56,6 +56,11 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   const [showHints, setShowHints] = useState<boolean[]>([false, false, false]); // 힌트 1, 2, 3 표시 여부
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [nextProblem, setNextProblem] = useState<Problem | null>(null);
+  const [showBugReportModal, setShowBugReportModal] = useState(false);
+  const [bugReportType, setBugReportType] = useState<'wrong_answer' | 'wrong_yes_no' | 'wrong_irrelevant' | 'wrong_similarity' | 'other'>('wrong_yes_no');
+  const [bugReportExpected, setBugReportExpected] = useState('');
+  const [bugReportQuestion, setBugReportQuestion] = useState<string | null>(null);
+  const [bugReportAnswer, setBugReportAnswer] = useState<string | null>(null);
 
   const generateRoomCode = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -248,6 +253,67 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
     } else {
       // 다음 문제가 없으면 문제 목록으로
       router.push(`/${lang}/problems`);
+    }
+  };
+
+  const handleSubmitBugReport = async () => {
+    if (!problem) return;
+
+    // 질문과 답변이 있는지 확인 (AI 제안 답변이나 질문 내역에서 온 경우)
+    const question = bugReportQuestion || questionText;
+    const answer = bugReportAnswer || suggestedAnswer;
+
+    if (!question || !answer) {
+      alert(lang === 'ko' ? '질문과 답변 정보가 필요합니다.' : 'Question and answer information is required.');
+      return;
+    }
+
+    try {
+      // 게스트 사용자 식별자 가져오기
+      let userIdentifier: string | null = null;
+      if (!user) {
+        if (typeof window !== 'undefined') {
+          userIdentifier = localStorage.getItem('guest_id') || `guest_${Date.now()}`;
+          if (!localStorage.getItem('guest_id')) {
+            localStorage.setItem('guest_id', userIdentifier);
+          }
+        }
+      }
+
+      const bugReportData: any = {
+        problem_id: problemId, // 문제 ID 명시
+        user_id: user?.id || null,
+        user_identifier: userIdentifier,
+        bug_type: bugReportType,
+        question_text: question,
+        ai_suggested_answer: answer,
+        expected_answer: bugReportExpected.trim() || null,
+        user_answer: userGuess?.trim() || null,
+        correct_answer: problem.answer,
+        similarity_score: similarityScore !== null ? Number(similarityScore.toFixed(2)) : null,
+        problem_content: problem.content,
+        hints: (problem as any).hints || null,
+        language: lang === 'ko' || lang === 'en' ? lang : 'ko',
+      };
+
+      const { error } = await supabase
+        .from('ai_bug_reports')
+        .insert(bugReportData);
+
+      if (error) {
+        console.error('오류 리포트 전송 오류:', error);
+        alert(lang === 'ko' ? '오류 리포트 전송에 실패했습니다.' : 'Failed to send error report.');
+        return;
+      }
+
+      alert(lang === 'ko' ? '오류 리포트가 전송되었습니다.' : 'Error report has been sent.');
+      setShowBugReportModal(false);
+      setBugReportExpected('');
+      setBugReportQuestion(null);
+      setBugReportAnswer(null);
+    } catch (error) {
+      console.error('오류 리포트 전송 오류:', error);
+      alert(lang === 'ko' ? '오류 리포트 전송에 실패했습니다.' : 'Failed to send error report.');
     }
   };
 
@@ -1443,12 +1509,29 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
               <div className="bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs sm:text-sm text-slate-300">{t.problem.aiSuggestedAnswer}</p>
-                  <button
-                    onClick={() => setSuggestedAnswer(null)}
-                    className="text-xs text-slate-400 hover:text-slate-300 touch-manipulation"
-                  >
-                    {t.problem.reAnalyze}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        if (questionText && suggestedAnswer) {
+                          setBugReportType('wrong_yes_no');
+                          setBugReportQuestion(questionText);
+                          setBugReportAnswer(suggestedAnswer);
+                          setShowBugReportModal(true);
+                        }
+                      }}
+                      className="text-xs px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all touch-manipulation flex items-center gap-1"
+                      title={lang === 'ko' ? '오류 리포트 보내기' : 'Send Error Report'}
+                    >
+                      <i className="ri-bug-line"></i>
+                      <span className="hidden sm:inline">{lang === 'ko' ? '오류 리포트' : 'Report'}</span>
+                    </button>
+                    <button
+                      onClick={() => setSuggestedAnswer(null)}
+                      className="text-xs text-slate-400 hover:text-slate-300 touch-manipulation"
+                    >
+                      {t.problem.reAnalyze}
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 mb-3">
                   {(() => {
@@ -1547,6 +1630,21 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                         <div className="flex items-start gap-2">
                           <span className="text-xs sm:text-sm font-semibold text-teal-400 flex-shrink-0">A:</span>
                           <p className={`text-xs sm:text-sm font-semibold ${answerColor}`}>{q.answer}</p>
+                        </div>
+                        <div className="flex justify-end mt-2">
+                          <button
+                            onClick={() => {
+                              setBugReportType('wrong_yes_no');
+                              setBugReportQuestion(q.question);
+                              setBugReportAnswer(q.answer);
+                              setShowBugReportModal(true);
+                            }}
+                            className="text-xs px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all touch-manipulation flex items-center gap-1"
+                            title={lang === 'ko' ? '오류 리포트 보내기' : 'Send Error Report'}
+                          >
+                            <i className="ri-bug-line"></i>
+                            <span>{lang === 'ko' ? '오류 리포트' : 'Report'}</span>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1685,15 +1783,32 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                         </>
                       )}
                     </h4>
-                    <span className={`text-xl sm:text-2xl font-bold ${
-                      similarityScore >= 80
-                        ? 'text-green-400'
-                        : similarityScore >= 60
-                        ? 'text-yellow-400'
-                        : 'text-red-400'
-                    }`}>
-                      {similarityScore}%
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xl sm:text-2xl font-bold ${
+                        similarityScore >= 80
+                          ? 'text-green-400'
+                          : similarityScore >= 60
+                          ? 'text-yellow-400'
+                          : 'text-red-400'
+                      }`}>
+                        {similarityScore}%
+                      </span>
+                      <button
+                        onClick={() => {
+                          if (userGuess && problem) {
+                            setBugReportType('wrong_similarity');
+                            setBugReportQuestion(null);
+                            setBugReportAnswer(null);
+                            setShowBugReportModal(true);
+                          }
+                        }}
+                        className="text-xs px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all touch-manipulation flex items-center gap-1"
+                        title={lang === 'ko' ? '오류 리포트 보내기' : 'Send Error Report'}
+                      >
+                        <i className="ri-bug-line"></i>
+                        <span className="hidden sm:inline">{lang === 'ko' ? '오류 리포트' : 'Report'}</span>
+                      </button>
+                    </div>
                   </div>
                   <p className="text-xs sm:text-sm text-slate-300 mt-2">
                     {similarityScore >= 80
@@ -2207,6 +2322,116 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
           </div>
         </div>
       </div>
+
+      {/* 오류 리포트 모달 */}
+      {showBugReportModal && problem && (bugReportQuestion || questionText) && (bugReportAnswer || suggestedAnswer) && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-xl p-4 sm:p-6 max-w-md w-full border border-slate-700 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg sm:text-xl font-bold text-red-400 flex items-center gap-2">
+                <i className="ri-bug-line"></i>
+                {lang === 'ko' ? '오류 리포트 보내기' : 'Send Error Report'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowBugReportModal(false);
+                  setBugReportExpected('');
+                  setBugReportQuestion(null);
+                  setBugReportAnswer(null);
+                }}
+                className="text-slate-400 hover:text-white transition-colors touch-manipulation"
+              >
+                <i className="ri-close-line text-xl"></i>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                  {lang === 'ko' ? '버그 유형' : 'Bug Type'}
+                </label>
+                <select
+                  value={bugReportType}
+                  onChange={(e) => setBugReportType(e.target.value as any)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="wrong_yes_no">{lang === 'ko' ? '예/아니요 오류 (예여야 하는데 아니요로 판단)' : 'Yes/No Error (Should be Yes but got No)'}</option>
+                  <option value="wrong_answer">{lang === 'ko' ? '정답 오류 (정답인데 오답으로 판단)' : 'Answer Error (Correct but marked wrong)'}</option>
+                  <option value="wrong_irrelevant">{lang === 'ko' ? '무관 오류 (관련 있는데 무관으로 판단)' : 'Irrelevant Error (Relevant but marked irrelevant)'}</option>
+                  <option value="wrong_similarity">{lang === 'ko' ? '유사도 계산 오류' : 'Similarity Calculation Error'}</option>
+                  <option value="other">{lang === 'ko' ? '기타' : 'Other'}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                  {lang === 'ko' ? '문제 ID' : 'Problem ID'}
+                </label>
+                <div className="bg-slate-900 rounded-lg px-3 sm:px-4 py-2 text-sm text-slate-300 border border-slate-700">
+                  {problemId}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                  {lang === 'ko' ? '질문' : 'Question'}
+                </label>
+                <div className="bg-slate-900 rounded-lg px-3 sm:px-4 py-2 text-sm text-slate-300 border border-slate-700">
+                  {bugReportQuestion || questionText}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                  {lang === 'ko' ? 'AI 제안 답변' : 'AI Suggested Answer'}
+                </label>
+                <div className="bg-slate-900 rounded-lg px-3 sm:px-4 py-2 text-sm text-slate-300 border border-slate-700">
+                  {(() => {
+                    const answer = bugReportAnswer || suggestedAnswer;
+                    return answer === 'yes' ? (lang === 'ko' ? '예' : 'Yes') :
+                           answer === 'no' ? (lang === 'ko' ? '아니요' : 'No') :
+                           answer === 'irrelevant' ? (lang === 'ko' ? '무관' : 'Irrelevant') :
+                           answer === 'decisive' ? (lang === 'ko' ? '결정적인' : 'Decisive') : answer;
+                  })()}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                  {lang === 'ko' ? '기대한 답변 (선택사항)' : 'Expected Answer (Optional)'}
+                </label>
+                <input
+                  type="text"
+                  value={bugReportExpected}
+                  onChange={(e) => setBugReportExpected(e.target.value)}
+                  placeholder={lang === 'ko' ? '예: 예, 아니요, 무관 등' : 'e.g., Yes, No, Irrelevant'}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    setShowBugReportModal(false);
+                    setBugReportExpected('');
+                    setBugReportQuestion(null);
+                    setBugReportAnswer(null);
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all font-semibold text-sm sm:text-base touch-manipulation"
+                >
+                  {lang === 'ko' ? '취소' : 'Cancel'}
+                </button>
+                <button
+                  onClick={handleSubmitBugReport}
+                  className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-lg transition-all font-semibold text-sm sm:text-base touch-manipulation"
+                >
+                  {lang === 'ko' ? '신고하기' : 'Submit'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CTA 바 공간 확보 (모바일에서 하단 버튼이 콘텐츠에 가려지지 않도록) */}
       <div className="h-24 sm:h-28"></div>
