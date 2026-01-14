@@ -307,20 +307,49 @@ function splitSentencesKo(text: string): string[] {
 }
 
 function roughRelevanceScore(question: string, sentence: string): number {
-  const qTokens = tokenizeKo(question);
-  const sTokens = new Set(tokenizeKo(sentence));
+  const qTokens = [...tokenizeKo(question), ...tokenizeEn(question)];
+  const sTokens = new Set([...tokenizeKo(sentence), ...tokenizeEn(sentence)]);
   if (!qTokens.length) return 0;
 
+  // 정확한 토큰 매칭 + canonical 매칭
   let hits = 0;
-  for (const t of qTokens) if (sTokens.has(t)) hits++;
+  for (const t of qTokens) {
+    if (sTokens.has(t)) hits++;
+    // canonical 매칭도 고려
+    const canon = toCanonical(t);
+    if (canon !== t) {
+      for (const st of sTokens) {
+        if (toCanonical(st) === canon) {
+          hits += 0.5;
+          break;
+        }
+      }
+    }
+  }
 
+  // 부분 매칭 (substring) + 유의어 매칭
   let partial = 0;
   const sLower = normalizeText(sentence).toLowerCase();
-  for (const t of qTokens) if (t.length >= 2 && sLower.includes(t)) partial += 0.35;
+  for (const t of qTokens) {
+    if (t.length >= 2 && sLower.includes(t)) partial += 0.35;
+    // 유의어 매칭 (간단한 체크)
+    const syns = GLOBAL_SYNONYMS.get(t);
+    if (syns) {
+      for (const syn of syns.slice(0, 3)) {
+        if (sLower.includes(syn)) {
+          partial += 0.25;
+          break;
+        }
+      }
+    }
+  }
 
-  const exact = hits / qTokens.length;
-  const part = Math.min(0.8, partial / qTokens.length);
-  return exact * 0.7 + part * 0.3;
+  // 문장 길이 정규화 보너스
+  const exact = hits / Math.max(qTokens.length, 1);
+  const part = Math.min(0.8, partial / Math.max(qTokens.length, 1));
+  const lengthBonus = sentence.length < 50 ? 0.05 : 0;
+  
+  return exact * 0.65 + part * 0.3 + lengthBonus;
 }
 
 function selectTopKSentences(question: string, sentences: string[], k: number): string[] {
@@ -464,58 +493,141 @@ const GLOBAL_ONTOLOGY: OntologyEdge[] = [
 
 // is_a (global minimal) - V9
 const GLOBAL_TAXONOMY: OntologyEdge[] = [
+  // 사람 계층
   { parent: "사람", child: "남자", rel: "is_a" },
   { parent: "사람", child: "여자", rel: "is_a" },
   { parent: "사람", child: "아이", rel: "is_a" },
+  { parent: "사람", child: "어린이", rel: "is_a" },
+  { parent: "사람", child: "소년", rel: "is_a" },
+  { parent: "사람", child: "소녀", rel: "is_a" },
+  
+  // 동물 계층
   { parent: "동물", child: "개", rel: "is_a" },
   { parent: "동물", child: "고양이", rel: "is_a" },
+  
+  // 교통수단 계층
   { parent: "교통수단", child: "자동차", rel: "is_a" },
+  { parent: "교통수단", child: "차", rel: "is_a" },
   { parent: "교통수단", child: "자전거", rel: "is_a" },
+  { parent: "교통수단", child: "버스", rel: "is_a" },
+  { parent: "교통수단", child: "기차", rel: "is_a" },
+  
+  // 범죄 계층
   { parent: "범죄", child: "살인", rel: "is_a" },
   { parent: "범죄", child: "도둑질", rel: "is_a" },
+  { parent: "범죄", child: "살인자", rel: "is_a" },
+  
+  // 장소 계층
   { parent: "장소", child: "집", rel: "is_a" },
   { parent: "장소", child: "학교", rel: "is_a" },
   { parent: "장소", child: "병원", rel: "is_a" },
   { parent: "장소", child: "교회", rel: "is_a" },
-  // EN
+  { parent: "장소", child: "사무실", rel: "is_a" },
+  { parent: "장소", child: "방", rel: "is_a" },
+  
+  // 시간 계층
+  { parent: "시간", child: "전", rel: "is_a" },
+  { parent: "시간", child: "후", rel: "is_a" },
+  { parent: "시간", child: "이전", rel: "is_a" },
+  { parent: "시간", child: "이후", rel: "is_a" },
+  { parent: "시간", child: "현재", rel: "is_a" },
+  
+  // EN 계층
   { parent: "person", child: "man", rel: "is_a" },
   { parent: "person", child: "woman", rel: "is_a" },
   { parent: "person", child: "child", rel: "is_a" },
+  { parent: "person", child: "kid", rel: "is_a" },
+  { parent: "person", child: "boy", rel: "is_a" },
+  { parent: "person", child: "girl", rel: "is_a" },
   { parent: "animal", child: "dog", rel: "is_a" },
   { parent: "animal", child: "cat", rel: "is_a" },
+  { parent: "vehicle", child: "car", rel: "is_a" },
+  { parent: "vehicle", child: "bus", rel: "is_a" },
+  { parent: "vehicle", child: "train", rel: "is_a" },
+  { parent: "crime", child: "murder", rel: "is_a" },
+  { parent: "crime", child: "theft", rel: "is_a" },
   { parent: "place", child: "home", rel: "is_a" },
+  { parent: "place", child: "house", rel: "is_a" },
   { parent: "place", child: "school", rel: "is_a" },
   { parent: "place", child: "hospital", rel: "is_a" },
   { parent: "place", child: "church", rel: "is_a" },
+  { parent: "place", child: "office", rel: "is_a" },
+  { parent: "place", child: "room", rel: "is_a" },
 ];
 
 // -------------------------
 // 전역 유의어 사전 (일반적인 유의어 쌍)
 // -------------------------
 const GLOBAL_SYNONYMS: Map<string, string[]> = new Map([
-  ["살인자", ["범인", "가해자", "범죄자", "죄인"]],
-  ["범인", ["살인자", "가해자", "범죄자", "죄인"]],
-  ["가해자", ["살인자", "범인", "범죄자", "죄인"]],
-  ["범죄자", ["살인자", "범인", "가해자", "죄인"]],
-  ["죄인", ["살인자", "범인", "가해자", "범죄자"]],
-  ["피해자", ["희생자", "사망자"]],
-  ["희생자", ["피해자", "사망자"]],
-  ["사망자", ["피해자", "희생자"]],
-  ["여자", ["여성", "여인", "여성분"]],
-  ["여성", ["여자", "여인", "여성분"]],
-  ["남자", ["남성", "남성분"]],
-  ["남성", ["남자", "남성분"]],
-  ["아이", ["어린이", "소년", "소녀", "아동"]],
-  ["어린이", ["아이", "소년", "소녀", "아동"]],
-  ["소년", ["아이", "어린이", "아동"]],
-  ["소녀", ["아이", "어린이", "아동"]],
-  ["아동", ["아이", "어린이", "소년", "소녀"]],
-  ["차", ["자동차", "승용차", "차량"]],
-  ["자동차", ["차", "승용차", "차량"]],
-  ["차량", ["차", "자동차", "승용차"]],
-  ["집", ["집안", "집안에", "가정", "주택"]],
-  ["집안", ["집", "가정", "주택"]],
-  ["가정", ["집", "집안", "주택"]],
+  // 범죄 관련
+  ["살인자", ["범인", "가해자", "범죄자", "죄인", "killer", "murderer", "culprit"]],
+  ["범인", ["살인자", "가해자", "범죄자", "죄인", "culprit", "killer"]],
+  ["가해자", ["살인자", "범인", "범죄자", "죄인", "perpetrator", "attacker"]],
+  ["범죄자", ["살인자", "범인", "가해자", "죄인", "criminal", "offender"]],
+  ["죄인", ["살인자", "범인", "가해자", "범죄자", "criminal"]],
+  ["피해자", ["희생자", "사망자", "victim", "casualty"]],
+  ["희생자", ["피해자", "사망자", "victim", "casualty"]],
+  ["사망자", ["피해자", "희생자", "dead", "deceased"]],
+  
+  // 사람 관련
+  ["여자", ["여성", "여인", "여성분", "woman", "female", "lady"]],
+  ["여성", ["여자", "여인", "여성분", "woman", "female"]],
+  ["남자", ["남성", "남성분", "man", "male", "guy"]],
+  ["남성", ["남자", "남성분", "man", "male"]],
+  ["아이", ["어린이", "소년", "소녀", "아동", "child", "kid", "youngster"]],
+  ["어린이", ["아이", "소년", "소녀", "아동", "child", "kid"]],
+  ["소년", ["아이", "어린이", "아동", "boy", "child"]],
+  ["소녀", ["아이", "어린이", "아동", "girl", "child"]],
+  ["아동", ["아이", "어린이", "소년", "소녀", "child"]],
+  ["사람", ["인간", "인", "person", "human", "individual"]],
+  ["인간", ["사람", "인", "human", "person"]],
+  
+  // 교통수단
+  ["차", ["자동차", "승용차", "차량", "car", "vehicle", "automobile"]],
+  ["자동차", ["차", "승용차", "차량", "car", "vehicle"]],
+  ["차량", ["차", "자동차", "승용차", "vehicle", "car"]],
+  ["버스", ["bus", "버스"]],
+  ["기차", ["train", "열차"]],
+  
+  // 장소
+  ["집", ["집안", "집안에", "가정", "주택", "home", "house", "residence"]],
+  ["집안", ["집", "가정", "주택", "home", "house"]],
+  ["가정", ["집", "집안", "주택", "home", "house"]],
+  ["학교", ["school", "교육기관"]],
+  ["병원", ["hospital", "의원", "클리닉"]],
+  ["교회", ["church", "성당", "예배당"]],
+  ["사무실", ["office", "오피스"]],
+  ["방", ["room", "룸"]],
+  
+  // 시간/순서
+  ["전", ["이전", "before", "earlier", "prior"]],
+  ["후", ["이후", "after", "later", "subsequent"]],
+  ["이전", ["전", "before", "earlier"]],
+  ["이후", ["후", "after", "later"]],
+  ["지금", ["현재", "now", "currently", "present"]],
+  ["현재", ["지금", "now", "currently"]],
+  
+  // 상태/조건
+  ["열", ["열려", "open", "opened", "개방"]],
+  ["닫", ["닫혀", "closed", "shut", "폐쇄"]],
+  ["살", ["살아", "alive", "living", "생존"]],
+  ["죽", ["죽어", "dead", "died", "사망"]],
+  ["있", ["존재", "exist", "present", "있다"]],
+  ["없", ["부재", "absent", "없다", "none"]],
+  
+  // 행동
+  ["도망", ["도주", "escape", "flee", "run away"]],
+  ["도주", ["도망", "escape", "flee"]],
+  ["죽이다", ["살해", "kill", "murder"]],
+  ["살해", ["죽이다", "kill", "murder"]],
+  ["떨어지다", ["추락", "fall", "drop", "crash"]],
+  ["추락", ["떨어지다", "fall", "drop"]],
+  
+  // 사고/의도
+  ["사고", ["사건", "accident", "incident", "우발"]],
+  ["우발", ["사고", "accident", "unintentional"]],
+  ["고의", ["의도", "intentional", "deliberate", "on purpose"]],
+  ["의도", ["고의", "intentional", "deliberate"]],
 ]);
 
 const GENERALIZATION_HINTS = [
@@ -1017,15 +1129,32 @@ function inferConceptsFromTokens(tokens: string[]): Set<string> {
   const tset = new Set(tokens);
   const concepts = new Set<string>();
 
-  const hasBrake = [...tset].some(t => t.includes("브레이크") || t.includes("제동"));
-  const hasFail = [...tset].some(t => t.includes("고장") || t.includes("불량") || t.includes("망가") || t.includes("안되"));
-  const hasCrash = [...tset].some(t => t.includes("추락") || t.includes("충돌") || t.includes("가드레일") || t.includes("넘어") || t.includes("떨어"));
-  const hasRun = [...tset].some(t => t.includes("도주") || t.includes("도망") || t.includes("질주") || t.includes("달리"));
+  // 사고 관련 패턴 (강화)
+  const hasBrake = [...tset].some(t => t.includes("브레이크") || t.includes("제동") || t.includes("brake") || t.includes("braking"));
+  const hasFail = [...tset].some(t => t.includes("고장") || t.includes("불량") || t.includes("망가") || t.includes("안되") || t.includes("fail") || t.includes("broken") || t.includes("malfunction"));
+  const hasCrash = [...tset].some(t => t.includes("추락") || t.includes("충돌") || t.includes("가드레일") || t.includes("넘어") || t.includes("떨어") || t.includes("crash") || t.includes("fall") || t.includes("collision"));
+  const hasRun = [...tset].some(t => t.includes("도주") || t.includes("도망") || t.includes("질주") || t.includes("달리") || t.includes("run") || t.includes("escape") || t.includes("flee"));
 
   if (hasBrake && hasFail && (hasCrash || hasRun)) concepts.add("accident");
+  if ((hasCrash || hasRun) && hasFail) concepts.add("accident"); // 더 관대한 패턴
 
-  const hasIntent = [...tset].some(t => t.includes("고의") || t.includes("의도") || t.includes("계획") || t.includes("일부러"));
+  // 의도 관련 패턴 (강화)
+  const hasIntent = [...tset].some(t => t.includes("고의") || t.includes("의도") || t.includes("계획") || t.includes("일부러") || t.includes("intent") || t.includes("purpose") || t.includes("deliberate") || t.includes("plan"));
   if (hasIntent) concepts.add("intentional");
+
+  // 살인/범죄 패턴
+  const hasKill = [...tset].some(t => t.includes("살해") || t.includes("죽이다") || t.includes("kill") || t.includes("murder"));
+  const hasCriminal = [...tset].some(t => t.includes("범인") || t.includes("살인자") || t.includes("killer") || t.includes("culprit") || t.includes("murderer"));
+  if (hasKill || hasCriminal) concepts.add("crime");
+
+  // 도주/탈출 패턴
+  if (hasRun) concepts.add("escape");
+
+  // 시간 관련
+  const hasBefore = [...tset].some(t => t.includes("전") || t.includes("이전") || t.includes("before") || t.includes("earlier"));
+  const hasAfter = [...tset].some(t => t.includes("후") || t.includes("이후") || t.includes("after") || t.includes("later"));
+  if (hasBefore) concepts.add("past");
+  if (hasAfter) concepts.add("future");
 
   return concepts;
 }
@@ -1349,10 +1478,59 @@ async function extractQuestionConceptsV9(question: string, knowledge: ProblemKno
     }
   }
 
+  // 문맥 기반 개념 확장 (V9+)
+  const contextualConcepts = extractContextualConcepts(question, knowledge);
+  for (const c of contextualConcepts) {
+    concepts.add(c);
+    if (concepts.size >= CONFIG.V9.MAX_CONCEPTS_TOTAL) return concepts;
+  }
+
   // infer concepts
   const qNorm = normalizeText(question).toLowerCase();
   if (qNorm.includes("사고") || qNorm.includes("우발") || qNorm.includes("실수") || qNorm.includes("accident")) concepts.add("accident");
   if (qNorm.includes("고의") || qNorm.includes("일부러") || qNorm.includes("의도") || qNorm.includes("계획") || qNorm.includes("intentional") || qNorm.includes("on purpose")) concepts.add("intentional");
+
+  return concepts;
+}
+
+// 문맥 기반 개념 확장 (V9+)
+function extractContextualConcepts(question: string, knowledge: ProblemKnowledge): Set<string> {
+  const concepts = new Set<string>();
+  const qNorm = normalizeText(question).toLowerCase();
+  const qTokens = [...tokenizeKo(question), ...tokenizeEn(question)];
+  const qTokensSet = new Set(qTokens);
+
+  // 시간/순서 패턴
+  const timePatterns = [
+    { pattern: ["전", "이전", "before", "earlier"], concept: "past" },
+    { pattern: ["후", "이후", "after", "later"], concept: "future" },
+    { pattern: ["지금", "현재", "now", "currently"], concept: "present" },
+  ];
+  for (const { pattern, concept } of timePatterns) {
+    if (pattern.some(p => qNorm.includes(p))) concepts.add(concept);
+  }
+
+  // 인과관계 패턴
+  const causalPatterns = [
+    { pattern: ["때문", "인해", "로", "because", "due to", "caused"], concept: "causal" },
+    { pattern: ["결과", "결과적으로", "result", "consequence"], concept: "result" },
+  ];
+  for (const { pattern, concept } of causalPatterns) {
+    if (pattern.some(p => qNorm.includes(p))) concepts.add(concept);
+  }
+
+  // 복합 개념 (여러 토큰 조합)
+  const hasPerson = qTokensSet.has("사람") || qTokensSet.has("person") || qTokensSet.has("인간") || qTokensSet.has("human");
+  const hasDead = qTokensSet.has("죽") || qTokensSet.has("dead") || qTokensSet.has("사망");
+  const hasKill = qTokensSet.has("살해") || qTokensSet.has("kill") || qTokensSet.has("죽이다");
+  
+  if (hasPerson && hasDead) concepts.add("death_person");
+  if (hasPerson && hasKill) concepts.add("murder_action");
+  
+  // 장소 + 행동 조합
+  const hasPlace = qTokensSet.has("집") || qTokensSet.has("home") || qTokensSet.has("장소") || qTokensSet.has("place");
+  const hasEscape = qTokensSet.has("도망") || qTokensSet.has("escape") || qTokensSet.has("도주");
+  if (hasPlace && hasEscape) concepts.add("escape_from_place");
 
   return concepts;
 }
@@ -1451,14 +1629,31 @@ export async function analyzeQuestionV8(
       simAnswerAdj -= CONFIG.ADJUST.ANTONYM_PENALTY;
     }
 
-    // 3) concept/infer bonus
+    // 3) concept/infer bonus (강화)
     const conceptMatched = [...qConcepts].some(c => aConcepts.has(c));
-    if (conceptMatched) simAnswerAdj += CONFIG.ADJUST.CONCEPT_MATCH_BONUS;
+    if (conceptMatched) {
+      simAnswerAdj += CONFIG.ADJUST.CONCEPT_MATCH_BONUS;
+      // 여러 개념이 매칭되면 추가 보너스
+      const matchCount = [...qConcepts].filter(c => aConcepts.has(c)).length;
+      if (matchCount >= 2) simAnswerAdj += 0.03;
+    }
 
     const inferMatched =
       (qConcepts.has("accident") && aConcepts.has("accident")) ||
-      (qConcepts.has("intentional") && aConcepts.has("intentional"));
+      (qConcepts.has("intentional") && aConcepts.has("intentional")) ||
+      (qConcepts.has("crime") && aConcepts.has("crime")) ||
+      (qConcepts.has("escape") && aConcepts.has("escape"));
     if (inferMatched) simAnswerAdj += CONFIG.ADJUST.INFER_MATCH_BONUS;
+
+    // 문맥 개념 매칭 (V9+)
+    const contextualMatches = [
+      qConcepts.has("past") && aConcepts.has("past"),
+      qConcepts.has("future") && aConcepts.has("future"),
+      qConcepts.has("causal") && aConcepts.has("causal"),
+      qConcepts.has("death_person") && aConcepts.has("death_person"),
+      qConcepts.has("murder_action") && aConcepts.has("murder_action"),
+    ];
+    if (contextualMatches.some(m => m)) simAnswerAdj += 0.05;
 
     // 8) taxonomy bonus (V9)
     if (force.taxonomyHit) simAnswerAdj += force.taxonomyBonus;
