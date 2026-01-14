@@ -8,6 +8,9 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/hooks/useAuth';
 import UserLabel from '@/components/UserLabel';
 import { useTranslations } from '@/hooks/useTranslations';
+import { PostCardSkeleton } from '@/components/Skeleton';
+import { PostsEmptyState } from '@/components/EmptyState';
+import { handleError } from '@/lib/error-handler';
 
 type Post = {
   id: string;
@@ -137,7 +140,7 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
       }
       setPostGameUserIds(userIds);
     } catch (error) {
-      console.error('게시글 로드 오류:', error);
+      handleError(error, '게시글 로드', true);
     } finally {
       setIsLoading(false);
     }
@@ -157,17 +160,6 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
     if (days < 7) return `${days}${t.community.daysAgo}`;
     return date.toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US');
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
-          <p className="text-slate-400">{t.community.loading}</p>
-        </div>
-      </div>
-    );
-  }
 
   const getCategoryInfo = (categoryId: string) => {
     return CATEGORIES.find(cat => cat.id === categoryId) || CATEGORIES[0];
@@ -219,48 +211,27 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
           </div>
         </div>
 
-        {posts.length === 0 ? (
-          <div className="text-center py-12 bg-slate-800/50 rounded-xl border border-slate-700">
-            <i className="ri-inbox-line text-4xl text-slate-600 mb-4"></i>
-            <p className="text-slate-400 mb-4">{t.community.noPosts}</p>
-            <button
-              onClick={() => {
-                if (user) {
-                  router.push(`/${lang}/community/create`);
-                } else {
-                  router.push(`/${lang}/auth/login`);
-                }
-              }}
-              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all"
-            >
-              {t.community.createFirst}
-            </button>
+        {isLoading ? (
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <PostCardSkeleton key={i} />
+            ))}
           </div>
+        ) : posts.length === 0 ? (
+          <PostsEmptyState 
+            lang={lang}
+            category={selectedCategory}
+            onCreateClick={() => {
+              if (user) {
+                router.push(`/${lang}/community/create`);
+              } else {
+                router.push(`/${lang}/auth/login`);
+              }
+            }}
+          />
         ) : (
           <div className="space-y-4">
-            {posts.length === 0 ? (
-              <div className="text-center py-12 bg-slate-800/50 rounded-xl border border-slate-700">
-                <i className="ri-inbox-line text-4xl text-slate-600 mb-4"></i>
-                <p className="text-slate-400 mb-4">
-                  {selectedCategory === 'all' 
-                    ? t.community.noPosts
-                    : `${getCategoryInfo(selectedCategory).label} ${t.community.noPostsInCategory}`}
-                </p>
-                <button
-                  onClick={() => {
-                    if (user) {
-                      router.push(`/${lang}/community/create`);
-                    } else {
-                      router.push(`/${lang}/auth/login`);
-                    }
-                  }}
-                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all"
-                >
-                  {t.community.createFirst}
-                </button>
-              </div>
-            ) : (
-              posts.map((post) => {
+            {posts.map((post) => {
                 const categoryInfo = getCategoryInfo(post.category);
                 return (
                   <div
@@ -321,8 +292,7 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
                     </div>
                   </div>
                 );
-              })
-            )}
+              })}
           </div>
         )}
       </div>

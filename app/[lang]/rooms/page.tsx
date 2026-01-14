@@ -7,6 +7,9 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useTranslations } from '@/hooks/useTranslations';
+import { RoomCardSkeleton } from '@/components/Skeleton';
+import { RoomsEmptyState } from '@/components/EmptyState';
+import { handleError } from '@/lib/error-handler';
 
 type Room = {
   code: string;
@@ -230,35 +233,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
     setPassword('');
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="mb-6 relative w-24 h-24 mx-auto">
-            <svg 
-              className="w-full h-full animate-turtle-float"
-              viewBox="0 0 100 100" 
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <ellipse cx="50" cy="55" rx="30" ry="20" fill="#14b8a6" />
-              <ellipse cx="50" cy="50" rx="25" ry="18" fill="#0d9488" />
-              <path d="M 50 35 Q 45 40 50 45 Q 55 40 50 35" stroke="#0f766e" strokeWidth="1.5" fill="none" />
-              <path d="M 35 50 Q 40 45 45 50 Q 40 55 35 50" stroke="#0f766e" strokeWidth="1.5" fill="none" />
-              <path d="M 65 50 Q 60 45 55 50 Q 60 55 65 50" stroke="#0f766e" strokeWidth="1.5" fill="none" />
-              <ellipse cx="50" cy="30" rx="8" ry="10" fill="#14b8a6" />
-              <circle cx="47" cy="28" r="1.5" fill="white" />
-              <circle cx="53" cy="28" r="1.5" fill="white" />
-              <ellipse cx="35" cy="60" rx="5" ry="8" fill="#14b8a6" />
-              <ellipse cx="65" cy="60" rx="5" ry="8" fill="#14b8a6" />
-              <ellipse cx="30" cy="70" rx="6" ry="5" fill="#14b8a6" />
-              <ellipse cx="70" cy="70" rx="6" ry="5" fill="#14b8a6" />
-            </svg>
-          </div>
-          <p className="text-slate-400">{t.room.loadingRooms}</p>
-        </div>
-      </div>
-    );
-  }
+  // 로딩 상태는 아래에서 처리
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
@@ -437,32 +412,22 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
           )}
         </div>
 
-        {filteredRooms.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="mb-4">
-              <i className="ri-door-open-line text-6xl text-slate-600"></i>
-            </div>
-            {searchQuery ? (
-              <>
-                <p className="text-slate-400 mb-4">{t.room.noSearchResults}</p>
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-6 py-3 rounded-xl transition-all"
-                >
-                  {t.room.clearSearch}
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="text-slate-400 mb-4">{t.room.noRoomsAvailable}</p>
-                <Link href={`/${lang}/create-room`}>
-                  <button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold px-6 py-3 rounded-xl transition-all">
-                    {t.room.createNewRoom}
-                  </button>
-                </Link>
-              </>
-            )}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <RoomCardSkeleton key={i} />
+            ))}
           </div>
+        ) : filteredRooms.length === 0 ? (
+          <RoomsEmptyState 
+            lang={lang}
+            hasSearchQuery={!!searchQuery}
+            onClearSearch={() => {
+              setSearchQuery('');
+              setPrivacyFilter('all');
+              setMinPlayers(0);
+            }}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredRooms.map((room) => (

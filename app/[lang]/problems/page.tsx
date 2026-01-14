@@ -8,6 +8,9 @@ import { supabase } from '@/lib/supabase';
 import type { Problem } from '@/lib/types';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useTranslations } from '@/hooks/useTranslations';
+import { ProblemCardSkeleton } from '@/components/Skeleton';
+import { ProblemsEmptyState } from '@/components/EmptyState';
+import { handleError } from '@/lib/error-handler';
 
 type SortOption = 'latest' | 'popular' | 'difficulty';
 
@@ -103,27 +106,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
     } catch (error: any) {
       // AbortError는 무해한 에러이므로 무시 (컴포넌트 언마운트 시 발생 가능)
       if (error?.name !== 'AbortError' && error?.message?.includes('aborted') === false) {
-        // 실제 에러 정보가 있는 경우에만 로그 출력
-        const hasErrorInfo = error?.message || error?.code || error?.details || error?.hint;
-        
-        if (hasErrorInfo) {
-          console.error('문제 로드 오류:', {
-            message: error?.message,
-            code: error?.code,
-            details: error?.details,
-            hint: error?.hint,
-          });
-          
-          let errorMessage = '문제를 불러올 수 없습니다.';
-          if (error?.message) {
-            errorMessage = `문제 로드 오류: ${error.message}`;
-          } else if (error?.code) {
-            errorMessage = `문제 로드 오류 (코드: ${error.code})`;
-          }
-          
-          alert(errorMessage);
-        }
-        // 에러 정보가 없는 경우는 조용히 무시 (빈 에러 객체)
+        handleError(error, '문제 로드', true);
       }
     } finally {
       setIsLoading(false);
@@ -320,15 +303,13 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
 
         {/* 문제 목록 */}
         {isLoading ? (
-          <div className="text-center py-8 sm:py-12">
-            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
-            <p className="text-xs sm:text-sm text-slate-400">{t.problem.loading}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+            {[...Array(6)].map((_, i) => (
+              <ProblemCardSkeleton key={i} />
+            ))}
           </div>
         ) : filteredProblems.length === 0 ? (
-          <div className="text-center py-8 sm:py-12 bg-slate-800 rounded-xl border border-slate-700">
-            <i className="ri-inbox-line text-4xl sm:text-5xl text-slate-500 mb-4"></i>
-            <p className="text-sm sm:text-base text-slate-400">{t.problem.noProblems}</p>
-          </div>
+          <ProblemsEmptyState lang={lang} />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
             {filteredProblems.map(problem => {

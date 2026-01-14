@@ -8,6 +8,8 @@ import LevelBadge from '@/components/LevelBadge';
 import type { UserProgress, Title, Achievement } from '@/types/progress';
 import { requiredXP, xpToNextLevel } from '@/lib/progress';
 import { useTranslations } from '@/hooks/useTranslations';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { handleError } from '@/lib/error-handler';
 
 export default function ProfilePage({ params }: { params: Promise<{ lang: string; id: string }> }) {
   const resolvedParams = use(params);
@@ -26,6 +28,14 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
   const [isLoading, setIsLoading] = useState(true);
   const [actualSolveCount, setActualSolveCount] = useState<number>(0);
   const [receivedHearts, setReceivedHearts] = useState<number>(0);
+  const { user: currentUser } = useAuth();
+  
+  // 신고 관련 state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportType, setReportType] = useState<'spam' | 'harassment' | 'inappropriate_content' | 'fake_account' | 'other'>('spam');
+  const [reportReason, setReportReason] = useState('');
+  const [reportDescription, setReportDescription] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -157,6 +167,76 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
     }
   };
 
+  const handleSubmitReport = async () => {
+    if (!reportReason.trim()) {
+      if (typeof window !== 'undefined' && (window as any).toastWarning) {
+        (window as any).toastWarning(lang === 'ko' ? '신고 사유를 입력해주세요.' : 'Please enter a report reason.');
+      }
+      return;
+    }
+
+    // 자기 자신을 신고하는 것 방지
+    if (user?.auth_user_id && currentUser?.id === user.auth_user_id) {
+      if (typeof window !== 'undefined' && (window as any).toastWarning) {
+        (window as any).toastWarning(lang === 'ko' ? '자기 자신을 신고할 수 없습니다.' : 'You cannot report yourself.');
+      }
+      return;
+    }
+
+    setIsSubmittingReport(true);
+    try {
+      // 게스트 사용자 식별자 가져오기
+      let userIdentifier: string | null = null;
+      if (!currentUser) {
+        if (typeof window !== 'undefined') {
+          userIdentifier = localStorage.getItem('guest_id') || `guest_${Date.now()}`;
+          if (!localStorage.getItem('guest_id')) {
+            localStorage.setItem('guest_id', userIdentifier);
+          }
+        }
+      }
+
+      const reportData = {
+        reported_user_id: userId, // game_users의 id
+        reporter_user_id: currentUser?.id || null,
+        reporter_identifier: userIdentifier,
+        report_type: reportType,
+        reason: reportReason.trim(),
+        description: reportDescription.trim() || null,
+        status: 'pending',
+      };
+
+      const { error } = await supabase
+        .from('user_reports')
+        .insert(reportData);
+
+      if (error) {
+        // 중복 신고 에러 처리
+        if (error.message?.includes('already reported') || error.message?.includes('24 hours')) {
+          if (typeof window !== 'undefined' && (window as any).toastWarning) {
+            (window as any).toastWarning(lang === 'ko' ? '24시간 이내에 같은 사유로 이미 신고하셨습니다.' : 'You have already reported this user for the same reason within the last 24 hours.');
+          }
+          return;
+        }
+        throw error;
+      }
+
+      if (typeof window !== 'undefined' && (window as any).toastSuccess) {
+        (window as any).toastSuccess(lang === 'ko' ? '신고가 접수되었습니다. 검토 후 조치하겠습니다.' : 'Report submitted. We will review and take action.');
+      }
+
+      // 모달 닫기 및 상태 초기화
+      setShowReportModal(false);
+      setReportType('spam');
+      setReportReason('');
+      setReportDescription('');
+    } catch (error) {
+      handleError(error, '유저 신고', true);
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
@@ -215,6 +295,16 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
               <h1 className="text-2xl sm:text-3xl font-bold mb-2">{user.nickname}</h1>
               <LevelBadge level={progress.level} size="lg" />
             </div>
+            {/* 신고하기 버튼 (자기 자신이 아닐 때만 표시) */}
+            {user?.auth_user_id && currentUser?.id !== user.auth_user_id && (
+              <button
+                onClick={() => setShowReportModal(true)}
+                className="px-3 sm:px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/50 rounded-lg transition-all text-sm font-semibold flex items-center gap-2"
+              >
+                <i className="ri-flag-line"></i>
+                <span className="hidden sm:inline">{lang === 'ko' ? '신고하기' : 'Report'}</span>
+              </button>
+            )}
           </div>
 
           {/* XP Progress Bar */}
@@ -343,6 +433,119 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
           )}
         </div>
       </div>
+
+      {/* 신고 모달 */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-xl p-6 sm:p-8 border border-slate-700 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-white">
+                {lang === 'ko' ? '유저 신고하기' : 'Report User'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowReportModal(false);
+                  setReportType('spam');
+                  setReportReason('');
+                  setReportDescription('');
+                }}
+                className="text-slate-400 hover:text-white transition-colors text-2xl"
+              >
+                <i className="ri-close-line"></i>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* 신고 유형 선택 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  {lang === 'ko' ? '신고 유형' : 'Report Type'}
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: 'spam', label: lang === 'ko' ? '스팸' : 'Spam', icon: 'ri-spam-line' },
+                    { value: 'harassment', label: lang === 'ko' ? '괴롭힘' : 'Harassment', icon: 'ri-user-forbid-line' },
+                    { value: 'inappropriate_content', label: lang === 'ko' ? '부적절한 내용' : 'Inappropriate', icon: 'ri-prohibited-line' },
+                    { value: 'fake_account', label: lang === 'ko' ? '가짜 계정' : 'Fake Account', icon: 'ri-user-unfollow-line' },
+                    { value: 'other', label: lang === 'ko' ? '기타' : 'Other', icon: 'ri-more-line' },
+                  ].map((type) => (
+                    <button
+                      key={type.value}
+                      onClick={() => setReportType(type.value as any)}
+                      className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                        reportType === type.value
+                          ? 'bg-red-500 text-white'
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      }`}
+                    >
+                      <i className={type.icon}></i>
+                      <span>{type.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 신고 사유 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  {lang === 'ko' ? '신고 사유 *' : 'Reason *'}
+                </label>
+                <input
+                  type="text"
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  placeholder={lang === 'ko' ? '신고 사유를 입력하세요' : 'Enter report reason'}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  maxLength={200}
+                />
+              </div>
+
+              {/* 상세 설명 (선택사항) */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  {lang === 'ko' ? '상세 설명 (선택사항)' : 'Description (Optional)'}
+                </label>
+                <textarea
+                  value={reportDescription}
+                  onChange={(e) => setReportDescription(e.target.value)}
+                  placeholder={lang === 'ko' ? '추가 설명을 입력하세요' : 'Enter additional details'}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                  rows={4}
+                  maxLength={500}
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  {reportDescription.length} / 500
+                </p>
+              </div>
+
+              {/* 버튼 */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowReportModal(false);
+                    setReportType('spam');
+                    setReportReason('');
+                    setReportDescription('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all font-semibold"
+                >
+                  {t.common.cancel}
+                </button>
+                <button
+                  onClick={handleSubmitReport}
+                  disabled={!reportReason.trim() || isSubmittingReport}
+                  className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all font-semibold"
+                >
+                  {isSubmittingReport 
+                    ? (lang === 'ko' ? '제출 중...' : 'Submitting...')
+                    : (lang === 'ko' ? '신고하기' : 'Submit Report')
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

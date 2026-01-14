@@ -21,6 +21,15 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   const router = useRouter();
   const t = useTranslations();
 
+  // Toast 헬퍼 함수
+  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+    if (typeof window !== 'undefined' && (window as any)[`toast${type.charAt(0).toUpperCase() + type.slice(1)}`]) {
+      (window as any)[`toast${type.charAt(0).toUpperCase() + type.slice(1)}`](message);
+    } else {
+      alert(message);
+    }
+  };
+
   const [problem, setProblem] = useState<Problem | null>(null);
   const [questions, setQuestions] = useState<ProblemQuestion[]>([]);
   const [comments, setComments] = useState<ProblemComment[]>([]);
@@ -169,13 +178,21 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
 
   const handleCreateRoomFromProblem = async () => {
     if (!problem) {
-      alert(lang === 'ko' ? '문제 정보를 불러올 수 없습니다.' : 'Cannot load problem information.');
+      if (typeof window !== 'undefined' && (window as any).toastError) {
+        (window as any).toastError(lang === 'ko' ? '문제 정보를 불러올 수 없습니다.' : 'Cannot load problem information.');
+      } else {
+        alert(lang === 'ko' ? '문제 정보를 불러올 수 없습니다.' : 'Cannot load problem information.');
+      }
       return;
     }
 
     // 로그인 체크
     if (!user) {
-      alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Login required.');
+      if (typeof window !== 'undefined' && (window as any).toastWarning) {
+        (window as any).toastWarning(lang === 'ko' ? '로그인이 필요합니다.' : 'Login required.');
+      } else {
+        alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Login required.');
+      }
       router.push(`/${lang}/auth/login`);
       return;
     }
@@ -281,7 +298,11 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       router.push(`/${lang}/room/${roomCode}?host=true&nickname=${encodeURIComponent(nickname)}`);
     } catch (error: any) {
       console.error('방 생성 오류:', error);
-      alert(lang === 'ko' ? '방 생성에 실패했습니다. 다시 시도해주세요.' : 'Failed to create room. Please try again.');
+      if (typeof window !== 'undefined' && (window as any).toastError) {
+        (window as any).toastError(lang === 'ko' ? '방 생성에 실패했습니다. 다시 시도해주세요.' : 'Failed to create room. Please try again.');
+      } else {
+        alert(lang === 'ko' ? '방 생성에 실패했습니다. 다시 시도해주세요.' : 'Failed to create room. Please try again.');
+      }
     } finally {
       setIsCreatingRoom(false);
     }
@@ -290,42 +311,58 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   const handleCopyInviteLink = async () => {
     if (!problem) return;
 
-    try {
-      // 먼저 방이 있는지 확인, 없으면 생성
-      let roomCode = '';
-      
-      // 최근 생성된 방 확인 (같은 문제로 생성된 방)
-      const { data: recentRooms } = await supabase
-        .from('rooms')
-        .select('code')
-        .eq('story', problem.content)
-        .eq('truth', problem.answer)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (recentRooms) {
-        roomCode = recentRooms.code;
-      } else {
-        // 방이 없으면 생성
-        await handleCreateRoomFromProblem();
-        return; // 방 생성 후 리다이렉트되므로 여기서 종료
-      }
-
-      // 방 링크 복사
-      const roomUrl = `${window.location.origin}/${lang}/room/${roomCode}`;
-      await navigator.clipboard.writeText(roomUrl);
-      
-      // 이벤트 로깅
-      if (typeof window !== 'undefined') {
-        console.log('problem_cta_invite_copy', { problemId, roomCode });
-      }
-
-      alert(lang === 'ko' ? '초대 링크가 복사되었습니다!' : 'Invite link copied!');
-    } catch (error) {
-      console.error('링크 복사 오류:', error);
-      alert(lang === 'ko' ? '링크 복사에 실패했습니다.' : 'Failed to copy link.');
+    // 이벤트 로깅
+    if (typeof window !== 'undefined') {
+      console.log('problem_cta_invite_copy', { problemId });
     }
+
+    // 공유 모달 열기
+    setShowShareModal(true);
+    
+    // 모달이 열린 후 카카오톡 공유 실행
+    setTimeout(() => {
+      const url = `${window.location.origin}/${lang}/problem/${problemId}`;
+      const title = problem.title;
+      const text = `${title}\n\n${problem.content.substring(0, 100)}...\n\n${url}`;
+      
+      // 모바일: 카카오톡 앱으로 직접 공유
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        // 카카오톡 URL 스킴 시도
+        const kakaoTalkUrl = `kakaotalk://send?text=${encodeURIComponent(text)}`;
+        window.location.href = kakaoTalkUrl;
+        
+        // 앱이 없으면 3초 후 웹으로 폴백
+        setTimeout(() => {
+          const kakaoWebUrl = `https://story.kakao.com/share?url=${encodeURIComponent(url)}`;
+          window.open(kakaoWebUrl, '_blank');
+        }, 3000);
+      } else {
+        // 데스크톱: 카카오 SDK 또는 웹 공유
+        const kakao = (window as any).Kakao;
+        if (kakao && kakao.isInitialized && kakao.isInitialized()) {
+          kakao.Share.sendDefault({
+            objectType: 'feed',
+            content: {
+              title: title,
+              description: problem.content.substring(0, 100),
+              imageUrl: `${window.location.origin}/og-image.png`,
+              link: {
+                mobileWebUrl: url,
+                webUrl: url,
+              },
+            },
+          });
+        } else {
+          // 카카오톡 웹 공유
+          const kakaoWebUrl = `https://story.kakao.com/share?url=${encodeURIComponent(url)}`;
+          window.open(kakaoWebUrl, '_blank');
+        }
+      }
+      
+      // 공유 실행 후 모달 닫기
+      setShowShareModal(false);
+    }, 100);
   };
 
   const handleNextProblem = () => {
@@ -350,7 +387,11 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
 
     // 유사도 오류인 경우 질문/답변 없이도 가능
     if (bugReportType !== 'wrong_similarity' && (!question || !answer)) {
-      alert(lang === 'ko' ? '질문과 답변 정보가 필요합니다.' : 'Question and answer information is required.');
+      if (typeof window !== 'undefined' && (window as any).toastWarning) {
+        (window as any).toastWarning(lang === 'ko' ? '질문과 답변 정보가 필요합니다.' : 'Question and answer information is required.');
+      } else {
+        alert(lang === 'ko' ? '질문과 답변 정보가 필요합니다.' : 'Question and answer information is required.');
+      }
       return;
     }
 
@@ -388,18 +429,30 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
 
       if (error) {
         console.error('오류 리포트 전송 오류:', error);
-        alert(lang === 'ko' ? '오류 리포트 전송에 실패했습니다.' : 'Failed to send error report.');
+        if (typeof window !== 'undefined' && (window as any).toastError) {
+          (window as any).toastError(lang === 'ko' ? '오류 리포트 전송에 실패했습니다.' : 'Failed to send error report.');
+        } else {
+          alert(lang === 'ko' ? '오류 리포트 전송에 실패했습니다.' : 'Failed to send error report.');
+        }
         return;
       }
 
-      alert(lang === 'ko' ? '오류 리포트가 전송되었습니다.' : 'Error report has been sent.');
+      if (typeof window !== 'undefined' && (window as any).toastSuccess) {
+        (window as any).toastSuccess(lang === 'ko' ? '오류 리포트가 전송되었습니다.' : 'Error report has been sent.');
+      } else {
+        alert(lang === 'ko' ? '오류 리포트가 전송되었습니다.' : 'Error report has been sent.');
+      }
       setShowBugReportModal(false);
       setBugReportExpected('');
       setBugReportQuestion(null);
       setBugReportAnswer(null);
     } catch (error) {
       console.error('오류 리포트 전송 오류:', error);
-      alert(lang === 'ko' ? '오류 리포트 전송에 실패했습니다.' : 'Failed to send error report.');
+      if (typeof window !== 'undefined' && (window as any).toastError) {
+        (window as any).toastError(lang === 'ko' ? '오류 리포트 전송에 실패했습니다.' : 'Failed to send error report.');
+      } else {
+        alert(lang === 'ko' ? '오류 리포트 전송에 실패했습니다.' : 'Failed to send error report.');
+      }
     }
   };
 
@@ -603,7 +656,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       }
     } catch (error) {
       console.error('문제 로드 오류:', error);
-      alert(t.problem.loadProblemFail);
+      showToast(t.problem.loadProblemFail, 'error');
       router.push(`/${lang}`);
     } finally {
       setIsLoading(false);
@@ -724,7 +777,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
 
   const handleRatingClick = async (rating: number) => {
     if (!user) {
-      alert(t.problem.loginRequired);
+      showToast(t.problem.loginRequired, 'warning');
       router.push(`/${lang}/auth/login`);
       return;
     }
@@ -779,7 +832,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
         errorMessage = `${t.problem.ratingVoteFail} (${t.common.error}: ${error.code})`;
       }
       
-      alert(errorMessage);
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -820,7 +873,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
 
   const handleAnalyzeBeforeSubmit = async () => {
     if (!questionText.trim() || !problem) {
-      alert(t.problem.enterQuestionAlert);
+      showToast(t.problem.enterQuestionAlert, 'warning');
       return;
     }
 
@@ -904,7 +957,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       saveLocalQuestion(questionText.trim(), t.common.pending);
       setQuestionText('');
       setSuggestedAnswer(null);
-      alert(t.problem.aiAnalysisError);
+      showToast(t.problem.aiAnalysisError, 'error');
     } finally {
       setIsAnalyzing(false);
     }
@@ -912,13 +965,13 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
 
   const handleSubmitComment = async () => {
     if (!user) {
-      alert(t.problem.loginRequired);
+      showToast(t.problem.loginRequired, 'warning');
       router.push(`/${lang}/auth/login`);
       return;
     }
 
     if (!commentText.trim()) {
-      alert(t.problem.enterCommentAlert);
+      showToast(t.problem.enterCommentAlert, 'warning');
       return;
     }
 
@@ -963,7 +1016,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       }
     } catch (error) {
       console.error('댓글 제출 오류:', error);
-      alert(t.problem.commentSubmitFail);
+      showToast(t.problem.commentSubmitFail, 'error');
     }
   };
 
@@ -989,7 +1042,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       loadComments();
     } catch (error) {
       console.error('댓글 수정 오류:', error);
-      alert(t.problem.updateCommentFail);
+      showToast(t.problem.updateCommentFail, 'error');
     }
   };
 
@@ -1014,7 +1067,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       loadComments();
     } catch (error) {
       console.error('댓글 삭제 오류:', error);
-      alert(t.community.commentDeleteFail);
+      showToast(t.community.commentDeleteFail, 'error');
     }
   };
 
@@ -1022,14 +1075,14 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
     if (!problem) return;
 
     if (!user) {
-      alert(t.problem.loginRequired);
+      showToast(t.problem.loginRequired, 'warning');
       router.push(`/${lang}/auth/login`);
       return;
     }
 
     if (!user.id) {
       console.error('사용자 ID가 없습니다:', user);
-      alert(t.problem.loadUserInfoFail);
+      showToast(t.problem.loadUserInfoFail, 'error');
       return;
     }
 
@@ -1037,13 +1090,13 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(user.id)) {
       console.error('잘못된 사용자 ID 형식:', user.id);
-      alert(t.problem.invalidUserInfo);
+      showToast(t.problem.invalidUserInfo, 'error');
       return;
     }
 
     if (!problemId || !uuidRegex.test(problemId)) {
       console.error('잘못된 문제 ID 형식:', problemId);
-      alert(t.problem.invalidProblemInfo);
+      showToast(t.problem.invalidProblemInfo, 'error');
       return;
     }
 
@@ -1218,7 +1271,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       } else if (error?.code) {
         errorMessage += `\n\n${t.common.error}: ${error.code}`;
       }
-      alert(errorMessage);
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -1238,7 +1291,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       loadQuestions();
     } catch (error) {
       console.error('답변 제출 오류:', error);
-      alert(t.problem.submitAnswerFail);
+      showToast(t.problem.submitAnswerFail, 'error');
     }
   };
 
@@ -1246,7 +1299,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
     if (!isOwner || !problem) return;
 
     if (!editTitle.trim() || !editContent.trim() || !editAnswer.trim()) {
-      alert(t.problem.enterAllFields);
+      showToast(t.problem.enterAllFields, 'warning');
       return;
     }
 
@@ -1267,10 +1320,10 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
 
       setIsEditing(false);
       await loadProblem(); // 문제 재로드 (knowledge도 자동으로 재생성됨)
-      alert(t.problem.problemUpdated);
+      showToast(t.problem.problemUpdated, 'success');
     } catch (error) {
       console.error('문제 수정 오류:', error);
-      alert(t.problem.updateProblemFail);
+      showToast(t.problem.updateProblemFail, 'error');
     }
   };
 
@@ -1445,11 +1498,11 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                               .delete()
                               .eq('id', problemId);
                             if (error) throw error;
-                            alert(t.problem.problemDeleted);
+                            showToast(t.problem.problemDeleted, 'success');
                             router.push(`/${lang}/problems`);
                           } catch (error) {
                             console.error('문제 삭제 오류:', error);
-                            alert(t.problem.deleteProblemFail);
+                            showToast(t.problem.deleteProblemFail, 'error');
                           }
                         }}
                         className="px-2 sm:px-3 py-1.5 sm:py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all text-xs sm:text-sm"
@@ -1850,7 +1903,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                 <button
                   onClick={async () => {
                     if (!userGuess.trim() || !problem) {
-                      alert(t.problem.enterAnswerAlert);
+                      showToast(t.problem.enterAnswerAlert, 'warning');
                       return;
                     }
 
@@ -1903,10 +1956,10 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                           console.error('정답 수 증가 오류:', error);
                         }
                       }
-                    } catch (error) {
-                      console.error('유사도 계산 오류:', error);
-                      alert(t.problem.similarityCalculationFail);
-                    } finally {
+                      } catch (error) {
+                        console.error('유사도 계산 오류:', error);
+                        showToast(t.problem.similarityCalculationFail, 'error');
+                      } finally {
                       setIsCalculatingSimilarity(false);
                     }
                   }}
@@ -2350,17 +2403,17 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                     setTimeout(() => {
                       // 인스타그램 웹에서는 직접 공유가 제한적이므로 링크 복사 안내
                       navigator.clipboard.writeText(url).then(() => {
-                        alert(t.problem.instagramLinkCopied);
+                        showToast(t.problem.instagramLinkCopied, 'success');
                       }).catch(() => {
-                        alert(`${t.problem.instagramCopyLink}\n${url}`);
+                        showToast(`${t.problem.instagramCopyLink}\n${url}`, 'info');
                       });
                     }, 2000);
                   } else {
                     // 데스크톱: 인스타그램 웹 (제한적)
                     navigator.clipboard.writeText(url).then(() => {
-                      alert(t.problem.linkCopiedInstagram);
+                      showToast(t.problem.linkCopiedInstagram, 'success');
                     }).catch(() => {
-                      alert(`${t.problem.instagramCopyLink}\n${url}`);
+                      showToast(`${t.problem.instagramCopyLink}\n${url}`, 'info');
                     });
                   }
                   setShowShareModal(false);
@@ -2408,7 +2461,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                   const url = `${window.location.origin}/${lang}/problem/${problemId}`;
                   try {
                     await navigator.clipboard.writeText(url);
-                    alert(t.problem.linkCopied);
+                    showToast(t.problem.linkCopied, 'success');
                     setShowShareModal(false);
                   } catch (error) {
                     // 폴백: 텍스트 영역 사용
@@ -2420,10 +2473,10 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                     textArea.select();
                     try {
                       document.execCommand('copy');
-                      alert(t.problem.linkCopied);
+                      showToast(t.problem.linkCopied, 'success');
                       setShowShareModal(false);
                     } catch (err) {
-                      alert(t.problem.copyLinkFail);
+                      showToast(t.problem.copyLinkFail, 'error');
                     }
                     document.body.removeChild(textArea);
                   }
