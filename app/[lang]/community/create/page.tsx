@@ -4,7 +4,6 @@ import { use } from 'react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useTranslations } from '@/hooks/useTranslations';
 import { createClient } from '@/lib/supabase/client';
@@ -22,7 +21,6 @@ export default function CreatePostPage({ params }: { params: Promise<{ lang: str
   const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
   const router = useRouter();
   const { user } = useAuth();
-  const supabase = createClient();
   const t = useTranslations();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -41,6 +39,49 @@ export default function CreatePostPage({ params }: { params: Promise<{ lang: str
     { id: 'funny', label: t.community.funny, icon: 'ri-emotion-laugh-line', color: 'from-pink-500 to-rose-500' },
     { id: 'social', label: t.community.social, icon: 'ri-group-line', color: 'from-teal-500 to-cyan-500' },
   ];
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!user) {
+        setIsCheckingAdmin(false);
+        return;
+      }
+
+      try {
+        const supabaseClient = createClient();
+        const { data: userData, error } = await supabaseClient
+          .from('users')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('관리자 확인 오류:', error);
+          setIsAdmin(false);
+        } else {
+          setIsAdmin(userData?.is_admin || false);
+        }
+      } catch (error) {
+        console.error('관리자 확인 오류:', error);
+        setIsAdmin(false);
+      } finally {
+        setIsCheckingAdmin(false);
+      }
+    };
+
+    checkAdmin();
+  }, [user]);
+
+  if (isCheckingAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <i className="ri-loader-4-line text-4xl animate-spin text-teal-400"></i>
+          <p className="mt-4 text-slate-400">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -83,7 +124,8 @@ export default function CreatePostPage({ params }: { params: Promise<{ lang: str
         return;
       }
 
-      const { data, error } = await supabase
+      const supabaseClient = createClient();
+      const { data, error } = await supabaseClient
         .from('posts')
         .insert({
           title: title.trim(),
