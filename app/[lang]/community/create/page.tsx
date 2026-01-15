@@ -131,7 +131,6 @@ export default function CreatePostPage({ params }: { params: Promise<{ lang: str
         return;
       }
 
-      const supabaseClient = createClient();
       const { data, error } = await supabaseClient
         .from('posts')
         .insert({
