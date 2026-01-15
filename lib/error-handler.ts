@@ -127,7 +127,10 @@ export function handleError(
       message: appError.message,
       details: appError.details,
       hint: appError.hint,
+      userMessage: appError.userMessage,
       originalError: error,
+      errorType: error?.constructor?.name,
+      errorString: String(error),
     });
   } else {
     console.error('Error:', {
@@ -135,7 +138,10 @@ export function handleError(
       message: appError.message,
       details: appError.details,
       hint: appError.hint,
+      userMessage: appError.userMessage,
       originalError: error,
+      errorType: error?.constructor?.name,
+      errorString: String(error),
     });
   }
 

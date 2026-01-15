@@ -32,7 +32,7 @@ AS $$
 DECLARE
   synced_count INTEGER := 0;
   pattern_record RECORD;
-  pattern_hash TEXT;
+  v_pattern_hash TEXT;  -- 변수 이름 변경하여 컬럼과 구분
 BEGIN
   -- applied = true인 패턴들을 learned_errors에 동기화
   FOR pattern_record IN
@@ -60,7 +60,7 @@ BEGIN
       )
   LOOP
     -- 패턴 해시 생성 (질문 패턴 + 기대 답변 + AI 제안 답변)
-    pattern_hash := MD5(
+    v_pattern_hash := MD5(
       COALESCE(pattern_record.pattern_data->>'question_token', '') || '|' ||
       COALESCE(pattern_record.pattern_data->>'expected', '') || '|' ||
       COALESCE(pattern_record.pattern_data->>'ai_suggested', '') || '|' ||
@@ -77,7 +77,7 @@ BEGIN
       learning_pattern_id
     )
     VALUES (
-      pattern_hash,
+      v_pattern_hash,  -- 변수 사용
       COALESCE(
         (pattern_record.pattern_data->>'bug_type')::TEXT,
         'other'

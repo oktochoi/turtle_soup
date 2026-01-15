@@ -70,31 +70,9 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
   }, [user, filterStatus, filterLearning, hideProcessed]);
 
   const checkLearningStatus = async () => {
-    try {
-      // 최근에 적용된 패턴이 있는지 확인
-      const { data, error } = await supabase
-        .from('ai_learning_patterns')
-        .select('applied_at')
-        .eq('applied', true)
-        .order('applied_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (!error && data && data.applied_at) {
-        // 최근 24시간 내에 학습이 실행되었는지 확인
-        const appliedAt = new Date(data.applied_at);
-        const now = new Date();
-        const hoursSinceApplied = (now.getTime() - appliedAt.getTime()) / (1000 * 60 * 60);
-        
-        // 24시간 이내에 학습이 실행되었으면 hasLearned = true
-        setHasLearned(hoursSinceApplied < 24);
-      } else {
-        setHasLearned(false);
-      }
-    } catch (error) {
-      console.error('학습 상태 확인 오류:', error);
-      setHasLearned(false);
-    }
+    // 24시간 제한 제거: 관리자가 원할 때 언제든지 학습 실행 가능
+    // 이 함수는 더 이상 사용하지 않지만 호환성을 위해 유지
+    setHasLearned(false);
   };
 
   const checkAdminAccess = async () => {
@@ -223,12 +201,29 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
       setIsRunningLearning(true);
       setLearningResult(null);
 
+      console.log('학습 사이클 시작...');
       const { data, error } = await supabase.rpc('run_ai_learning_cycle');
 
-      if (error) throw error;
+      if (error) {
+        console.error('학습 사이클 RPC 오류 상세:', {
+          error,
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          errorString: JSON.stringify(error, null, 2),
+        });
+        throw error;
+      }
+
+      console.log('학습 사이클 결과:', data);
+
+      if (!data) {
+        throw new Error('학습 사이클 실행 결과가 없습니다.');
+      }
 
       setLearningResult(data);
-      setHasLearned(true); // 학습 완료 상태로 설정
+      setHasLearned(false); // 24시간 제한 제거로 항상 false
       
       if (typeof window !== 'undefined' && (window as any).toastSuccess) {
         (window as any).toastSuccess(
@@ -241,7 +236,26 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
       loadReports();
       // 학습 상태 다시 확인
       checkLearningStatus();
-    } catch (error) {
+    } catch (error: any) {
+      console.error('학습 실행 오류 상세:', {
+        error,
+        errorType: error?.constructor?.name,
+        errorMessage: error?.message,
+        errorCode: error?.code,
+        errorDetails: error?.details,
+        errorHint: error?.hint,
+        errorString: JSON.stringify(error, Object.getOwnPropertyNames(error), 2),
+        stack: error?.stack,
+      });
+      // 더 자세한 오류 메시지 표시
+      const errorMessage = error?.message || error?.details || error?.hint || '알 수 없는 오류가 발생했습니다.';
+      if (typeof window !== 'undefined' && (window as any).toastError) {
+        (window as any).toastError(
+          lang === 'ko' 
+            ? `학습 실행 실패: ${errorMessage}`
+            : `Learning failed: ${errorMessage}`
+        );
+      }
       handleError(error, '학습 실행', true);
     } finally {
       setIsRunningLearning(false);
@@ -374,9 +388,9 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
     return labels[status]?.[langKey] || status;
   };
 
-  const validReportsCount = reports.filter(r => !r.ignore_for_learning && r.status === 'pending').length;
-  // 학습 가능 조건: 100개 이상의 리포트가 있고, 최근 24시간 내에 학습이 실행되지 않았을 때
-  const canRunLearning = validReportsCount >= 100 && !hasLearned;
+  const validReportsCount = reports.filter(r => !r.ignore_for_learning && !r.studied && r.status === 'pending').length;
+  // 관리자가 원할 때 언제든지 학습 실행 가능
+  const canRunLearning = validReportsCount > 0;
 
   if (isLoading && reports.length === 0) {
     return (
@@ -415,7 +429,7 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
               </div>
               <div className="text-sm">
                 <span className="text-slate-400">{lang === 'ko' ? '학습 가능 리포트:' : 'Valid for Learning:'} </span>
-                <span className={`font-bold ${canRunLearning ? 'text-green-400' : 'text-yellow-400'}`}>
+                <span className="font-bold text-green-400">
                   {validReportsCount}
                 </span>
               </div>
@@ -480,11 +494,14 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
                   </>
                 )}
               </button>
-              {validReportsCount >= 100 && canRunLearning && (
+              {canRunLearning && (
                 <button
                   onClick={runLearningCycle}
                   disabled={isRunningLearning}
                   className="px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg font-semibold hover:from-teal-600 hover:to-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  title={lang === 'ko' 
+                    ? `학습 가능한 리포트: ${validReportsCount}개` 
+                    : `Valid reports for learning: ${validReportsCount}`}
                 >
                   {isRunningLearning ? (
                     <>
@@ -498,6 +515,12 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
                     </>
                   )}
                 </button>
+              )}
+              {!canRunLearning && (
+                <div className="px-4 py-2 bg-slate-700/50 text-slate-400 rounded-lg font-semibold border border-slate-600">
+                  <i className="ri-information-line mr-2"></i>
+                  {lang === 'ko' ? '학습 가능한 리포트가 없습니다' : 'No reports available for learning'}
+                </div>
               )}
             </div>
           </div>
