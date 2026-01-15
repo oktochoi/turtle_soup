@@ -65,7 +65,7 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
       });
       
       // users 테이블에서 nickname 가져오기
-      const { data: userData } = await supabase
+      const { data: userData } = await supabaseClient
         .from('users')
         .select('nickname')
         .eq('id', user.id)
