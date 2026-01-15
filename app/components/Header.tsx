@@ -171,12 +171,20 @@ export default function Header() {
             ) : user ? (
               <div className="flex items-center gap-3 ml-2">
                 {isAdmin && (
-                  <Link href={getLocalizedPath('/admin/reports')}>
-                    <button className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30">
-                      <i className="ri-shield-user-line mr-1"></i>
-                      {currentLang === 'ko' ? '관리자' : 'Admin'}
-                    </button>
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link href={getLocalizedPath('/admin/reports')}>
+                      <button className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30">
+                        <i className="ri-shield-user-line mr-1"></i>
+                        {currentLang === 'ko' ? '신고 관리' : 'Reports'}
+                      </button>
+                    </Link>
+                    <Link href={getLocalizedPath('/admin/bug-reports')}>
+                      <button className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-purple-500/20 text-purple-400 border border-purple-500/50 hover:bg-purple-500/30">
+                        <i className="ri-bug-line mr-1"></i>
+                        {currentLang === 'ko' ? '버그 리포트' : 'Bug Reports'}
+                      </button>
+                    </Link>
+                  </div>
                 )}
                 {gameUserId && (
                   <Link href={getLocalizedPath(`/profile/${gameUserId}`)}>
@@ -245,15 +253,26 @@ export default function Header() {
                 ) : user ? (
                   <>
                     {isAdmin && (
-                      <Link
-                        href={getLocalizedPath('/admin/reports')}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        <button className="w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30 mb-2">
-                          <i className="ri-shield-user-line mr-2"></i>
-                          {currentLang === 'ko' ? '관리자' : 'Admin'}
-                        </button>
-                      </Link>
+                      <>
+                        <Link
+                          href={getLocalizedPath('/admin/reports')}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          <button className="w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30 mb-2">
+                            <i className="ri-shield-user-line mr-2"></i>
+                            {currentLang === 'ko' ? '신고 관리' : 'Reports'}
+                          </button>
+                        </Link>
+                        <Link
+                          href={getLocalizedPath('/admin/bug-reports')}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          <button className="w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left bg-purple-500/20 text-purple-400 border border-purple-500/50 hover:bg-purple-500/30 mb-2">
+                            <i className="ri-bug-line mr-2"></i>
+                            {currentLang === 'ko' ? '버그 리포트' : 'Bug Reports'}
+                          </button>
+                        </Link>
+                      </>
                     )}
                     {gameUserId && (
                       <Link

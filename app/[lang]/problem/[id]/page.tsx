@@ -13,6 +13,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import UserLabel from '@/components/UserLabel';
 import { useTranslations } from '@/hooks/useTranslations';
 import { createNotification } from '@/lib/notifications';
+import { checkIfLearnedError } from '@/lib/check-learned-error';
 
 export default function ProblemPage({ params }: { params: Promise<{ lang: string; id: string }> }) {
   const resolvedParams = use(params);
@@ -369,6 +370,40 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       return;
     }
 
+    // 기대한 답변 필수 검증
+    if (!bugReportExpected || !bugReportExpected.trim()) {
+      if (typeof window !== 'undefined' && (window as any).toastError) {
+        (window as any).toastError(lang === 'ko' ? '기대한 답변을 입력해주세요.' : 'Please enter the expected answer.');
+      } else {
+        alert(lang === 'ko' ? '기대한 답변을 입력해주세요.' : 'Please enter the expected answer.');
+      }
+      return;
+    }
+
+    // 학습된 오류인지 확인
+    const learnedErrorCheck = await checkIfLearnedError(
+      question || '',
+      answer || '',
+      bugReportExpected.trim(),
+      bugReportType,
+      similarityScore !== null ? similarityScore : undefined
+    );
+
+    if (learnedErrorCheck.isLearnedError) {
+      if (typeof window !== 'undefined' && (window as any).toastInfo) {
+        (window as any).toastInfo(
+          lang === 'ko' 
+            ? '이 오류는 이미 학습되어 수정되었습니다. AI가 이제 올바르게 동작할 것입니다.'
+            : 'This error has already been learned and fixed. The AI should now work correctly.'
+        );
+      } else {
+        alert(lang === 'ko' 
+          ? '이 오류는 이미 학습되어 수정되었습니다. AI가 이제 올바르게 동작할 것입니다.'
+          : 'This error has already been learned and fixed. The AI should now work correctly.');
+      }
+      // 학습된 오류라도 리포트는 저장 (통계용)
+    }
+
     try {
       // 게스트 사용자 식별자 가져오기
       let userIdentifier: string | null = null;
@@ -388,7 +423,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
         bug_type: bugReportType,
         question_text: question || (bugReportType === 'wrong_similarity' ? userGuess : null) || null,
         ai_suggested_answer: answer || (bugReportType === 'wrong_similarity' ? 'similarity_error' : null) || null,
-        expected_answer: bugReportExpected.trim() || null,
+        expected_answer: bugReportExpected.trim(),
         user_answer: userGuess?.trim() || null,
         correct_answer: problem.answer,
         similarity_score: similarityScore !== null ? Number(similarityScore.toFixed(2)) : null,
@@ -2611,15 +2646,22 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
 
               <div>
                 <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-                  {lang === 'ko' ? '기대한 답변 (선택사항)' : 'Expected Answer (Optional)'}
+                  {lang === 'ko' ? '기대한 답변' : 'Expected Answer'}
+                  <span className="text-red-400 ml-1">*</span>
                 </label>
                 <input
                   type="text"
                   value={bugReportExpected}
                   onChange={(e) => setBugReportExpected(e.target.value)}
                   placeholder={lang === 'ko' ? '예: 예, 아니요, 무관 등' : 'e.g., Yes, No, Irrelevant'}
+                  required
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
                 />
+                <p className="text-xs text-slate-400 mt-1">
+                  {lang === 'ko' 
+                    ? 'AI가 어떤 답변을 해야 했는지 입력해주세요.' 
+                    : 'Please enter what answer the AI should have given.'}
+                </p>
               </div>
 
               <div className="flex gap-3 pt-2">
