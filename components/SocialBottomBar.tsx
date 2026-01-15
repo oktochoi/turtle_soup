@@ -38,9 +38,9 @@ export default function SocialBottomBar() {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/50 shadow-lg">
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex items-center justify-center gap-4 sm:gap-6">
+    <footer className="w-full bg-slate-900 border-t border-slate-700/50 mt-auto">
+      <div className="container mx-auto px-4 py-6 sm:py-8">
+        <div className="flex items-center justify-center gap-4 sm:gap-6 md:gap-8">
           {socialLinks.map((link) => (
             <a
               key={link.name}
@@ -49,17 +49,17 @@ export default function SocialBottomBar() {
               rel="noopener noreferrer"
               className={`
                 flex flex-col items-center justify-center
-                px-3 sm:px-4 py-2
+                px-4 sm:px-5 py-3 sm:py-4
                 rounded-lg
                 transition-all duration-200
                 ${link.bgColor}
                 ${link.color}
                 group
-                min-w-[60px] sm:min-w-[80px]
+                min-w-[70px] sm:min-w-[90px]
               `}
               title={link.name}
             >
-              <i className={`${link.icon} text-xl sm:text-2xl mb-1 transition-transform group-hover:scale-110`}></i>
+              <i className={`${link.icon} text-2xl sm:text-3xl mb-2 transition-transform group-hover:scale-110`}></i>
               <span className="text-xs sm:text-sm font-medium opacity-80 group-hover:opacity-100">
                 {link.name}
               </span>
@@ -67,7 +67,7 @@ export default function SocialBottomBar() {
           ))}
         </div>
       </div>
-    </div>
+    </footer>
   );
 }
 

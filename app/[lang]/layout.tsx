@@ -102,11 +102,13 @@ export default async function LangLayout({
       <link rel="alternate" hrefLang="ko" href={`${siteUrl}/ko`} />
       <link rel="alternate" hrefLang="en" href={`${siteUrl}/en`} />
       <link rel="alternate" hrefLang="x-default" href={`${siteUrl}/ko`} />
-      <Header />
-      <div className="pb-20 sm:pb-24">
-        {children}
+      <div className="flex flex-col min-h-screen">
+        <Header />
+        <main className="flex-1">
+          {children}
+        </main>
+        <SocialBottomBar />
       </div>
-      <SocialBottomBar />
       <ToastContainer />
       <AnalyticsGate />
     </ErrorBoundary>

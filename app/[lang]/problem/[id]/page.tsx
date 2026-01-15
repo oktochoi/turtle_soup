@@ -36,6 +36,8 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   const [comments, setComments] = useState<ProblemComment[]>([]);
   const [questionText, setQuestionText] = useState('');
   const [commentText, setCommentText] = useState('');
+  const [isSpoiler, setIsSpoiler] = useState(false);
+  const [revealedSpoilers, setRevealedSpoilers] = useState<Set<string>>(new Set());
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [suggestedAnswer, setSuggestedAnswer] = useState<'yes' | 'no' | 'irrelevant' | 'decisive' | null>(null);
   const [localQuestions, setLocalQuestions] = useState<Array<{ question: string; answer: string; timestamp: number }>>([]);
@@ -58,6 +60,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   const { user } = useAuth();
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
+  const [editCommentIsSpoiler, setEditCommentIsSpoiler] = useState(false);
   const [problemKnowledge, setProblemKnowledge] = useState<ProblemKnowledge | ProblemKnowledgeEn | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [hasSubmittedAnswer, setHasSubmittedAnswer] = useState(false);
@@ -1001,11 +1004,13 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
           nickname: nickname,
           text: commentText.trim(),
           user_id: user.id,
+          is_spoiler: isSpoiler,
         });
 
       if (error) throw error;
 
       setCommentText('');
+      setIsSpoiler(false);
       loadComments();
 
       // 문제 작성자에게 알림 생성
@@ -1032,6 +1037,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   const handleEditComment = (comment: ProblemComment) => {
     setEditingCommentId(comment.id);
     setEditCommentText(comment.text);
+    setEditCommentIsSpoiler(comment.is_spoiler || false);
   };
 
   const handleSaveEditComment = async () => {
@@ -1040,7 +1046,10 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
     try {
       const { error } = await supabase
         .from('problem_comments')
-        .update({ text: editCommentText.trim() })
+        .update({ 
+          text: editCommentText.trim(),
+          is_spoiler: editCommentIsSpoiler,
+        })
         .eq('id', editingCommentId)
         .eq('user_id', user.id); // 본인 댓글만 수정 가능
 
@@ -1048,6 +1057,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
 
       setEditingCommentId(null);
       setEditCommentText('');
+      setEditCommentIsSpoiler(false);
       loadComments();
     } catch (error) {
       console.error('댓글 수정 오류:', error);
@@ -1058,6 +1068,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   const handleCancelEditComment = () => {
     setEditingCommentId(null);
     setEditCommentText('');
+    setEditCommentIsSpoiler(false);
   };
 
   const handleDeleteComment = async (commentId: string) => {
@@ -2198,6 +2209,23 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 h-24 resize-none text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
               maxLength={500}
             />
+            <div className="flex items-center gap-2 mb-2">
+              <input
+                type="checkbox"
+                id="spoiler-checkbox"
+                checked={isSpoiler}
+                onChange={(e) => setIsSpoiler(e.target.checked)}
+                disabled={!user}
+                className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-red-500 focus:ring-red-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <label 
+                htmlFor="spoiler-checkbox" 
+                className={`text-xs sm:text-sm cursor-pointer ${!user ? 'opacity-50 cursor-not-allowed' : 'text-slate-300 hover:text-red-400'} transition-colors flex items-center gap-1`}
+              >
+                <i className="ri-eye-off-line text-red-400"></i>
+                {lang === 'ko' ? '스포일러 표시' : 'Mark as spoiler'}
+              </label>
+            </div>
             <button
               onClick={handleSubmitComment}
               disabled={!commentText.trim() || !user}
@@ -2270,6 +2298,22 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                           rows={3}
                           maxLength={500}
                         />
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="edit-spoiler-checkbox"
+                            checked={editCommentIsSpoiler}
+                            onChange={(e) => setEditCommentIsSpoiler(e.target.checked)}
+                            className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-red-500 focus:ring-red-500 focus:ring-2"
+                          />
+                          <label 
+                            htmlFor="edit-spoiler-checkbox" 
+                            className="text-xs sm:text-sm cursor-pointer text-slate-300 hover:text-red-400 transition-colors flex items-center gap-1"
+                          >
+                            <i className="ri-eye-off-line text-red-400"></i>
+                            {lang === 'ko' ? '스포일러 표시' : 'Mark as spoiler'}
+                          </label>
+                        </div>
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-slate-500">{editCommentText.length} / 500</span>
                           <div className="flex items-center gap-2">
@@ -2290,7 +2334,32 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                         </div>
                       </div>
                     ) : (
-                      <p className="text-xs sm:text-sm text-white break-words whitespace-pre-wrap">{comment.text}</p>
+                      <div>
+                        {comment.is_spoiler && !revealedSpoilers.has(comment.id) ? (
+                          <div
+                            onClick={() => {
+                              setRevealedSpoilers(prev => new Set(prev).add(comment.id));
+                            }}
+                            className="bg-red-500/20 border-2 border-red-500/50 border-dashed rounded-lg p-4 cursor-pointer hover:bg-red-500/30 transition-all group"
+                          >
+                            <div className="flex items-center justify-center gap-2 text-red-400">
+                              <i className="ri-eye-off-line text-lg group-hover:scale-110 transition-transform"></i>
+                              <span className="text-xs sm:text-sm font-semibold">
+                                {lang === 'ko' ? '스포일러가 포함된 댓글입니다. 클릭하여 보기' : 'Spoiler comment. Click to reveal'}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className={`text-xs sm:text-sm break-words whitespace-pre-wrap ${comment.is_spoiler ? 'text-red-300' : 'text-white'}`}>
+                            {comment.text}
+                            {comment.is_spoiler && (
+                              <span className="ml-2 text-xs text-red-400 opacity-70">
+                                <i className="ri-eye-off-line"></i>
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                 );
