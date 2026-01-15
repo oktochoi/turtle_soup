@@ -64,8 +64,14 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         userId: user.id 
       });
       
-      // author 필드 자동 설정 (user_id 기반 또는 이메일)
-      const authorName = user.email?.split('@')[0] || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User');
+      // users 테이블에서 nickname 가져오기
+      const { data: userData } = await supabase
+        .from('users')
+        .select('nickname')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      const authorName = userData?.nickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User');
       
       // 힌트 필터링 (빈 문자열 제거, 최대 3개)
       const validHints = hints.filter(h => h && h.trim()).slice(0, 3);

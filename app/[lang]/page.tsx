@@ -213,12 +213,19 @@ export default function Home() {
         if (gameUser) {
           userId = gameUser.id;
         } else {
+          // users 테이블에서 nickname 가져오기
+          const { data: userData } = await supabaseClient
+            .from('users')
+            .select('nickname')
+            .eq('id', user.id)
+            .maybeSingle();
+          
           // game_users에 없으면 생성
           const { data: newGameUser } = await supabaseClient
             .from('game_users')
             .insert({
               auth_user_id: user.id,
-              nickname: user.user_metadata?.full_name || user.email?.split('@')[0] || (lang === 'ko' ? `사용자${user.id.substring(0, 8)}` : `User${user.id.substring(0, 8)}`),
+              nickname: userData?.nickname || user.user_metadata?.full_name || (lang === 'ko' ? `사용자${user.id.substring(0, 8)}` : `User${user.id.substring(0, 8)}`),
             })
             .select()
             .single();

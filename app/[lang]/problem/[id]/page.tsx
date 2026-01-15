@@ -206,12 +206,20 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       // 닉네임 가져오기
       let nickname = '';
       if (user) {
+        // users 테이블에서 nickname 가져오기
+        const { data: userData } = await supabase
+          .from('users')
+          .select('nickname')
+          .eq('id', user.id)
+          .maybeSingle();
+        
         const { data: gameUser } = await supabase
           .from('game_users')
           .select('nickname')
           .eq('auth_user_id', user.id)
           .maybeSingle();
-        nickname = gameUser?.nickname || user.email?.split('@')[0] || `User${user.id.substring(0, 6)}`;
+        
+        nickname = userData?.nickname || gameUser?.nickname || `User${user.id.substring(0, 6)}`;
       } else {
         // 게스트인 경우 임시 닉네임
         nickname = lang === 'ko' ? `게스트${Math.random().toString(36).substring(2, 6)}` : `Guest${Math.random().toString(36).substring(2, 6)}`;
@@ -995,7 +1003,14 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
         .eq('auth_user_id', user.id)
         .maybeSingle();
 
-      const nickname = gameUser?.nickname || user.email?.split('@')[0] || t.common.anonymous;
+      // users 테이블에서 nickname 가져오기
+      const { data: userData } = await supabase
+        .from('users')
+        .select('nickname')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      const nickname = userData?.nickname || gameUser?.nickname || t.common.anonymous;
 
       const { error } = await supabase
         .from('problem_comments')

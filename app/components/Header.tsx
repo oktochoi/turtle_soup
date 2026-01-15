@@ -60,8 +60,8 @@ export default function Header() {
           if (userProfile?.nickname) {
             setUserNickname(userProfile.nickname);
           } else {
-            // 닉네임이 없으면 이메일 앞부분 사용
-            setUserNickname(user.email?.split('@')[0] || '사용자');
+            // 닉네임이 없으면 기본값 사용
+            setUserNickname(currentLang === 'ko' ? '사용자' : 'User');
           }
         }
       } catch (error: any) {
@@ -69,7 +69,7 @@ export default function Header() {
         if (error?.name !== 'AbortError' && error?.message?.includes('aborted') === false) {
           console.error('프로필 로드 오류:', error);
         }
-        setUserNickname(user.email?.split('@')[0] || '사용자');
+        setUserNickname(currentLang === 'ko' ? '사용자' : 'User');
       }
     };
 
@@ -194,7 +194,7 @@ export default function Header() {
                   </Link>
                 )}
                 <span className="text-sm text-slate-300 font-medium">
-                  {userNickname || user.email?.split('@')[0] || (currentLang === 'ko' ? '사용자' : 'User')}{currentLang === 'ko' ? '님' : ''}
+                  {userNickname || (currentLang === 'ko' ? '사용자' : 'User')}{currentLang === 'ko' ? '님' : ''}
                 </span>
                 <button
                   onClick={handleSignOut}
@@ -285,7 +285,7 @@ export default function Header() {
                       </Link>
                     )}
                     <div className="px-4 py-2 text-sm text-slate-300 font-medium">
-                      {userNickname || user.email?.split('@')[0] || (currentLang === 'ko' ? '사용자' : 'User')}{currentLang === 'ko' ? '님' : ''}
+                      {userNickname || (currentLang === 'ko' ? '사용자' : 'User')}{currentLang === 'ko' ? '님' : ''}
                     </div>
                     <button
                       onClick={() => {

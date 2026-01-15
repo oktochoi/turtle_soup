@@ -356,7 +356,14 @@ export default function PostDetailPage({ params }: { params: Promise<{ lang: str
         .eq('auth_user_id', user.id)
         .maybeSingle();
 
-      const author = gameUser?.nickname || user.email?.split('@')[0] || user.id.substring(0, 8);
+      // users 테이블에서 nickname 가져오기
+      const { data: userData } = await supabase
+        .from('users')
+        .select('nickname')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      const author = userData?.nickname || gameUser?.nickname || user.id.substring(0, 8);
 
       const { error } = await supabase
         .from('post_comments')

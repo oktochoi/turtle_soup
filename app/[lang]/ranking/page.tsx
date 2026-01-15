@@ -354,7 +354,7 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
                     </span>
                     <div>
                       <p className="text-lg font-semibold text-white flex items-center gap-2">
-                        {(myRank.data as ProblemSolveRanking).nickname || (myRank.data as ProblemSolveRanking).email?.split('@')[0] || (myRank.data as ProblemSolveRanking).user_id.substring(0, 8)}
+                        {(myRank.data as ProblemSolveRanking).nickname || (myRank.data as ProblemSolveRanking).user_id.substring(0, 8)}
                         <span className="text-xs bg-teal-500/30 text-teal-300 px-2 py-0.5 rounded">나</span>
                       </p>
                       <p className="text-sm text-slate-400">
@@ -392,7 +392,7 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
                             </span>
                             <div>
                               <p className="text-lg font-semibold text-white">
-                                {userItem.nickname || userItem.email?.split('@')[0] || userItem.user_id.substring(0, 8)}
+                                {userItem.nickname || userItem.user_id.substring(0, 8)}
                               </p>
                               <p className="text-sm text-slate-400">
                                 {userItem.solve_count} {t.ranking.problems}

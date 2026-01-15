@@ -113,8 +113,15 @@ export default function CreatePostPage({ params }: { params: Promise<{ lang: str
 
     setIsSubmitting(true);
     try {
-      // 작성자 이름 결정 (이메일 앞부분 또는 user.id)
-      const author = user.email?.split('@')[0] || user.id.substring(0, 8);
+      // users 테이블에서 nickname 가져오기
+      const supabaseClient = createClient();
+      const { data: userData } = await supabaseClient
+        .from('users')
+        .select('nickname')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      const author = userData?.nickname || user.id.substring(0, 8);
 
       // 공지사항은 관리자만 작성 가능
       const isNotice = category === 'notice';
