@@ -1,12 +1,13 @@
 'use client';
 
 import { use } from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useTranslations } from '@/hooks/useTranslations';
+import { createClient } from '@/lib/supabase/client';
 
 type Category = {
   id: string;
@@ -21,11 +22,14 @@ export default function CreatePostPage({ params }: { params: Promise<{ lang: str
   const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
   const router = useRouter();
   const { user } = useAuth();
+  const supabase = createClient();
   const t = useTranslations();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState<string>('free');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
 
   const CATEGORIES: Category[] = [
     { id: 'notice', label: t.community.notice, icon: 'ri-megaphone-line', color: 'from-red-500 to-pink-500' },
@@ -71,6 +75,14 @@ export default function CreatePostPage({ params }: { params: Promise<{ lang: str
       // 작성자 이름 결정 (이메일 앞부분 또는 user.id)
       const author = user.email?.split('@')[0] || user.id.substring(0, 8);
 
+      // 공지사항은 관리자만 작성 가능
+      const isNotice = category === 'notice';
+      if (isNotice && !isAdmin) {
+        alert(lang === 'ko' ? '공지사항은 관리자만 작성할 수 있습니다.' : 'Only admins can create notice posts.');
+        setIsSubmitting(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('posts')
         .insert({
@@ -80,6 +92,7 @@ export default function CreatePostPage({ params }: { params: Promise<{ lang: str
           user_id: user.id,
           category: category,
           lang: currentLang,
+          is_notice: isNotice,
         })
         .select()
         .single();
@@ -152,21 +165,42 @@ export default function CreatePostPage({ params }: { params: Promise<{ lang: str
               {t.community.selectCategoryLabel}
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setCategory(cat.id)}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    category === cat.id
-                      ? `border-blue-500 bg-gradient-to-r ${cat.color} text-white`
-                      : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600'
-                  }`}
-                >
-                  <i className={`${cat.icon} text-2xl mb-2 block`}></i>
-                  <span className="text-sm font-semibold">{cat.label}</span>
-                </button>
-              ))}
+              {CATEGORIES.map((cat) => {
+                // 공지사항은 관리자만 선택 가능
+                const isNotice = cat.id === 'notice';
+                const isDisabled = isNotice && !isAdmin;
+                
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      if (!isDisabled) {
+                        setCategory(cat.id);
+                      } else {
+                        alert(lang === 'ko' ? '공지사항은 관리자만 작성할 수 있습니다.' : 'Only admins can create notice posts.');
+                      }
+                    }}
+                    disabled={isDisabled}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      category === cat.id
+                        ? `border-blue-500 bg-gradient-to-r ${cat.color} text-white`
+                        : isDisabled
+                        ? 'border-slate-800 bg-slate-900 text-slate-600 cursor-not-allowed opacity-50'
+                        : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600'
+                    }`}
+                    title={isDisabled ? (lang === 'ko' ? '관리자만 작성 가능' : 'Admin only') : ''}
+                  >
+                    <i className={`${cat.icon} text-2xl mb-2 block`}></i>
+                    <span className="text-sm font-semibold">{cat.label}</span>
+                    {isNotice && !isAdmin && (
+                      <span className="text-xs text-slate-500 block mt-1">
+                        {lang === 'ko' ? '(관리자 전용)' : '(Admin only)'}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

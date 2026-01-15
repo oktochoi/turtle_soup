@@ -22,6 +22,7 @@ type Post = {
   view_count: number;
   like_count: number;
   comment_count: number;
+  is_notice: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -208,28 +209,57 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
       filtered = filtered.filter(post => new Date(post.created_at) >= cutoffDate);
     }
 
-    // 정렬
-    switch (sortOption) {
-      case 'latest':
-        filtered.sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-        break;
-      case 'popular':
-        filtered.sort((a, b) => 
-          (b.like_count || 0) - (a.like_count || 0)
-        );
-        break;
-      case 'most_comments':
-        filtered.sort((a, b) => 
-          (b.comment_count || 0) - (a.comment_count || 0)
-        );
-        break;
-      case 'most_views':
-        filtered.sort((a, b) => 
-          (b.view_count || 0) - (a.view_count || 0)
-        );
-        break;
+    // 전체 카테고리일 때 공지사항을 최상단에 표시
+    if (selectedCategory === 'all') {
+      // 공지사항과 일반 게시글 분리
+      const notices = filtered.filter(post => post.is_notice);
+      const regularPosts = filtered.filter(post => !post.is_notice);
+      
+      // 공지사항은 최신순 정렬
+      notices.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      
+      // 일반 게시글 정렬
+      switch (sortOption) {
+        case 'latest':
+          regularPosts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          break;
+        case 'popular':
+          regularPosts.sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
+          break;
+        case 'most_comments':
+          regularPosts.sort((a, b) => (b.comment_count || 0) - (a.comment_count || 0));
+          break;
+        case 'most_views':
+          regularPosts.sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
+          break;
+      }
+      
+      // 공지사항을 맨 위에, 그 다음 일반 게시글
+      filtered = [...notices, ...regularPosts];
+    } else {
+      // 특정 카테고리 선택 시 일반 정렬
+      switch (sortOption) {
+        case 'latest':
+          filtered.sort((a, b) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+          break;
+        case 'popular':
+          filtered.sort((a, b) => 
+            (b.like_count || 0) - (a.like_count || 0)
+          );
+          break;
+        case 'most_comments':
+          filtered.sort((a, b) => 
+            (b.comment_count || 0) - (a.comment_count || 0)
+          );
+          break;
+        case 'most_views':
+          filtered.sort((a, b) => 
+            (b.view_count || 0) - (a.view_count || 0)
+          );
+          break;
+      }
     }
 
     setFilteredPosts(filtered);
@@ -410,12 +440,21 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
                     className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-4 sm:p-5 lg:p-6 border border-slate-700/50 hover:border-blue-500/50 active:border-blue-500 transition-all cursor-pointer hover:shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1 active:translate-y-0 touch-manipulation"
                   >
                     <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                      {post.is_notice && (
+                        <span className="px-2 py-1 rounded-md text-xs font-semibold bg-gradient-to-r from-red-500 to-pink-500 text-white whitespace-nowrap animate-pulse">
+                          <i className="ri-megaphone-fill mr-1"></i>
+                          {lang === 'ko' ? '공지사항' : 'Notice'}
+                        </span>
+                      )}
                       <span className={`px-2 py-1 rounded-md text-xs font-semibold bg-gradient-to-r ${categoryInfo.color} text-white whitespace-nowrap`}>
                         <i className={`${categoryInfo.icon} mr-1`}></i>
                         {categoryInfo.label}
                       </span>
                     </div>
-                    <h2 className="text-base sm:text-lg lg:text-xl font-bold text-white mb-2 sm:mb-3 line-clamp-2 leading-tight">
+                    <h2 className={`text-base sm:text-lg lg:text-xl font-bold mb-2 sm:mb-3 line-clamp-2 leading-tight ${
+                      post.is_notice ? 'text-red-400' : 'text-white'
+                    }`}>
+                      {post.is_notice && <i className="ri-pushpin-fill mr-2 text-red-500"></i>}
                       {post.title}
                     </h2>
                     <p className="text-xs sm:text-sm lg:text-base text-slate-300 mb-3 sm:mb-4 line-clamp-2 sm:line-clamp-3 leading-relaxed">

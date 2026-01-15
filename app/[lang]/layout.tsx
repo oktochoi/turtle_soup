@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Analytics } from "@vercel/analytics/next";
 import Header from "../components/Header";
 import LangScript from "@/components/LangScript";
 import ToastContainer from "@/components/Toast";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AnalyticsGate } from "@/components/AnalyticsGate";
 import { getMessages, type Locale, isValidLocale, defaultLocale } from "@/lib/i18n";
 import { notFound } from "next/navigation";
 
@@ -104,7 +104,7 @@ export default async function LangLayout({
       <Header />
       {children}
       <ToastContainer />
-      <Analytics />
+      <AnalyticsGate />
     </ErrorBoundary>
   );
 }
