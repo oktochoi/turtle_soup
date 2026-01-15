@@ -36,6 +36,11 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
   const [reportReason, setReportReason] = useState('');
   const [reportDescription, setReportDescription] = useState('');
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  
+  // 닉네임 수정 관련 state
+  const [isEditingNickname, setIsEditingNickname] = useState(false);
+  const [newNickname, setNewNickname] = useState('');
+  const [isSavingNickname, setIsSavingNickname] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -139,6 +144,15 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
     }
   };
 
+  // Toast 헬퍼 함수
+  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+    if (typeof window !== 'undefined' && (window as any)[`toast${type.charAt(0).toUpperCase() + type.slice(1)}`]) {
+      (window as any)[`toast${type.charAt(0).toUpperCase() + type.slice(1)}`](message);
+    } else {
+      alert(message);
+    }
+  };
+
   const handleSelectTitle = async (titleId: number) => {
     if (!progress) return;
 
@@ -152,9 +166,10 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
 
       setSelectedTitleId(titleId);
       setProgress({ ...progress, selected_title_id: titleId });
+      showToast(lang === 'ko' ? '칭호가 변경되었습니다.' : 'Title has been changed.', 'success');
     } catch (error) {
       console.error('칭호 선택 오류:', error);
-      alert(t.profile.selectTitleFail);
+      showToast(t.profile.selectTitleFail, 'error');
     }
   };
 
@@ -289,10 +304,55 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
         <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 sm:p-8 border border-slate-700/50 mb-6">
           <div className="flex items-center gap-4 mb-6">
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-2xl sm:text-3xl font-bold">
-              {user.nickname.charAt(0).toUpperCase()}
+              {(isEditingNickname ? newNickname : user.nickname).charAt(0).toUpperCase()}
             </div>
             <div className="flex-1">
-              <h1 className="text-2xl sm:text-3xl font-bold mb-2">{user.nickname}</h1>
+              {isEditingNickname ? (
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={newNickname}
+                    onChange={(e) => setNewNickname(e.target.value)}
+                    className="text-2xl sm:text-3xl font-bold bg-slate-700 border border-slate-600 rounded-lg px-3 py-1 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    maxLength={20}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSaveNickname();
+                      } else if (e.key === 'Escape') {
+                        handleCancelEditNickname();
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={handleSaveNickname}
+                    disabled={isSavingNickname}
+                    className="px-3 py-1 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-all text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSavingNickname ? (lang === 'ko' ? '저장 중...' : 'Saving...') : (lang === 'ko' ? '저장' : 'Save')}
+                  </button>
+                  <button
+                    onClick={handleCancelEditNickname}
+                    className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all text-sm font-semibold"
+                  >
+                    {lang === 'ko' ? '취소' : 'Cancel'}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 mb-2">
+                  <h1 className="text-2xl sm:text-3xl font-bold">{user.nickname}</h1>
+                  {/* 자기 자신의 프로필일 때만 수정 버튼 표시 */}
+                  {((user.auth_user_id && currentUser?.id === user.auth_user_id) || (!user.auth_user_id && !currentUser)) && (
+                    <button
+                      onClick={handleEditNickname}
+                      className="p-1.5 text-slate-400 hover:text-teal-400 transition-colors"
+                      title={lang === 'ko' ? '닉네임 수정' : 'Edit nickname'}
+                    >
+                      <i className="ri-edit-line text-lg"></i>
+                    </button>
+                  )}
+                </div>
+              )}
               <LevelBadge level={progress.level} size="lg" />
             </div>
             {/* 신고하기 버튼 (자기 자신이 아닐 때만 표시) */}
