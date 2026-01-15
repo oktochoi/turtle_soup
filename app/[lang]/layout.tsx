@@ -4,6 +4,7 @@ import LangScript from "@/components/LangScript";
 import ToastContainer from "@/components/Toast";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AnalyticsGate } from "@/components/AnalyticsGate";
+import SocialBottomBar from "@/components/SocialBottomBar";
 import { getMessages, type Locale, isValidLocale, defaultLocale } from "@/lib/i18n";
 import { notFound } from "next/navigation";
 
@@ -102,7 +103,10 @@ export default async function LangLayout({
       <link rel="alternate" hrefLang="en" href={`${siteUrl}/en`} />
       <link rel="alternate" hrefLang="x-default" href={`${siteUrl}/ko`} />
       <Header />
-      {children}
+      <div className="pb-20 sm:pb-24">
+        {children}
+      </div>
+      <SocialBottomBar />
       <ToastContainer />
       <AnalyticsGate />
     </ErrorBoundary>
