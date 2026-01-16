@@ -8,7 +8,6 @@ import SocialBottomBar from "@/components/SocialBottomBar";
 import { getMessages, type Locale, isValidLocale, defaultLocale } from "@/lib/i18n";
 import { notFound } from "next/navigation";
 import { measurePageLoad, monitorMemoryUsage } from "@/lib/performance-monitor";
-import Script from "next/script"; // ✅ 추가
 
 export async function generateMetadata({
   params,
@@ -124,17 +123,12 @@ export default async function LangLayout({
         <Header />
         <main className="flex-1">{children}</main>
         <SocialBottomBar />
+        
       </div>
 
       <ToastContainer />
       <AnalyticsGate />
       <PerformanceMonitor />
-
-      {/* ✅ Adsterra / EffectiveGateCPM Script */}
-      <Script
-        src="https://pl28489651.effectivegatecpm.com/03/8a/81/038a81177705a94b1b3a016e57699e3f.js"
-        strategy="afterInteractive"
-      />
     </ErrorBoundary>
   );
 }
