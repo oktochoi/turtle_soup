@@ -10,6 +10,8 @@ import { useTranslations } from '@/hooks/useTranslations';
 import { RoomCardSkeleton } from '@/components/Skeleton';
 import { RoomsEmptyState } from '@/components/EmptyState';
 import { handleError } from '@/lib/error-handler';
+import AdNativeBanner from '@/components/ads/AdNativeBanner';
+import AdBanner300x250 from '@/components/ads/AdBanner300x250';
 
 type Room = {
   code: string;
@@ -583,6 +585,22 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
               </div>
             ))}
             </div>
+
+            {/* 광고: 방 리스트 중간 (5개 방 후) */}
+            {paginatedRooms.length > 5 && currentPage === 1 && (
+              <div className="my-6">
+                <div className="flex flex-col items-center gap-4">
+                  <AdNativeBanner
+                    position="rooms-middle"
+                    className="w-full max-w-md"
+                    cardStyle={true}
+                  />
+                  <div className="hidden sm:block">
+                    <AdBanner300x250 position="rooms-middle" />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* 페이지네이션 */}
             {totalPages > 1 && (

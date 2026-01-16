@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import React, { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -2246,7 +2246,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
               forceMobileAspectRatio={true}
             />
             
-            {/* Banner 300x250 (데스크톱에서만 또는 모바일에서 1회) */}
+            {/* Banner 300x250 (데스크톱에서만) */}
             <div className="hidden sm:block">
               <AdBanner300x250
                 position="problem-after-answer"
@@ -2310,12 +2310,33 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
             {comments.length === 0 ? (
               <p className="text-slate-400 text-xs sm:text-sm">{t.problem.noComments}</p>
             ) : (
-              comments.map(comment => {
+              <>
+                {/* 광고: 댓글 목록 상단 */}
+                <div className="my-4">
+                  <AdNativeBanner
+                    position="problem-comments-top"
+                    className="w-full max-w-md mx-auto"
+                    cardStyle={true}
+                  />
+                </div>
+                {comments.map((comment, index) => {
+                  // 댓글 중간에 광고 삽입 (5개 댓글 후)
+                  const showMiddleAd = index === 5 && comments.length > 5;
                 const isOwner = user && comment.user_id === user.id;
                 const isEditingThis = editingCommentId === comment.id;
                 
                 return (
-                  <div key={comment.id} className="bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700">
+                  <React.Fragment key={comment.id}>
+                    {showMiddleAd && (
+                      <div className="my-6 w-full">
+                        <AdNativeBanner
+                          position="problem-comments-middle"
+                          className="w-full max-w-md mx-auto"
+                          cardStyle={true}
+                        />
+                      </div>
+                    )}
+                    <div className="bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700">
                     <div className="flex items-start justify-between mb-2 gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         {commentGameUserIds.get(comment.id) ? (
@@ -2431,9 +2452,11 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                         )}
                       </div>
                     )}
-                  </div>
+                    </div>
+                  </React.Fragment>
                 );
-              })
+              })}
+              </>
             )}
           </div>
         </div>

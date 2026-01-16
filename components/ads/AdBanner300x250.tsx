@@ -42,8 +42,21 @@ export default function AdBanner300x250({
 
   // 광고 스크립트 로딩
   useEffect(() => {
-    if (!isAdsEnabled() || !adConfig.banner300x250.enabled) return;
-    if (!isLoaded || scriptLoadedRef.current) return;
+    if (!isAdsEnabled() || !adConfig.banner300x250.enabled) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[AdBanner300x250] 광고 비활성화 상태:', {
+          isAdsEnabled: isAdsEnabled(),
+          bannerEnabled: adConfig.banner300x250.enabled,
+        });
+      }
+      return;
+    }
+    if (!isLoaded || scriptLoadedRef.current) {
+      if (process.env.NODE_ENV === 'development' && !isLoaded) {
+        console.log('[AdBanner300x250] 아직 로딩되지 않음, isLoaded:', isLoaded);
+      }
+      return;
+    }
 
     // 스크립트가 이미 로드되었는지 확인
     const existingScript = document.querySelector(
@@ -55,7 +68,7 @@ export default function AdBanner300x250({
       return;
     }
 
-    // atOptions 설정
+    // atOptions 설정 (스크립트가 로드되기 전에 설정)
     (window as any).atOptions = {
       key: adConfig.banner300x250.key,
       format: 'iframe',
@@ -68,6 +81,20 @@ export default function AdBanner300x250({
     const script = document.createElement('script');
     script.src = adConfig.banner300x250.scriptUrl;
     script.async = true;
+    script.onload = () => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[AdBanner300x250:${position}] 스크립트 로드 완료`);
+      }
+      // 스크립트가 로드된 후 약간의 지연을 두고 광고 삽입 확인
+      setTimeout(() => {
+        const adContainer = document.getElementById(`ad-banner-300x250-${position}`);
+        if (adContainer && adContainer.children.length === 0) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`[AdBanner300x250:${position}] 광고가 삽입되지 않았습니다. 스크립트가 컨테이너를 찾지 못했을 수 있습니다.`);
+          }
+        }
+      }, 1000);
+    };
     script.onerror = () => {
       console.warn(`[AdBanner300x250:${position}] 스크립트 로딩 실패`);
     };
@@ -76,7 +103,25 @@ export default function AdBanner300x250({
     scriptLoadedRef.current = true;
   }, [isLoaded, position]);
 
+  // 디버깅: 환경 변수 확인
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[AdBanner300x250] 디버그 정보:', {
+        isAdsEnabled: isAdsEnabled(),
+        bannerEnabled: adConfig.banner300x250.enabled,
+        envVar: process.env.NEXT_PUBLIC_ADS_ENABLED,
+        bannerEnvVar: process.env.NEXT_PUBLIC_BANNER_300X250_ENABLED,
+      });
+    }
+  }, []);
+
   if (!isAdsEnabled() || !adConfig.banner300x250.enabled) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[AdBanner300x250] 광고 비활성화:', {
+        isAdsEnabled: isAdsEnabled(),
+        bannerEnabled: adConfig.banner300x250.enabled,
+      });
+    }
     return null;
   }
 

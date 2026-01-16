@@ -59,8 +59,21 @@ export default function AdNativeBanner({
 
   // 광고 스크립트 로딩
   useEffect(() => {
-    if (!isAdsEnabled() || !adConfig.nativeBanner.enabled) return;
-    if (!isLoaded || scriptLoadedRef.current) return;
+    if (!isAdsEnabled() || !adConfig.nativeBanner.enabled) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[AdNativeBanner] 광고 비활성화 상태:', {
+          isAdsEnabled: isAdsEnabled(),
+          nativeBannerEnabled: adConfig.nativeBanner.enabled,
+        });
+      }
+      return;
+    }
+    if (!isLoaded || scriptLoadedRef.current) {
+      if (process.env.NODE_ENV === 'development' && !isLoaded) {
+        console.log('[AdNativeBanner] 아직 로딩되지 않음, isLoaded:', isLoaded);
+      }
+      return;
+    }
 
     // 스크립트가 이미 로드되었는지 확인
     const existingScript = document.querySelector(
@@ -78,6 +91,24 @@ export default function AdNativeBanner({
     script.src = adConfig.nativeBanner.scriptUrl;
     script.async = true;
     script.setAttribute('data-cfasync', 'false');
+    script.onload = () => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[AdNativeBanner:${position}] 스크립트 로드 완료`);
+      }
+      // 스크립트가 로드된 후 약간의 지연을 두고 광고 삽입 확인
+      setTimeout(() => {
+        const adContainer = document.getElementById(adConfig.nativeBanner.containerId);
+        if (adContainer && adContainer.children.length === 0) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`[AdNativeBanner:${position}] 광고가 삽입되지 않았습니다. 컨테이너 ID: ${adConfig.nativeBanner.containerId}`);
+          }
+        } else if (adContainer) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`[AdNativeBanner:${position}] 광고 삽입 확인됨`);
+          }
+        }
+      }, 1000);
+    };
     script.onerror = () => {
       console.warn(`[AdNativeBanner:${position}] 스크립트 로딩 실패`);
     };
@@ -98,7 +129,25 @@ export default function AdNativeBanner({
     }
   }, [isLoaded]);
 
+  // 디버깅: 환경 변수 확인
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[AdNativeBanner] 디버그 정보:', {
+        isAdsEnabled: isAdsEnabled(),
+        nativeBannerEnabled: adConfig.nativeBanner.enabled,
+        envVar: process.env.NEXT_PUBLIC_ADS_ENABLED,
+        nativeBannerEnvVar: process.env.NEXT_PUBLIC_NATIVEBANNER_ENABLED,
+      });
+    }
+  }, []);
+
   if (!isAdsEnabled() || !adConfig.nativeBanner.enabled) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[AdNativeBanner] 광고 비활성화:', {
+        isAdsEnabled: isAdsEnabled(),
+        nativeBannerEnabled: adConfig.nativeBanner.enabled,
+      });
+    }
     return null;
   }
 

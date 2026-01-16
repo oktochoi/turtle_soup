@@ -4,7 +4,9 @@
 
 export const adConfig = {
   // 광고 활성화 여부
-  enabled: process.env.NEXT_PUBLIC_ADS_ENABLED === 'true',
+  // 개발 환경에서는 기본적으로 활성화 (환경 변수가 없어도)
+  enabled: process.env.NEXT_PUBLIC_ADS_ENABLED !== 'false' && 
+           (process.env.NEXT_PUBLIC_ADS_ENABLED === 'true' || process.env.NODE_ENV === 'development'),
   
   // 개별 광고 타입 활성화
   popunder: {
@@ -26,7 +28,8 @@ export const adConfig = {
   },
   
   nativeBanner: {
-    enabled: process.env.NEXT_PUBLIC_NATIVEBANNER_ENABLED === 'true',
+    enabled: process.env.NEXT_PUBLIC_NATIVEBANNER_ENABLED !== 'false' && 
+             (process.env.NEXT_PUBLIC_NATIVEBANNER_ENABLED === 'true' || process.env.NODE_ENV === 'development'),
     scriptUrl: 'https://pl28489713.effectivegatecpm.com/e55815afb3e5d73fa76db3038a7eff13/invoke.js',
     containerId: 'container-e55815afb3e5d73fa76db3038a7eff13',
     // 모바일에서 권장 비율 (4:1)
@@ -52,7 +55,8 @@ export const adConfig = {
   // 광고 로딩 전략
   loadingStrategy: {
     // 뷰포트 진입 시 로딩 (IntersectionObserver)
-    useIntersectionObserver: true,
+    // 개발 환경에서는 즉시 로딩
+    useIntersectionObserver: process.env.NODE_ENV !== 'development',
     // 뷰포트 진입 전 대기 시간 (ms)
     intersectionDelay: 100,
   },

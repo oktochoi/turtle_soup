@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { getMessages, type Locale, isValidLocale, defaultLocale } from '@/lib/i18n';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import AdNativeBanner from '@/components/ads/AdNativeBanner';
+import AdBanner300x250 from '@/components/ads/AdBanner300x250';
 
 export async function generateMetadata({
   params,
@@ -162,6 +164,15 @@ export default async function GuidePage({
               </ol>
             </section>
 
+            {/* 광고: 오프라인 모드 후 */}
+            <div className="my-6 sm:my-8">
+              <AdNativeBanner
+                position="guide-after-offline"
+                className="w-full max-w-md mx-auto"
+                cardStyle={true}
+              />
+            </div>
+
             <section>
               <h2 className="text-2xl font-bold text-teal-400 mb-4">
                 {isKo ? '문제 생성하기' : 'Creating Problems'}
@@ -228,6 +239,15 @@ export default async function GuidePage({
               </ul>
             </section>
 
+            {/* 광고: 게임 팁 후 */}
+            <div className="my-6 sm:my-8">
+              <AdNativeBanner
+                position="guide-after-tips"
+                className="w-full max-w-md mx-auto"
+                cardStyle={true}
+              />
+            </div>
+
             <section>
               <h2 className="text-2xl font-bold text-teal-400 mb-4">
                 {isKo ? '랭킹 시스템' : 'Ranking System'}
@@ -278,6 +298,20 @@ export default async function GuidePage({
                 </li>
               </ul>
             </section>
+
+            {/* 광고: 출석체크 및 경험치 후 */}
+            <div className="my-6 sm:my-8">
+              <div className="flex flex-col items-center gap-4">
+                <AdNativeBanner
+                  position="guide-after-xp"
+                  className="w-full max-w-md"
+                  cardStyle={true}
+                />
+                <div className="hidden sm:block">
+                  <AdBanner300x250 position="guide-after-xp" />
+                </div>
+              </div>
+            </div>
 
             <div className="mt-8 pt-6 border-t border-slate-700">
               <div className="flex flex-wrap gap-3">

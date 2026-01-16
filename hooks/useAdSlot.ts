@@ -92,8 +92,11 @@ export function useAdSlot(options: UseAdSlotOptions = {}): UseAdSlotReturn {
 
     // IntersectionObserver를 사용하지 않는 경우 즉시 로딩
     if (!useIntersectionObserver) {
-      loadAd();
-      return;
+      // 약간의 지연을 두어 DOM이 완전히 렌더링되도록
+      const timeout = setTimeout(() => {
+        loadAd();
+      }, 100);
+      return () => clearTimeout(timeout);
     }
 
     // IntersectionObserver 설정
