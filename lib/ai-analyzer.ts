@@ -1573,6 +1573,14 @@ async function extractQuestionConceptsV9(
   return { qConceptsExact, qConceptsExpanded };
 }
 
+// (D) Token common ratio 계산 헬퍼
+function calculateTokenCommonRatio(question: string, knowledge: ProblemKnowledge): number {
+  const qTokens = new Set([...tokenizeKo(question), ...tokenizeEn(question)]);
+  const contentTokens = new Set([...knowledge.contentTokens, ...knowledge.answerTokens]);
+  const commonTokens = [...qTokens].filter(t => contentTokens.has(t) || contentTokens.has(toCanonical(t)));
+  return qTokens.size > 0 ? commonTokens.length / qTokens.size : 0;
+}
+
 // 문맥적 불일치 감지 (V9+)
 // 질문과 문제 내용/답변 간의 문맥적 거리를 계산하여 irrelevant 판단 보조
 function detectContextualMismatch(
