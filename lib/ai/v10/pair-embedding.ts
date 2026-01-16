@@ -4,7 +4,15 @@
  */
 
 import { ProblemKnowledge } from '../../ai-analyzer';
-import { getEmbedding, cosineSimilarity, selectTopKSentences, CONFIG } from '../../ai-analyzer';
+import { getEmbedding, cosineSimilarity, selectTopKSentences } from '../../ai-analyzer';
+
+/**
+ * V10 Pair Embedding Config
+ */
+const PAIR_EMBEDDING_CONFIG = {
+  TOP_K_CONTENT: 1, // Pair embedding은 Top1만 사용
+  TOP_K_ANSWER: 1,
+};
 
 /**
  * Pair embedding 결과
