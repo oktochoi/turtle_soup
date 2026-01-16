@@ -86,10 +86,37 @@ export default function AdSocialBar({
       return;
     }
 
+    // 컨테이너가 DOM에 있는지 확인
+    const containerId = `ad-social-bar-${position}`;
+    const adContainer = document.getElementById(containerId);
+    if (!adContainer) {
+      console.warn(`[AdSocialBar:${position}] 컨테이너를 찾을 수 없습니다: ${containerId}`);
+      // 컨테이너가 없어도 스크립트는 로드 (스크립트가 자동으로 찾을 수 있음)
+    }
+
     // 스크립트 로딩
     const script = document.createElement('script');
     script.src = adConfig.socialBar.scriptUrl;
     script.async = true;
+    script.setAttribute('data-cfasync', 'false');
+    script.onload = () => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[AdSocialBar:${position}] 스크립트 로드 완료, 컨테이너 ID: ${containerId}`);
+      }
+      // 스크립트가 로드된 후 약간의 지연을 두고 광고 삽입 확인
+      setTimeout(() => {
+        const container = document.getElementById(containerId);
+        if (container && container.children.length === 0) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`[AdSocialBar:${position}] 광고가 삽입되지 않았습니다. 컨테이너 ID: ${containerId}`);
+          }
+        } else if (container && container.children.length > 0) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`[AdSocialBar:${position}] 광고 삽입 확인됨`);
+          }
+        }
+      }, 2000);
+    };
     script.onerror = () => {
       console.warn(`[AdSocialBar:${position}] 스크립트 로딩 실패`);
     };

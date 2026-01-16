@@ -86,6 +86,14 @@ export default function AdNativeBanner({
       return;
     }
 
+    // 컨테이너가 DOM에 있는지 확인
+    const containerId = adConfig.nativeBanner.containerId;
+    const adContainer = document.getElementById(containerId);
+    if (!adContainer) {
+      console.warn(`[AdNativeBanner:${position}] 컨테이너를 찾을 수 없습니다: ${containerId}`);
+      // 컨테이너가 없어도 스크립트는 로드 (스크립트가 자동으로 찾을 수 있음)
+    }
+
     // 스크립트 로딩
     const script = document.createElement('script');
     script.src = adConfig.nativeBanner.scriptUrl;
@@ -93,21 +101,25 @@ export default function AdNativeBanner({
     script.setAttribute('data-cfasync', 'false');
     script.onload = () => {
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[AdNativeBanner:${position}] 스크립트 로드 완료`);
+        console.log(`[AdNativeBanner:${position}] 스크립트 로드 완료, 컨테이너 ID: ${containerId}`);
       }
       // 스크립트가 로드된 후 약간의 지연을 두고 광고 삽입 확인
       setTimeout(() => {
-        const adContainer = document.getElementById(adConfig.nativeBanner.containerId);
-        if (adContainer && adContainer.children.length === 0) {
+        const container = document.getElementById(containerId);
+        if (container && container.children.length === 0) {
           if (process.env.NODE_ENV === 'development') {
-            console.warn(`[AdNativeBanner:${position}] 광고가 삽입되지 않았습니다. 컨테이너 ID: ${adConfig.nativeBanner.containerId}`);
+            console.warn(`[AdNativeBanner:${position}] 광고가 삽입되지 않았습니다. 컨테이너 ID: ${containerId}`);
           }
-        } else if (adContainer) {
+        } else if (container && container.children.length > 0) {
           if (process.env.NODE_ENV === 'development') {
             console.log(`[AdNativeBanner:${position}] 광고 삽입 확인됨`);
           }
+        } else if (!container) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`[AdNativeBanner:${position}] 컨테이너를 찾을 수 없습니다: ${containerId}`);
+          }
         }
-      }, 1000);
+      }, 2000);
     };
     script.onerror = () => {
       console.warn(`[AdNativeBanner:${position}] 스크립트 로딩 실패`);

@@ -157,20 +157,53 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
       let eventsToday = { count: 0 };
       let eventsWeek = { count: 0 };
       try {
+        // 오늘 날짜 계산 (UTC 기준)
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        
         const [eventsTotalRes, eventsTodayRes, eventsWeekRes] = await Promise.all([
-          supabase.from('events').select('id', { count: 'exact', head: true }),
+          supabase.from('events').select('*', { count: 'exact', head: true }),
           supabase
             .from('events')
-            .select('id', { count: 'exact', head: true })
-            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+            .select('*', { count: 'exact', head: true })
+            .gte('created_at', todayStart.toISOString()),
           supabase
             .from('events')
-            .select('id', { count: 'exact', head: true })
-            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
+            .select('*', { count: 'exact', head: true })
+            .gte('created_at', weekStart.toISOString()),
         ]);
-        if (!eventsTotalRes.error) eventsTotal = { count: eventsTotalRes.count ?? 0 };
-        if (!eventsTodayRes.error) eventsToday = { count: eventsTodayRes.count ?? 0 };
-        if (!eventsWeekRes.error) eventsWeek = { count: eventsWeekRes.count ?? 0 };
+        
+        // count 값 확인 및 디버깅
+        if (process.env.NODE_ENV === 'development') {
+          console.log('이벤트 통계 디버그:', {
+            total: { count: eventsTotalRes.count, error: eventsTotalRes.error },
+            today: { count: eventsTodayRes.count, error: eventsTodayRes.error },
+            week: { count: eventsWeekRes.count, error: eventsWeekRes.error },
+          });
+        }
+        
+        // count가 숫자 타입인지 확인하고 설정
+        if (!eventsTotalRes.error) {
+          const totalCount = typeof eventsTotalRes.count === 'number' ? eventsTotalRes.count : 0;
+          eventsTotal = { count: totalCount };
+        } else {
+          console.warn('이벤트 전체 통계 오류:', eventsTotalRes.error);
+        }
+        
+        if (!eventsTodayRes.error) {
+          const todayCount = typeof eventsTodayRes.count === 'number' ? eventsTodayRes.count : 0;
+          eventsToday = { count: todayCount };
+        } else {
+          console.warn('이벤트 오늘 통계 오류:', eventsTodayRes.error);
+        }
+        
+        if (!eventsWeekRes.error) {
+          const weekCount = typeof eventsWeekRes.count === 'number' ? eventsWeekRes.count : 0;
+          eventsWeek = { count: weekCount };
+        } else {
+          console.warn('이벤트 이번 주 통계 오류:', eventsWeekRes.error);
+        }
       } catch (err) {
         console.warn('이벤트 통계를 가져올 수 없습니다:', err);
       }
@@ -178,12 +211,43 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
       // 전환율 계산 (함수가 있는 경우에만)
       let conversionRate = 0;
       try {
-        const { data: conversionData, error: conversionError } = await supabase.rpc('get_conversion_funnel');
-        if (!conversionError && conversionData && conversionData.length > 0) {
-          conversionRate = conversionData[conversionData.length - 1]?.conversion_rate || 0;
+        // 함수는 DATE 타입을 받지만, Supabase RPC는 파라미터를 명시적으로 전달해야 함
+        // 빈 객체로 호출하면 기본값(NULL)이 사용됨
+        const { data: conversionData, error: conversionError } = await supabase.rpc('get_conversion_funnel', {});
+        
+        if (conversionError) {
+          // 400 에러는 함수가 없거나 파라미터 문제일 수 있음
+          if (conversionError.code === 'PGRST116' || conversionError.code === '42883') {
+            // 함수가 없거나 찾을 수 없음 - 무시
+            if (process.env.NODE_ENV === 'development') {
+              console.log('전환율 함수를 사용할 수 없습니다 (함수가 없거나 권한 없음)');
+            }
+          } else {
+            console.warn('전환율 계산 함수 오류:', conversionError);
+          }
+        } else if (conversionData && conversionData.length > 0) {
+          // 마지막 단계(정답 제출)의 전환율 사용
+          const lastStep = conversionData[conversionData.length - 1];
+          conversionRate = Number(lastStep?.conversion_rate) || 0;
+          
+          if (process.env.NODE_ENV === 'development') {
+            console.log('전환율 데이터:', conversionData, '최종 전환율:', conversionRate);
+          }
+        } else {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('전환율 데이터가 없습니다 (이벤트 데이터 없음)');
+          }
         }
-      } catch (err) {
-        console.warn('전환율 계산 함수를 사용할 수 없습니다:', err);
+      } catch (err: any) {
+        // 네트워크 오류나 기타 예외 처리
+        if (err?.code === 'PGRST116' || err?.message?.includes('function') || err?.message?.includes('not found')) {
+          // 함수가 없음 - 무시
+          if (process.env.NODE_ENV === 'development') {
+            console.log('전환율 함수를 사용할 수 없습니다 (함수 없음)');
+          }
+        } else {
+          console.warn('전환율 계산 함수를 사용할 수 없습니다:', err);
+        }
       }
 
       // AI 학습 통계 (테이블이 있는 경우에만)

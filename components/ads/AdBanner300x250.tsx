@@ -69,6 +69,10 @@ export default function AdBanner300x250({
     }
 
     // atOptions 설정 (스크립트가 로드되기 전에 설정)
+    // 전역 atOptions를 설정하여 스크립트가 이를 읽을 수 있도록 함
+    if (!(window as any).atOptions) {
+      (window as any).atOptions = {};
+    }
     (window as any).atOptions = {
       key: adConfig.banner300x250.key,
       format: 'iframe',
@@ -77,23 +81,40 @@ export default function AdBanner300x250({
       params: {},
     };
 
+    // 컨테이너가 DOM에 있는지 확인
+    const containerId = `ad-banner-300x250-${position}`;
+    const adContainer = document.getElementById(containerId);
+    if (!adContainer) {
+      console.warn(`[AdBanner300x250:${position}] 컨테이너를 찾을 수 없습니다: ${containerId}`);
+      return;
+    }
+
     // 스크립트 로딩
     const script = document.createElement('script');
     script.src = adConfig.banner300x250.scriptUrl;
     script.async = true;
+    script.setAttribute('data-cfasync', 'false');
     script.onload = () => {
       if (process.env.NODE_ENV === 'development') {
         console.log(`[AdBanner300x250:${position}] 스크립트 로드 완료`);
       }
       // 스크립트가 로드된 후 약간의 지연을 두고 광고 삽입 확인
       setTimeout(() => {
-        const adContainer = document.getElementById(`ad-banner-300x250-${position}`);
-        if (adContainer && adContainer.children.length === 0) {
+        const container = document.getElementById(containerId);
+        if (container && container.children.length === 0) {
           if (process.env.NODE_ENV === 'development') {
-            console.warn(`[AdBanner300x250:${position}] 광고가 삽입되지 않았습니다. 스크립트가 컨테이너를 찾지 못했을 수 있습니다.`);
+            console.warn(`[AdBanner300x250:${position}] 광고가 삽입되지 않았습니다. 컨테이너 ID: ${containerId}`);
+          }
+          // 스크립트가 자동으로 삽입하지 않으면 수동으로 트리거 시도
+          if ((window as any).atOptions && (window as any).atOptions.key === adConfig.banner300x250.key) {
+            console.log(`[AdBanner300x250:${position}] atOptions 설정 확인됨, 광고 삽입 대기 중...`);
+          }
+        } else if (container && container.children.length > 0) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`[AdBanner300x250:${position}] 광고 삽입 확인됨`);
           }
         }
-      }, 1000);
+      }, 2000);
     };
     script.onerror = () => {
       console.warn(`[AdBanner300x250:${position}] 스크립트 로딩 실패`);
