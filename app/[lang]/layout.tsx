@@ -123,7 +123,6 @@ export default async function LangLayout({
         <Header />
         <main className="flex-1">{children}</main>
         <SocialBottomBar />
-        
       </div>
 
       <ToastContainer />

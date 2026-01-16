@@ -38,6 +38,20 @@ type DashboardStats = {
     patterns_found: number;
     patterns_applied: number;
   };
+  bug_reports: {
+    total: number;
+    pending: number;
+    reviewed: number;
+    fixed: number;
+    rejected: number;
+  };
+  user_reports: {
+    total: number;
+    pending: number;
+    reviewed: number;
+    resolved: number;
+    dismissed: number;
+  };
 };
 
 export default function AdminDashboardPage({ params }: { params: Promise<{ lang: string }> }) {
@@ -138,43 +152,156 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
       const totalLikes = problemsLikes.data?.reduce((sum, p) => sum + (p.like_count || 0), 0) || 0;
       const totalViews = problemsViews.data?.reduce((sum, p) => sum + (p.view_count || 0), 0) || 0;
 
-      // 이벤트 통계
-      const [eventsTotal, eventsToday, eventsWeek] = await Promise.all([
-        supabase.from('events').select('id', { count: 'exact', head: true }),
-        supabase
-          .from('events')
-          .select('id', { count: 'exact', head: true })
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
-        supabase
-          .from('events')
-          .select('id', { count: 'exact', head: true })
-          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
-      ]);
+      // 이벤트 통계 (테이블이 있는 경우에만)
+      let eventsTotal = { count: 0 };
+      let eventsToday = { count: 0 };
+      let eventsWeek = { count: 0 };
+      try {
+        const [eventsTotalRes, eventsTodayRes, eventsWeekRes] = await Promise.all([
+          supabase.from('events').select('id', { count: 'exact', head: true }),
+          supabase
+            .from('events')
+            .select('id', { count: 'exact', head: true })
+            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+          supabase
+            .from('events')
+            .select('id', { count: 'exact', head: true })
+            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
+        ]);
+        if (!eventsTotalRes.error) eventsTotal = eventsTotalRes;
+        if (!eventsTodayRes.error) eventsToday = eventsTodayRes;
+        if (!eventsWeekRes.error) eventsWeek = eventsWeekRes;
+      } catch (err) {
+        console.warn('이벤트 통계를 가져올 수 없습니다:', err);
+      }
 
-      // 전환율 계산
-      const { data: conversionData } = await supabase.rpc('get_conversion_funnel');
-      const conversionRate = conversionData && conversionData.length > 0 
-        ? conversionData[conversionData.length - 1]?.conversion_rate || 0 
-        : 0;
+      // 전환율 계산 (함수가 있는 경우에만)
+      let conversionRate = 0;
+      try {
+        const { data: conversionData, error: conversionError } = await supabase.rpc('get_conversion_funnel');
+        if (!conversionError && conversionData && conversionData.length > 0) {
+          conversionRate = conversionData[conversionData.length - 1]?.conversion_rate || 0;
+        }
+      } catch (err) {
+        console.warn('전환율 계산 함수를 사용할 수 없습니다:', err);
+      }
 
-      // AI 학습 통계
-      const [aiReportsTotal, aiReportsValid, aiPatterns, aiPatternsApplied] = await Promise.all([
-        supabase
-          .from('ai_bug_reports')
-          .select('id', { count: 'exact', head: true }),
-        supabase
-          .from('ai_bug_reports')
-          .select('id', { count: 'exact', head: true })
-          .eq('ignore_for_learning', false)
-          .eq('studied', false),
-        supabase
-          .from('ai_learning_patterns')
-          .select('id', { count: 'exact', head: true }),
-        supabase
-          .from('ai_learning_patterns')
-          .select('id', { count: 'exact', head: true })
-          .eq('applied', true),
-      ]);
+      // AI 학습 통계 (테이블이 있는 경우에만)
+      let aiReportsTotal = { count: 0 };
+      let aiReportsValid = { count: 0 };
+      let aiPatterns = { count: 0 };
+      let aiPatternsApplied = { count: 0 };
+      try {
+        const [aiReportsTotalRes, aiReportsValidRes, aiPatternsRes, aiPatternsAppliedRes] = await Promise.all([
+          supabase
+            .from('ai_bug_reports')
+            .select('id', { count: 'exact', head: true }),
+          supabase
+            .from('ai_bug_reports')
+            .select('id', { count: 'exact', head: true })
+            .eq('ignore_for_learning', false)
+            .eq('studied', false),
+          supabase
+            .from('ai_learning_patterns')
+            .select('id', { count: 'exact', head: true }),
+          supabase
+            .from('ai_learning_patterns')
+            .select('id', { count: 'exact', head: true })
+            .eq('applied', true),
+        ]);
+        if (!aiReportsTotalRes.error) aiReportsTotal = aiReportsTotalRes;
+        if (!aiReportsValidRes.error) aiReportsValid = aiReportsValidRes;
+        if (!aiPatternsRes.error) aiPatterns = aiPatternsRes;
+        if (!aiPatternsAppliedRes.error) aiPatternsApplied = aiPatternsAppliedRes;
+      } catch (err) {
+        console.warn('AI 학습 통계를 가져올 수 없습니다:', err);
+      }
+
+      // 버그 리포트 통계
+      let bugReportsTotal = { count: 0 };
+      let bugReportsPending = { count: 0 };
+      let bugReportsReviewed = { count: 0 };
+      let bugReportsFixed = { count: 0 };
+      let bugReportsRejected = { count: 0 };
+      try {
+        const [bugReportsTotalRes, bugReportsPendingRes, bugReportsReviewedRes, bugReportsFixedRes, bugReportsRejectedRes] = await Promise.all([
+          supabase.from('ai_bug_reports').select('id', { count: 'exact', head: true }),
+          supabase.from('ai_bug_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+          supabase.from('ai_bug_reports').select('id', { count: 'exact', head: true }).eq('status', 'reviewed'),
+          supabase.from('ai_bug_reports').select('id', { count: 'exact', head: true }).eq('status', 'fixed'),
+          supabase.from('ai_bug_reports').select('id', { count: 'exact', head: true }).eq('status', 'rejected'),
+        ]);
+        if (bugReportsTotalRes.error) {
+          console.error('버그 리포트 전체 통계 오류:', bugReportsTotalRes.error);
+        } else {
+          bugReportsTotal = bugReportsTotalRes;
+        }
+        if (bugReportsPendingRes.error) {
+          console.error('버그 리포트 대기중 통계 오류:', bugReportsPendingRes.error);
+        } else {
+          bugReportsPending = bugReportsPendingRes;
+        }
+        if (bugReportsReviewedRes.error) {
+          console.error('버그 리포트 검토됨 통계 오류:', bugReportsReviewedRes.error);
+        } else {
+          bugReportsReviewed = bugReportsReviewedRes;
+        }
+        if (bugReportsFixedRes.error) {
+          console.error('버그 리포트 수정됨 통계 오류:', bugReportsFixedRes.error);
+        } else {
+          bugReportsFixed = bugReportsFixedRes;
+        }
+        if (bugReportsRejectedRes.error) {
+          console.error('버그 리포트 거부됨 통계 오류:', bugReportsRejectedRes.error);
+        } else {
+          bugReportsRejected = bugReportsRejectedRes;
+        }
+      } catch (err) {
+        console.error('버그 리포트 통계를 가져올 수 없습니다:', err);
+      }
+
+      // 사용자 신고 통계
+      let userReportsTotal = { count: 0 };
+      let userReportsPending = { count: 0 };
+      let userReportsReviewed = { count: 0 };
+      let userReportsResolved = { count: 0 };
+      let userReportsDismissed = { count: 0 };
+      try {
+        const [userReportsTotalRes, userReportsPendingRes, userReportsReviewedRes, userReportsResolvedRes, userReportsDismissedRes] = await Promise.all([
+          supabase.from('user_reports').select('id', { count: 'exact', head: true }),
+          supabase.from('user_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+          supabase.from('user_reports').select('id', { count: 'exact', head: true }).eq('status', 'reviewed'),
+          supabase.from('user_reports').select('id', { count: 'exact', head: true }).eq('status', 'resolved'),
+          supabase.from('user_reports').select('id', { count: 'exact', head: true }).eq('status', 'dismissed'),
+        ]);
+        if (userReportsTotalRes.error) {
+          console.error('사용자 신고 전체 통계 오류:', userReportsTotalRes.error);
+        } else {
+          userReportsTotal = userReportsTotalRes;
+        }
+        if (userReportsPendingRes.error) {
+          console.error('사용자 신고 대기중 통계 오류:', userReportsPendingRes.error);
+        } else {
+          userReportsPending = userReportsPendingRes;
+        }
+        if (userReportsReviewedRes.error) {
+          console.error('사용자 신고 검토됨 통계 오류:', userReportsReviewedRes.error);
+        } else {
+          userReportsReviewed = userReportsReviewedRes;
+        }
+        if (userReportsResolvedRes.error) {
+          console.error('사용자 신고 해결됨 통계 오류:', userReportsResolvedRes.error);
+        } else {
+          userReportsResolved = userReportsResolvedRes;
+        }
+        if (userReportsDismissedRes.error) {
+          console.error('사용자 신고 기각됨 통계 오류:', userReportsDismissedRes.error);
+        } else {
+          userReportsDismissed = userReportsDismissedRes;
+        }
+      } catch (err) {
+        console.error('사용자 신고 통계를 가져올 수 없습니다:', err);
+      }
 
       setStats({
         users: {
@@ -208,6 +335,20 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
           patterns_found: aiPatterns.count || 0,
           patterns_applied: aiPatternsApplied.count || 0,
         },
+        bug_reports: {
+          total: bugReportsTotal.count || 0,
+          pending: bugReportsPending.count || 0,
+          reviewed: bugReportsReviewed.count || 0,
+          fixed: bugReportsFixed.count || 0,
+          rejected: bugReportsRejected.count || 0,
+        },
+        user_reports: {
+          total: userReportsTotal.count || 0,
+          pending: userReportsPending.count || 0,
+          reviewed: userReportsReviewed.count || 0,
+          resolved: userReportsResolved.count || 0,
+          dismissed: userReportsDismissed.count || 0,
+        },
       });
     } catch (error) {
       handleError(error, '통계 로드', true);
@@ -238,9 +379,16 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
     );
   }
 
-  if (!stats) {
-    return null;
-  }
+  // stats가 없으면 기본값 사용
+  const displayStats = stats || {
+    users: { total: 0, active_today: 0, active_week: 0, active_month: 0 },
+    rooms: { total: 0, active: 0, created_today: 0, created_week: 0 },
+    problems: { total: 0, created_today: 0, created_week: 0, total_likes: 0, total_views: 0 },
+    events: { total: 0, today: 0, week: 0, conversion_rate: 0 },
+    ai_learning: { total_reports: 0, valid_for_learning: 0, patterns_found: 0, patterns_applied: 0 },
+    bug_reports: { total: 0, pending: 0, reviewed: 0, fixed: 0, rejected: 0 },
+    user_reports: { total: 0, pending: 0, reviewed: 0, resolved: 0, dismissed: 0 },
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
@@ -260,19 +408,19 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '전체' : 'Total'}</span>
-                <span className="text-2xl font-bold">{stats.users.total.toLocaleString()}</span>
+                <span className="text-2xl font-bold">{displayStats.users.total.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '오늘 가입' : 'Today'}</span>
-                <span className="text-xl font-semibold">{stats.users.active_today.toLocaleString()}</span>
+                <span className="text-xl font-semibold">{displayStats.users.active_today.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '이번 주' : 'This Week'}</span>
-                <span className="text-xl font-semibold">{stats.users.active_week.toLocaleString()}</span>
+                <span className="text-xl font-semibold">{displayStats.users.active_week.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '이번 달' : 'This Month'}</span>
-                <span className="text-xl font-semibold">{stats.users.active_month.toLocaleString()}</span>
+                <span className="text-xl font-semibold">{displayStats.users.active_month.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -286,19 +434,19 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '전체' : 'Total'}</span>
-                <span className="text-2xl font-bold">{stats.rooms.total.toLocaleString()}</span>
+                <span className="text-2xl font-bold">{displayStats.rooms.total.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '활성' : 'Active'}</span>
-                <span className="text-xl font-semibold text-green-400">{stats.rooms.active.toLocaleString()}</span>
+                <span className="text-xl font-semibold text-green-400">{displayStats.rooms.active.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '오늘 생성' : 'Created Today'}</span>
-                <span className="text-xl font-semibold">{stats.rooms.created_today.toLocaleString()}</span>
+                <span className="text-xl font-semibold">{displayStats.rooms.created_today.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '이번 주' : 'This Week'}</span>
-                <span className="text-xl font-semibold">{stats.rooms.created_week.toLocaleString()}</span>
+                <span className="text-xl font-semibold">{displayStats.rooms.created_week.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -312,23 +460,23 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '전체' : 'Total'}</span>
-                <span className="text-2xl font-bold">{stats.problems.total.toLocaleString()}</span>
+                <span className="text-2xl font-bold">{displayStats.problems.total.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '오늘 생성' : 'Created Today'}</span>
-                <span className="text-xl font-semibold">{stats.problems.created_today.toLocaleString()}</span>
+                <span className="text-xl font-semibold">{displayStats.problems.created_today.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '이번 주' : 'This Week'}</span>
-                <span className="text-xl font-semibold">{stats.problems.created_week.toLocaleString()}</span>
+                <span className="text-xl font-semibold">{displayStats.problems.created_week.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '총 좋아요' : 'Total Likes'}</span>
-                <span className="text-xl font-semibold text-pink-400">{stats.problems.total_likes.toLocaleString()}</span>
+                <span className="text-xl font-semibold text-pink-400">{displayStats.problems.total_likes.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '총 조회수' : 'Total Views'}</span>
-                <span className="text-xl font-semibold text-cyan-400">{stats.problems.total_views.toLocaleString()}</span>
+                <span className="text-xl font-semibold text-cyan-400">{displayStats.problems.total_views.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -342,19 +490,19 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '전체' : 'Total'}</span>
-                <span className="text-2xl font-bold">{stats.events.total.toLocaleString()}</span>
+                <span className="text-2xl font-bold">{displayStats.events.total.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '오늘' : 'Today'}</span>
-                <span className="text-xl font-semibold">{stats.events.today.toLocaleString()}</span>
+                <span className="text-xl font-semibold">{displayStats.events.today.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '이번 주' : 'This Week'}</span>
-                <span className="text-xl font-semibold">{stats.events.week.toLocaleString()}</span>
+                <span className="text-xl font-semibold">{displayStats.events.week.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '전환율' : 'Conversion Rate'}</span>
-                <span className="text-xl font-semibold text-green-400">{stats.events.conversion_rate.toFixed(2)}%</span>
+                <span className="text-xl font-semibold text-green-400">{displayStats.events.conversion_rate.toFixed(2)}%</span>
               </div>
             </div>
           </div>
@@ -368,43 +516,167 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '전체 리포트' : 'Total Reports'}</span>
-                <span className="text-2xl font-bold">{stats.ai_learning.total_reports.toLocaleString()}</span>
+                <span className="text-2xl font-bold">{displayStats.ai_learning.total_reports.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '학습 가능' : 'Valid for Learning'}</span>
-                <span className="text-xl font-semibold text-green-400">{stats.ai_learning.valid_for_learning.toLocaleString()}</span>
+                <span className="text-xl font-semibold text-green-400">{displayStats.ai_learning.valid_for_learning.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '발견된 패턴' : 'Patterns Found'}</span>
-                <span className="text-xl font-semibold">{stats.ai_learning.patterns_found.toLocaleString()}</span>
+                <span className="text-xl font-semibold">{displayStats.ai_learning.patterns_found.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{lang === 'ko' ? '적용된 패턴' : 'Patterns Applied'}</span>
-                <span className="text-xl font-semibold text-teal-400">{stats.ai_learning.patterns_applied.toLocaleString()}</span>
+                <span className="text-xl font-semibold text-teal-400">{displayStats.ai_learning.patterns_applied.toLocaleString()}</span>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* 버그 리포트 및 사용자 신고 요약 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-8">
+          {/* 버그 리포트 요약 */}
+          <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700/50 hover:border-red-500/50 transition-all">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-red-400">
+                <i className="ri-bug-line mr-2"></i>
+                {lang === 'ko' ? '버그 리포트' : 'Bug Reports'}
+              </h2>
+              <a
+                href={`/${lang}/admin/bug-reports`}
+                className="text-sm text-teal-400 hover:text-teal-300 transition-colors"
+              >
+                {lang === 'ko' ? '전체 보기' : 'View All'} <i className="ri-arrow-right-line"></i>
+              </a>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-slate-400">{lang === 'ko' ? '전체' : 'Total'}</span>
+                <span className="text-2xl font-bold">{displayStats.bug_reports.total.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">{lang === 'ko' ? '대기중' : 'Pending'}</span>
+                <span className="text-xl font-semibold text-yellow-400">{displayStats.bug_reports.pending.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">{lang === 'ko' ? '검토됨' : 'Reviewed'}</span>
+                <span className="text-xl font-semibold text-blue-400">{displayStats.bug_reports.reviewed.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">{lang === 'ko' ? '수정됨' : 'Fixed'}</span>
+                <span className="text-xl font-semibold text-green-400">{displayStats.bug_reports.fixed.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">{lang === 'ko' ? '거부됨' : 'Rejected'}</span>
+                <span className="text-xl font-semibold text-red-400">{displayStats.bug_reports.rejected.toLocaleString()}</span>
+              </div>
+            </div>
+            {displayStats.bug_reports.pending > 0 && (
+              <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <p className="text-sm text-yellow-400">
+                  <i className="ri-alert-line mr-2"></i>
+                  {lang === 'ko' 
+                    ? `${displayStats.bug_reports.pending}개의 대기중인 버그 리포트가 있습니다.`
+                    : `${displayStats.bug_reports.pending} bug reports are pending review.`}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* 사용자 신고 요약 */}
+          <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700/50 hover:border-orange-500/50 transition-all">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-orange-400">
+                <i className="ri-flag-line mr-2"></i>
+                {lang === 'ko' ? '사용자 신고' : 'User Reports'}
+              </h2>
+              <a
+                href={`/${lang}/admin/reports`}
+                className="text-sm text-teal-400 hover:text-teal-300 transition-colors"
+              >
+                {lang === 'ko' ? '전체 보기' : 'View All'} <i className="ri-arrow-right-line"></i>
+              </a>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-slate-400">{lang === 'ko' ? '전체' : 'Total'}</span>
+                <span className="text-2xl font-bold">{displayStats.user_reports.total.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">{lang === 'ko' ? '대기중' : 'Pending'}</span>
+                <span className="text-xl font-semibold text-yellow-400">{displayStats.user_reports.pending.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">{lang === 'ko' ? '검토됨' : 'Reviewed'}</span>
+                <span className="text-xl font-semibold text-blue-400">{displayStats.user_reports.reviewed.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">{lang === 'ko' ? '해결됨' : 'Resolved'}</span>
+                <span className="text-xl font-semibold text-green-400">{displayStats.user_reports.resolved.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">{lang === 'ko' ? '기각됨' : 'Dismissed'}</span>
+                <span className="text-xl font-semibold text-slate-400">{displayStats.user_reports.dismissed.toLocaleString()}</span>
+              </div>
+            </div>
+            {displayStats.user_reports.pending > 0 && (
+              <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <p className="text-sm text-yellow-400">
+                  <i className="ri-alert-line mr-2"></i>
+                  {lang === 'ko' 
+                    ? `${displayStats.user_reports.pending}개의 대기중인 사용자 신고가 있습니다.`
+                    : `${displayStats.user_reports.pending} user reports are pending review.`}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* 빠른 링크 */}
         <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700/50">
           <h2 className="text-xl font-bold mb-4">
+            <i className="ri-links-line mr-2"></i>
             {lang === 'ko' ? '빠른 링크' : 'Quick Links'}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <a
               href={`/${lang}/admin/bug-reports`}
-              className="p-4 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-all text-center"
+              className="p-4 bg-slate-700/50 hover:bg-red-500/20 border border-slate-600 hover:border-red-500/50 rounded-lg transition-all text-center group"
             >
-              <i className="ri-bug-line text-2xl mb-2 block text-red-400"></i>
-              <span className="text-sm">{lang === 'ko' ? '버그 리포트' : 'Bug Reports'}</span>
+              <i className="ri-bug-line text-3xl mb-2 block text-red-400 group-hover:scale-110 transition-transform"></i>
+              <span className="text-sm font-semibold">{lang === 'ko' ? '버그 리포트' : 'Bug Reports'}</span>
+              {displayStats.bug_reports.pending > 0 && (
+                <span className="block mt-1 text-xs text-yellow-400">
+                  {displayStats.bug_reports.pending} {lang === 'ko' ? '대기중' : 'pending'}
+                </span>
+              )}
             </a>
             <a
               href={`/${lang}/admin/reports`}
-              className="p-4 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-all text-center"
+              className="p-4 bg-slate-700/50 hover:bg-orange-500/20 border border-slate-600 hover:border-orange-500/50 rounded-lg transition-all text-center group"
             >
-              <i className="ri-flag-line text-2xl mb-2 block text-orange-400"></i>
-              <span className="text-sm">{lang === 'ko' ? '사용자 신고' : 'User Reports'}</span>
+              <i className="ri-flag-line text-3xl mb-2 block text-orange-400 group-hover:scale-110 transition-transform"></i>
+              <span className="text-sm font-semibold">{lang === 'ko' ? '사용자 신고' : 'User Reports'}</span>
+              {displayStats.user_reports.pending > 0 && (
+                <span className="block mt-1 text-xs text-yellow-400">
+                  {displayStats.user_reports.pending} {lang === 'ko' ? '대기중' : 'pending'}
+                </span>
+              )}
+            </a>
+            <a
+              href={`/${lang}/admin/dashboard`}
+              className="p-4 bg-slate-700/50 hover:bg-teal-500/20 border border-slate-600 hover:border-teal-500/50 rounded-lg transition-all text-center group"
+            >
+              <i className="ri-dashboard-line text-3xl mb-2 block text-teal-400 group-hover:scale-110 transition-transform"></i>
+              <span className="text-sm font-semibold">{lang === 'ko' ? '대시보드' : 'Dashboard'}</span>
+            </a>
+            <a
+              href={`/${lang}`}
+              className="p-4 bg-slate-700/50 hover:bg-slate-600 border border-slate-600 hover:border-slate-500 rounded-lg transition-all text-center group"
+            >
+              <i className="ri-home-line text-3xl mb-2 block text-slate-400 group-hover:scale-110 transition-transform"></i>
+              <span className="text-sm font-semibold">{lang === 'ko' ? '홈으로' : 'Home'}</span>
             </a>
           </div>
         </div>

@@ -583,29 +583,37 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
             }));
             setPlayers(newPlayers);
             
-            // 새 참가자 입장 알림 (호스트에게만)
-            if (isHost && payload.eventType === 'INSERT') {
+            // 새 참가자 입장 알림 - 채팅에 시스템 메시지 추가
+            if (payload.eventType === 'INSERT') {
               const newPlayer = payload.new as { nickname: string };
               if (newPlayer.nickname !== nickname) {
-                // 토스트 알림 (간단하게 alert 사용)
-                setTimeout(() => {
-                  alert(lang === 'ko' 
-                    ? `🎉 ${newPlayer.nickname}님이 참가했습니다!` 
-                    : `🎉 ${newPlayer.nickname} joined!`);
-                }, 300);
+                // 채팅에 시스템 메시지 추가
+                await supabase
+                  .from('room_chats')
+                  .insert({
+                    room_code: roomCode,
+                    nickname: 'SYSTEM',
+                    message: lang === 'ko' 
+                      ? `🎉 ${newPlayer.nickname}님이 방에 들어왔습니다.` 
+                      : `🎉 ${newPlayer.nickname} joined the room.`,
+                  });
               }
             }
             
-            // 참가자 퇴장 알림 (호스트에게만)
-            if (isHost && payload.eventType === 'DELETE') {
+            // 참가자 퇴장 알림 - 채팅에 시스템 메시지 추가
+            if (payload.eventType === 'DELETE') {
               const leftPlayer = payload.old as { nickname: string };
               if (leftPlayer.nickname !== nickname) {
-                // 토스트 알림
-                setTimeout(() => {
-                  alert(lang === 'ko' 
-                    ? `👋 ${leftPlayer.nickname}님이 나갔습니다.` 
-                    : `👋 ${leftPlayer.nickname} left.`);
-                }, 300);
+                // 채팅에 시스템 메시지 추가
+                await supabase
+                  .from('room_chats')
+                  .insert({
+                    room_code: roomCode,
+                    nickname: 'SYSTEM',
+                    message: lang === 'ko' 
+                      ? `👋 ${leftPlayer.nickname}님이 방에서 나갔습니다.` 
+                      : `👋 ${leftPlayer.nickname} left the room.`,
+                  });
               }
             }
           }

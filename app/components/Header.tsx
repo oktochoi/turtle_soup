@@ -85,14 +85,24 @@ export default function Header() {
 
       try {
         const supabase = createClient();
-        const { data: userData } = await supabase
+        const { data: userData, error } = await supabase
           .from('users')
           .select('is_admin')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116은 "no rows returned" 에러 (정상)
+          console.error('관리자 권한 확인 오류:', error.message || error);
+          setIsAdmin(false);
+          return;
+        }
 
         setIsAdmin(userData?.is_admin || false);
-      } catch (error) {
+      } catch (error: any) {
+        // AbortError는 무해한 에러이므로 무시
+        if (error?.name !== 'AbortError' && error?.message?.includes('aborted') === false) {
+          console.error('관리자 권한 확인 오류:', error?.message || error);
+        }
         setIsAdmin(false);
       }
     };
@@ -260,6 +270,15 @@ export default function Header() {
                   <>
                     {isAdmin && (
                       <>
+                        <Link
+                          href={getLocalizedPath('/admin/dashboard')}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          <button className="w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left bg-teal-500/20 text-teal-400 border border-teal-500/50 hover:bg-teal-500/30 mb-2">
+                            <i className="ri-dashboard-line mr-2"></i>
+                            {currentLang === 'ko' ? '대시보드' : 'Dashboard'}
+                          </button>
+                        </Link>
                         <Link
                           href={getLocalizedPath('/admin/reports')}
                           onClick={() => setIsMobileMenuOpen(false)}

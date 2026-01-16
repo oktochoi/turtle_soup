@@ -327,6 +327,22 @@ export default function ChatPanel({ roomCode, nickname, lang }: ChatPanelProps) 
         ) : (
           messages.map((msg) => {
             const isOwnMessage = msg.nickname === nickname;
+            const isSystemMessage = msg.nickname === 'SYSTEM';
+            
+            // 시스템 메시지 스타일
+            if (isSystemMessage) {
+              return (
+                <div
+                  key={msg.id}
+                  className="flex justify-center my-2"
+                >
+                  <div className="bg-slate-700/50 text-slate-400 text-xs px-3 py-1.5 rounded-full border border-slate-600/50">
+                    {msg.message}
+                  </div>
+                </div>
+              );
+            }
+            
             return (
               <div
                 key={msg.id}
