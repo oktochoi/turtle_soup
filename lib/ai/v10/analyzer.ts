@@ -7,7 +7,6 @@ import {
   JudgeResult,
   ProblemKnowledge,
   analyzeQuestionV8,
-  normalizeText,
   CONFIG,
   getEmbedding,
   selectTopKSentences,
@@ -25,10 +24,101 @@ import {
   normalizeNegationQuestion,
   detectContextualMismatch,
   calculateTokenCommonRatio,
-  tokenizeKo,
-  tokenizeEn,
-  toCanonical,
 } from '../../ai-analyzer';
+
+/**
+ * Helper: Normalize text (copied from ai-analyzer.ts)
+ */
+function normalizeText(text: string): string {
+  return (text ?? "")
+    .replace(/\u200B/g, "")
+    .replace(/[\u200C\u200D\uFEFF]/g, "")
+    .replace(/[""'’]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Helper: Rough stem Korean token (copied from ai-analyzer.ts)
+ */
+function roughStemKo(token: string): string {
+  let t = token.trim();
+  if (!t) return t;
+
+  t = t.replace(/[.,!?;:()[\]{}<>~`@#$%^&*_+=|\\/]/g, "");
+
+  t = t.replace(
+    /(으로|로|에서|에게|께|한테|부터|까지|보다|처럼|같이|만|도|는|은|이|가|을|를|의|와|과|랑|하고|나|이나|거나|라도|든지|조차|마저)$/g,
+    ""
+  );
+
+  t = t.replace(
+    /(했나요|했니|했어|했지|했습니까|합니까|인가요|인가|인가\?|나요|니|냐|죠|지|요|다|음)$/g,
+    ""
+  );
+
+  return t;
+}
+
+/**
+ * Helper: Tokenize Korean (copied from ai-analyzer.ts)
+ */
+function tokenizeKo(text: string): string[] {
+  const t = normalizeText(text).toLowerCase();
+  if (!t) return [];
+  const raw = t.split(/\s+/).filter(Boolean);
+
+  const tokens: string[] = [];
+  for (const r of raw) {
+    const s = roughStemKo(r);
+    if (!s) continue;
+    if (s.length < CONFIG.LEXICON.MIN_TOKEN_LEN) continue;
+    tokens.push(s);
+  }
+  return tokens.slice(0, CONFIG.LEXICON.MAX_TOKENS);
+}
+
+/**
+ * Helper: Tokenize English (copied from ai-analyzer.ts)
+ */
+function tokenizeEn(text: string): string[] {
+  const t = normalizeText(text).toLowerCase();
+  if (!t) return [];
+  const raw = t.split(/\s+/).filter(Boolean);
+
+  const tokens: string[] = [];
+  for (const r of raw) {
+    const cleaned = r.replace(/[.,!?;:()[\]{}<>~`@#$%^&*_+=|\\/]/g, "");
+    if (!cleaned) continue;
+    if (cleaned.length < CONFIG.LEXICON.MIN_TOKEN_LEN) continue;
+    tokens.push(cleaned);
+  }
+  return tokens.slice(0, CONFIG.LEXICON.MAX_TOKENS);
+}
+
+/**
+ * Helper: Canonical concept map (simplified version)
+ */
+const CANONICAL_MAP = new Map<string, string>([
+  ["살인자", "killer"],
+  ["범인", "culprit"],
+  ["가해자", "culprit"],
+  ["killer", "killer"],
+  ["culprit", "culprit"],
+  ["사람", "person"],
+  ["person", "person"],
+  ["집", "home"],
+  ["home", "home"],
+  ["학교", "school"],
+  ["school", "school"],
+]);
+
+/**
+ * Helper: To canonical (copied from ai-analyzer.ts)
+ */
+function toCanonical(token: string): string {
+  return CANONICAL_MAP.get(token) ?? token;
+}
 
 /**
  * Helper: Calculate domain match ratio
