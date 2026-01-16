@@ -4,7 +4,6 @@ import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { createClient } from '@/lib/supabase/client';
 import type { Problem, ProblemQuestion, ProblemComment } from '@/lib/types';
 import { buildProblemKnowledge, analyzeQuestionV8, calculateAnswerSimilarity, initializeModel, type ProblemKnowledge } from '@/lib/ai-analyzer';
 import { buildProblemKnowledge as buildProblemKnowledgeEn, analyzeQuestionV8 as analyzeQuestionV8En, calculateAnswerSimilarityEn, initializeModel as initializeModelEn, type ProblemKnowledge as ProblemKnowledgeEn } from '@/lib/ai-analyzer-en';
@@ -15,7 +14,6 @@ import { useTranslations } from '@/hooks/useTranslations';
 import { createNotification } from '@/lib/notifications';
 import { checkIfLearnedError } from '@/lib/check-learned-error';
 import JsonLd from '@/components/JsonLd';
-import NativeAd from '@/app/components/NativeAd';
 
 export default function ProblemPage({ params }: { params: Promise<{ lang: string; id: string }> }) {
   const resolvedParams = use(params);
@@ -2417,7 +2415,6 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
           </div>
         </div>
       </div>
-      <NativeAd />
 
       {/* 공유 모달 */}
       {showShareModal && (

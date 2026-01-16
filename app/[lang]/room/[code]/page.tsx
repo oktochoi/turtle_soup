@@ -14,7 +14,6 @@ import GuessInput from './GuessInput';
 import HostAnswerInbox from './HostAnswerInbox';
 import GameResultModal from './GameResultModal';
 import ChatPanel from './ChatPanel';
-import NativeAd from '@/app/components/NativeAd';
 
 type LocalQuestion = {
   id: string;
@@ -1741,7 +1740,6 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
             )}
           </div>
         </div>
-        <NativeAd />
 
       </div>
       {(gameEnded || userWon) && (

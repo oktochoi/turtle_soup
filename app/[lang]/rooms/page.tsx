@@ -10,7 +10,6 @@ import { useTranslations } from '@/hooks/useTranslations';
 import { RoomCardSkeleton } from '@/components/Skeleton';
 import { RoomsEmptyState } from '@/components/EmptyState';
 import { handleError } from '@/lib/error-handler';
-import NativeAd from '@/app/components/NativeAd';
 
 type Room = {
   code: string;
@@ -635,8 +634,6 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
           </>
         )}
       </div>
-      <NativeAd />
-
 
       {/* 비밀번호 입력 모달 */}
       {showPasswordModal && (

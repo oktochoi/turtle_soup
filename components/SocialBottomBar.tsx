@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 
 export default function SocialBottomBar() {
   const pathname = usePathname();
@@ -40,31 +41,60 @@ export default function SocialBottomBar() {
   return (
     <footer className="w-full bg-slate-900 border-t border-slate-700/50 mt-auto">
       <div className="container mx-auto px-4 py-6 sm:py-8">
-        <div className="flex items-center justify-center gap-4 sm:gap-6 md:gap-8">
-          {socialLinks.map((link) => (
-            <a
-              key={link.name}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`
-                flex flex-col items-center justify-center
-                px-4 sm:px-5 py-3 sm:py-4
-                rounded-lg
-                transition-all duration-200
-                ${link.bgColor}
-                ${link.color}
-                group
-                min-w-[70px] sm:min-w-[90px]
-              `}
-              title={link.name}
-            >
-              <i className={`${link.icon} text-2xl sm:text-3xl mb-2 transition-transform group-hover:scale-110`}></i>
-              <span className="text-xs sm:text-sm font-medium opacity-80 group-hover:opacity-100">
-                {link.name}
-              </span>
-            </a>
-          ))}
+        <div className="flex flex-col items-center gap-6">
+          {/* 소셜 링크 */}
+          <div className="flex items-center justify-center gap-4 sm:gap-6 md:gap-8">
+            {socialLinks.map((link) => (
+              <a
+                key={link.name}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`
+                  flex flex-col items-center justify-center
+                  px-4 sm:px-5 py-3 sm:py-4
+                  rounded-lg
+                  transition-all duration-200
+                  ${link.bgColor}
+                  ${link.color}
+                  group
+                  min-w-[70px] sm:min-w-[90px]
+                `}
+                title={link.name}
+              >
+                <i className={`${link.icon} text-2xl sm:text-3xl mb-2 transition-transform group-hover:scale-110`}></i>
+                <span className="text-xs sm:text-sm font-medium opacity-80 group-hover:opacity-100">
+                  {link.name}
+                </span>
+              </a>
+            ))}
+          </div>
+          
+          {/* 법적 링크 */}
+          <div className="w-full pt-4 border-t border-slate-700/50">
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm">
+              <Link 
+                href={`/${lang}/privacy`}
+                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
+              >
+                개인정보처리방침
+              </Link>
+              <span className="text-slate-600">|</span>
+              <Link 
+                href={`/${lang}/terms`}
+                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
+              >
+                이용약관
+              </Link>
+              <span className="text-slate-600">|</span>
+              <Link 
+                href={`/${lang}/contact`}
+                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
+              >
+                문의하기
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </footer>
