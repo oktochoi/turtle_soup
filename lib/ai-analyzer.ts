@@ -359,7 +359,7 @@ function roughRelevanceScore(question: string, sentence: string): number {
   return exact * 0.65 + part * 0.3 + lengthBonus;
 }
 
-function selectTopKSentences(question: string, sentences: string[], k: number): string[] {
+export function selectTopKSentences(question: string, sentences: string[], k: number): string[] {
   if (sentences.length <= k) return sentences;
   return sentences
     .map(s => ({ s, score: roughRelevanceScore(question, s) }))
@@ -368,7 +368,7 @@ function selectTopKSentences(question: string, sentences: string[], k: number): 
     .map(x => x.s);
 }
 
-async function mapWithConcurrency<T, R>(
+export async function mapWithConcurrency<T, R>(
   items: T[],
   limit: number,
   fn: (item: T) => Promise<R>
@@ -448,7 +448,7 @@ function hasModality(text: string) {
 }
 
 // (B) Negation 처리 안정화: 의미 변조 금지, invert flag만 추출
-function normalizeNegationQuestion(question: string): { normalized: string; invert: boolean } {
+export function normalizeNegationQuestion(question: string): { normalized: string; invert: boolean } {
   const q = normalizeText(question);
   if (!q) return { normalized: q, invert: false };
   
@@ -911,7 +911,7 @@ function hasExistTargetContext(text: string): boolean {
 }
 
 // 반의어(대립 개념) 감지 - 텍스트 기반 (V9)
-function detectAntonymMismatchByTextV9(
+export function detectAntonymMismatchByTextV9(
   question: string,
   answer: string,
   activeAxes: AntonymAxis[]
@@ -935,7 +935,7 @@ function detectAntonymMismatchByTextV9(
 }
 
 // 반의어(대립 개념) 감지 - 개념 기반 (V9)
-function detectAntonymMismatchByConceptsV9(
+export function detectAntonymMismatchByConceptsV9(
   qConcepts: Set<string>,
   aConcepts: Set<string>,
   activeAxes: AntonymAxis[],
@@ -961,7 +961,7 @@ function detectAntonymMismatchByConceptsV9(
 }
 
 // 반의어(대립 개념) 감지 - lexicon 기반 (V9)
-function detectAntonymMismatchByLexiconV9(
+export function detectAntonymMismatchByLexiconV9(
   question: string,
   answer: string,
   antonymLexicon: Map<string, string[]>
@@ -985,7 +985,7 @@ function detectAntonymMismatchByLexiconV9(
   return pairs.length ? { hit: true, pairs } : { hit: false };
 }
 
-function antonymSignalCount(args: {
+export function antonymSignalCount(args: {
   antiText: { hit: boolean };
   antiConcept: { hit: boolean };
   antiLex: { hit: boolean };
@@ -1094,7 +1094,7 @@ function toFloat32Array(output: any): Float32Array {
   throw new Error("Unexpected embedding output");
 }
 
-async function getEmbedding(text: string): Promise<Float32Array> {
+export async function getEmbedding(text: string): Promise<Float32Array> {
   const normalized = normalizeText(text);
   if (!normalized) throw new Error("Empty text");
 
@@ -1116,7 +1116,7 @@ function cosineSimilarity(a: Float32Array, b: Float32Array): number {
   return Math.max(-1, Math.min(1, dot));
 }
 
-function maxSimilarity(questionVec: Float32Array, sentenceVecs: Float32Array[]): number {
+export function maxSimilarity(questionVec: Float32Array, sentenceVecs: Float32Array[]): number {
   if (!sentenceVecs.length) return 0;
   let max = -1;
   for (const v of sentenceVecs) {
@@ -1126,7 +1126,7 @@ function maxSimilarity(questionVec: Float32Array, sentenceVecs: Float32Array[]):
   return max;
 }
 
-function avgSimilarity(questionVec: Float32Array, sentenceVecs: Float32Array[]): number {
+export function avgSimilarity(questionVec: Float32Array, sentenceVecs: Float32Array[]): number {
   if (!sentenceVecs.length) return 0;
   let sum = 0;
   for (const v of sentenceVecs) sum += cosineSimilarity(questionVec, v);
@@ -1200,7 +1200,7 @@ function isParentOf(parent: string, child: string, adj: Map<string, string[]>, d
 }
 
 // quantity mismatch
-function hasQuantityMismatch(question: string, answerText: string, quantityPatterns: QuantityPattern[] = []): boolean {
+export function hasQuantityMismatch(question: string, answerText: string, quantityPatterns: QuantityPattern[] = []): boolean {
   const qNorm = normalizeText(question).toLowerCase();
   const aNorm = normalizeText(answerText).toLowerCase();
 
@@ -1232,7 +1232,7 @@ function hasQuantityMismatch(question: string, answerText: string, quantityPatte
 }
 
 // ontology/quantity force NO (V9)
-function shouldForceNoByOntologyV9(args: {
+export function shouldForceNoByOntologyV9(args: {
   question: string;
   qConcepts: Set<string>;
   aConcepts: Set<string>;
@@ -1506,7 +1506,7 @@ async function getOrBuildSynonymsForToken(token: string, knowledge: ProblemKnowl
 }
 
 // (C) Concept Explosion 방지: Exact vs Expanded 분리
-async function extractQuestionConceptsV9(
+export async function extractQuestionConceptsV9(
   question: string, 
   knowledge: ProblemKnowledge
 ): Promise<{ qConceptsExact: Set<string>; qConceptsExpanded: Set<string> }> {
@@ -1574,7 +1574,7 @@ async function extractQuestionConceptsV9(
 }
 
 // (D) Token common ratio 계산 헬퍼
-function calculateTokenCommonRatio(question: string, knowledge: ProblemKnowledge): number {
+export function calculateTokenCommonRatio(question: string, knowledge: ProblemKnowledge): number {
   const qTokens = new Set([...tokenizeKo(question), ...tokenizeEn(question)]);
   const contentTokens = new Set([...knowledge.contentTokens, ...knowledge.answerTokens]);
   const commonTokens = [...qTokens].filter(t => contentTokens.has(t) || contentTokens.has(toCanonical(t)));
@@ -1583,7 +1583,7 @@ function calculateTokenCommonRatio(question: string, knowledge: ProblemKnowledge
 
 // 문맥적 불일치 감지 (V9+)
 // 질문과 문제 내용/답변 간의 문맥적 거리를 계산하여 irrelevant 판단 보조
-function detectContextualMismatch(
+export function detectContextualMismatch(
   question: string,
   knowledge: ProblemKnowledge,
   simAnswer: number,
@@ -1692,7 +1692,7 @@ function extractAnswerConceptsV9(knowledge: ProblemKnowledge): Set<string> {
   return base;
 }
 
-function extractAnswerConcepts(knowledge: ProblemKnowledge): Set<string> {
+export function extractAnswerConcepts(knowledge: ProblemKnowledge): Set<string> {
   return extractAnswerConceptsV9(knowledge);
 }
 
