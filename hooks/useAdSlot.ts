@@ -41,7 +41,7 @@ export interface UseAdSlotReturn {
   /**
    * 광고 컨테이너 ref
    */
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   
   /**
    * 광고가 로딩되었는지 여부
