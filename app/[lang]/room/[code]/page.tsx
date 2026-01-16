@@ -1741,7 +1741,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
           </div>
         </div>
       </div>
-
+<NativeAd />
       {(gameEnded || userWon) && (
         <GameResultModal
           story={story}

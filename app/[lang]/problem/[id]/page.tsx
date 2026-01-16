@@ -2807,7 +2807,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
           </div>
         </div>
       )}
-
+  <NativeAd />
       {/* CTA 바 공간 확보 (모바일에서 하단 버튼이 콘텐츠에 가려지지 않도록) */}
       <div className="h-24 sm:h-28"></div>
     </div>
