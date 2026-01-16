@@ -168,9 +168,9 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
             .select('id', { count: 'exact', head: true })
             .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
         ]);
-        if (!eventsTotalRes.error) eventsTotal = eventsTotalRes;
-        if (!eventsTodayRes.error) eventsToday = eventsTodayRes;
-        if (!eventsWeekRes.error) eventsWeek = eventsWeekRes;
+        if (!eventsTotalRes.error) eventsTotal = { count: eventsTotalRes.count ?? 0 };
+        if (!eventsTodayRes.error) eventsToday = { count: eventsTodayRes.count ?? 0 };
+        if (!eventsWeekRes.error) eventsWeek = { count: eventsWeekRes.count ?? 0 };
       } catch (err) {
         console.warn('이벤트 통계를 가져올 수 없습니다:', err);
       }
@@ -209,10 +209,10 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
             .select('id', { count: 'exact', head: true })
             .eq('applied', true),
         ]);
-        if (!aiReportsTotalRes.error) aiReportsTotal = aiReportsTotalRes;
-        if (!aiReportsValidRes.error) aiReportsValid = aiReportsValidRes;
-        if (!aiPatternsRes.error) aiPatterns = aiPatternsRes;
-        if (!aiPatternsAppliedRes.error) aiPatternsApplied = aiPatternsAppliedRes;
+        if (!aiReportsTotalRes.error) aiReportsTotal = { count: aiReportsTotalRes.count ?? 0 };
+        if (!aiReportsValidRes.error) aiReportsValid = { count: aiReportsValidRes.count ?? 0 };
+        if (!aiPatternsRes.error) aiPatterns = { count: aiPatternsRes.count ?? 0 };
+        if (!aiPatternsAppliedRes.error) aiPatternsApplied = { count: aiPatternsAppliedRes.count ?? 0 };
       } catch (err) {
         console.warn('AI 학습 통계를 가져올 수 없습니다:', err);
       }
@@ -234,27 +234,27 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
         if (bugReportsTotalRes.error) {
           console.error('버그 리포트 전체 통계 오류:', bugReportsTotalRes.error);
         } else {
-          bugReportsTotal = bugReportsTotalRes;
+          bugReportsTotal = { count: bugReportsTotalRes.count ?? 0 };
         }
         if (bugReportsPendingRes.error) {
           console.error('버그 리포트 대기중 통계 오류:', bugReportsPendingRes.error);
         } else {
-          bugReportsPending = bugReportsPendingRes;
+          bugReportsPending = { count: bugReportsPendingRes.count ?? 0 };
         }
         if (bugReportsReviewedRes.error) {
           console.error('버그 리포트 검토됨 통계 오류:', bugReportsReviewedRes.error);
         } else {
-          bugReportsReviewed = bugReportsReviewedRes;
+          bugReportsReviewed = { count: bugReportsReviewedRes.count ?? 0 };
         }
         if (bugReportsFixedRes.error) {
           console.error('버그 리포트 수정됨 통계 오류:', bugReportsFixedRes.error);
         } else {
-          bugReportsFixed = bugReportsFixedRes;
+          bugReportsFixed = { count: bugReportsFixedRes.count ?? 0 };
         }
         if (bugReportsRejectedRes.error) {
           console.error('버그 리포트 거부됨 통계 오류:', bugReportsRejectedRes.error);
         } else {
-          bugReportsRejected = bugReportsRejectedRes;
+          bugReportsRejected = { count: bugReportsRejectedRes.count ?? 0 };
         }
       } catch (err) {
         console.error('버그 리포트 통계를 가져올 수 없습니다:', err);
@@ -277,27 +277,27 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
         if (userReportsTotalRes.error) {
           console.error('사용자 신고 전체 통계 오류:', userReportsTotalRes.error);
         } else {
-          userReportsTotal = userReportsTotalRes;
+          userReportsTotal = { count: userReportsTotalRes.count ?? 0 };
         }
         if (userReportsPendingRes.error) {
           console.error('사용자 신고 대기중 통계 오류:', userReportsPendingRes.error);
         } else {
-          userReportsPending = userReportsPendingRes;
+          userReportsPending = { count: userReportsPendingRes.count ?? 0 };
         }
         if (userReportsReviewedRes.error) {
           console.error('사용자 신고 검토됨 통계 오류:', userReportsReviewedRes.error);
         } else {
-          userReportsReviewed = userReportsReviewedRes;
+          userReportsReviewed = { count: userReportsReviewedRes.count ?? 0 };
         }
         if (userReportsResolvedRes.error) {
           console.error('사용자 신고 해결됨 통계 오류:', userReportsResolvedRes.error);
         } else {
-          userReportsResolved = userReportsResolvedRes;
+          userReportsResolved = { count: userReportsResolvedRes.count ?? 0 };
         }
         if (userReportsDismissedRes.error) {
           console.error('사용자 신고 기각됨 통계 오류:', userReportsDismissedRes.error);
         } else {
-          userReportsDismissed = userReportsDismissedRes;
+          userReportsDismissed = { count: userReportsDismissedRes.count ?? 0 };
         }
       } catch (err) {
         console.error('사용자 신고 통계를 가져올 수 없습니다:', err);
