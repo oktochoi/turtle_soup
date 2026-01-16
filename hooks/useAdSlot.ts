@@ -99,6 +99,15 @@ export function useAdSlot(options: UseAdSlotOptions = {}): UseAdSlotReturn {
       return () => clearTimeout(timeout);
     }
 
+    // IntersectionObserver가 지원되지 않는 경우 fallback: 즉시 로딩
+    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
+      console.warn('[useAdSlot] IntersectionObserver가 지원되지 않음, 즉시 로딩');
+      const timeout = setTimeout(() => {
+        loadAd();
+      }, 100);
+      return () => clearTimeout(timeout);
+    }
+
     // IntersectionObserver 설정
     const observer = new IntersectionObserver(
       (entries) => {

@@ -4,9 +4,9 @@
 
 export const adConfig = {
   // 광고 활성화 여부
-  // 개발 환경에서는 기본적으로 활성화 (환경 변수가 없어도)
-  enabled: process.env.NEXT_PUBLIC_ADS_ENABLED !== 'false' && 
-           (process.env.NEXT_PUBLIC_ADS_ENABLED === 'true' || process.env.NODE_ENV === 'development'),
+  // 기본적으로 활성화 (환경 변수가 'false'가 아니면 활성화)
+  // 프로덕션에서도 환경 변수가 없으면 활성화됨
+  enabled: process.env.NEXT_PUBLIC_ADS_ENABLED !== 'false',
   
   // 개별 광고 타입 활성화
   popunder: {
@@ -28,8 +28,8 @@ export const adConfig = {
   },
   
   nativeBanner: {
-    enabled: process.env.NEXT_PUBLIC_NATIVEBANNER_ENABLED !== 'false' && 
-             (process.env.NEXT_PUBLIC_NATIVEBANNER_ENABLED === 'true' || process.env.NODE_ENV === 'development'),
+    // 기본적으로 활성화 (환경 변수가 'false'가 아니면 활성화)
+    enabled: process.env.NEXT_PUBLIC_NATIVEBANNER_ENABLED !== 'false',
     scriptUrl: 'https://pl28489713.effectivegatecpm.com/e55815afb3e5d73fa76db3038a7eff13/invoke.js',
     containerId: 'container-e55815afb3e5d73fa76db3038a7eff13',
     // 모바일에서 권장 비율 (4:1)
@@ -55,8 +55,9 @@ export const adConfig = {
   // 광고 로딩 전략
   loadingStrategy: {
     // 뷰포트 진입 시 로딩 (IntersectionObserver)
-    // 개발 환경에서는 즉시 로딩
-    useIntersectionObserver: process.env.NODE_ENV !== 'development',
+    // 프로덕션에서도 IntersectionObserver 사용 (성능 최적화)
+    // 단, IntersectionObserver가 지원되지 않으면 즉시 로딩
+    useIntersectionObserver: typeof window !== 'undefined' && 'IntersectionObserver' in window,
     // 뷰포트 진입 전 대기 시간 (ms)
     intersectionDelay: 100,
   },

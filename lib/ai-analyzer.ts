@@ -81,6 +81,12 @@ const CONFIG = {
     // embedding calls upper bound in AnswerSimilarityV9 (ua/ca/content)
     ANSWER_SIM_MAX_EMBEDS: 3,
   },
+
+  // (A) Learned data 적용 제어 - 자동 반영 OFF 시 완전히 차단
+  LEARNING: {
+    USE_LEARNED_SYNONYMS: false, // 기본값: false (OFF)
+    USE_LEARNED_ANTONYMS: false, // 기본값: false (OFF)
+  },
 } as const;
 
 // -------------------------
@@ -441,36 +447,19 @@ function hasModality(text: string) {
   return hasAny(text, MODALITY_PATTERNS);
 }
 
+// (B) Negation 처리 안정화: 의미 변조 금지, invert flag만 추출
 function normalizeNegationQuestion(question: string): { normalized: string; invert: boolean } {
   const q = normalizeText(question);
   if (!q) return { normalized: q, invert: false };
-  if (!hasNegation(q)) return { normalized: q, invert: false };
-
-  let nq = q;
-
-  // KO
-  nq = nq.replace(/지\s*않/g, "");
-  nq = nq.replace(/지않/g, "");
-  nq = nq.replace(/안\s*/g, "");
-  nq = nq.replace(/못\s*/g, "");
-  nq = nq.replace(/없/g, "있");
-
-  // EN
-  nq = nq.replace(/\bnot\b/g, "");
-  nq = nq.replace(/\bnever\b/g, "");
-  nq = nq.replace(/\bno\b/g, "");
-  nq = nq.replace(/\bcan't\b/g, "can");
-  nq = nq.replace(/\bcannot\b/g, "can");
-  nq = nq.replace(/\bdon't\b/g, "");
-  nq = nq.replace(/\bdidn't\b/g, "");
-  nq = nq.replace(/\bisn't\b/g, "is");
-  nq = nq.replace(/\baren't\b/g, "are");
-  nq = nq.replace(/\bwasn't\b/g, "was");
-  nq = nq.replace(/\bweren't\b/g, "were");
-
-  nq = normalizeText(nq);
-
-  return { normalized: nq || q, invert: true };
+  
+  // negation 존재 여부만 확인, 원문은 최대한 유지
+  const invert = hasNegation(q);
+  
+  // 의미 변조를 일으키는 치환 제거:
+  // - "없 -> 있" 같은 의미 반전 치환 금지
+  // - "안/못 제거", "not/no 제거" 등으로 원문 의미가 달라지는 치환 금지
+  // normalized는 원문 그대로 유지, invert flag만 반환
+  return { normalized: q, invert };
 }
 
 // -------------------------
@@ -743,17 +732,23 @@ function extractAutoOntologyEdges(
   return edges.slice(0, 40);
 }
 
-// heuristic: auto taxonomy edges (is_a) - extremely gated (V9)
+// (E) auto taxonomy extraction 안전화 (오염 방지)
 function extractAutoTaxonomyEdges(
   content: string,
   answer: string,
   contentTokens: string[],
   answerTokens: string[]
 ): OntologyEdge[] {
+  // 기본 OFF 또는 강하게 gate: SAFE_PARENTS whitelist 도입
+  const SAFE_PARENTS = new Set([
+    "사람", "동물", "장소", "교통수단", "범죄", "시간",
+    "person", "animal", "place", "vehicle", "crime", "time"
+  ]);
+
   const text = normalizeText(`${content} ${answer}`).toLowerCase();
-  const ctxKeywords = ["종류", "분류", "중 하나", "이다", "인", "라고", "kind", "type", "category", "one of", "classified"];
-  const ok = ctxKeywords.some(k => text.includes(k));
-  if (!ok) return [];
+  const ctxKeywords = ["종류", "분류", "중 하나", "이다", "인", "라고", "kind", "type", "category", "one of", "classified", "is a"];
+  const hasContext = ctxKeywords.some(k => text.includes(k));
+  if (!hasContext) return [];
 
   const edges: OntologyEdge[] = [];
   const all = [...new Set([...contentTokens, ...answerTokens])];
@@ -763,10 +758,21 @@ function extractAutoTaxonomyEdges(
       if (i === j) continue;
       const child = all[i];
       const parent = all[j];
-      if (child.length < 2 || parent.length < 2) continue;
-      if (child.includes(parent) && child.length > parent.length) {
-        edges.push({ parent, child, rel: "is_a" });
-      }
+      
+      // 강화된 조건:
+      // 1. parent 길이 >= 2, child 길이 >= parent + 1
+      // 2. parent가 SAFE_PARENTS에 포함
+      // 3. child.includes(parent) 단순 heuristic는 false positive가 크므로 더 강화
+      if (parent.length < 2 || child.length < parent.length + 1) continue;
+      if (!SAFE_PARENTS.has(parent) && !SAFE_PARENTS.has(toCanonical(parent))) continue;
+      if (!child.includes(parent) && !toCanonical(child).includes(toCanonical(parent))) continue;
+      
+      // content+answer에 "종류/분류/중 하나/is a/type/kind" 같은 context가 있을 때만 적용
+      const childInText = text.includes(child) || text.includes(toCanonical(child));
+      const parentInText = text.includes(parent) || text.includes(toCanonical(parent));
+      if (!childInText || !parentInText) continue;
+
+      edges.push({ parent, child, rel: "is_a" });
     }
   }
 
@@ -778,7 +784,7 @@ function extractAutoTaxonomyEdges(
     return true;
   });
 
-  return out.slice(0, 40);
+  return out.slice(0, 20); // 최대 개수도 줄임 (40 -> 20)
 }
 
 // taxonomy maps (V9)
@@ -1368,10 +1374,12 @@ export async function buildProblemKnowledge(
 
   const antonymAxes = buildActiveAntonymAxes(content, answer);
   
-  // 학습된 반의어 병합
-  await loadLearnedDataOnce();
+  // 학습된 반의어 병합 - (A) gating: USE_LEARNED_ANTONYMS가 true일 때만
+  if (CONFIG.LEARNING.USE_LEARNED_ANTONYMS) {
+    await loadLearnedDataOnce();
+  }
   const antonymLexicon = new Map<string, string[]>(GLOBAL_ANTONYM_LEXICON);
-  if (learnedAntonymsCache) {
+  if (CONFIG.LEARNING.USE_LEARNED_ANTONYMS && learnedAntonymsCache) {
     for (const [token, antonyms] of learnedAntonymsCache.entries()) {
       const existing = antonymLexicon.get(token) || [];
       const merged = [...new Set([...existing, ...antonyms])];
@@ -1456,15 +1464,17 @@ async function getOrBuildSynonymsForToken(token: string, knowledge: ProblemKnowl
   const cached = knowledge.synonymMap.get(key);
   if (cached) return cached;
 
-  // 학습 데이터 로드 (한 번만)
-  await loadLearnedDataOnce();
+  // 학습 데이터 로드 (한 번만) - (A) gating: USE_LEARNED_SYNONYMS가 true일 때만
+  if (CONFIG.LEARNING.USE_LEARNED_SYNONYMS) {
+    await loadLearnedDataOnce();
+  }
 
   // 1) global synonyms first
   const globalSyns = GLOBAL_SYNONYMS.get(token);
   const synonyms: string[] = globalSyns ? [...globalSyns] : [];
 
-  // 1-1) learned synonyms (버그 리포트에서 학습한 유의어)
-  if (learnedSynonymsCache) {
+  // 1-1) learned synonyms (버그 리포트에서 학습한 유의어) - (A) gating 적용
+  if (CONFIG.LEARNING.USE_LEARNED_SYNONYMS && learnedSynonymsCache) {
     const learnedSyns = learnedSynonymsCache.get(token);
     if (learnedSyns) {
       for (const syn of learnedSyns) {
@@ -1495,26 +1505,33 @@ async function getOrBuildSynonymsForToken(token: string, knowledge: ProblemKnowl
   return out;
 }
 
-async function extractQuestionConceptsV9(question: string, knowledge: ProblemKnowledge): Promise<Set<string>> {
+// (C) Concept Explosion 방지: Exact vs Expanded 분리
+async function extractQuestionConceptsV9(
+  question: string, 
+  knowledge: ProblemKnowledge
+): Promise<{ qConceptsExact: Set<string>; qConceptsExpanded: Set<string> }> {
   const toks = tokenizeUniversal(question);
-  const concepts = new Set<string>();
+  const qConceptsExact = new Set<string>(); // 질문에서 직접 추출된 canonical token만
+  const qConceptsExpanded = new Set<string>(); // 유의어/상하위어/문맥 추론 확장 포함
 
-  // base tokens -> canonical
+  // base tokens -> canonical (Exact에만)
   for (const { token } of toks) {
-    concepts.add(toCanonical(token));
-    if (concepts.size >= CONFIG.V9.MAX_CONCEPTS_TOTAL) return concepts;
+    const canonical = toCanonical(token);
+    qConceptsExact.add(canonical);
+    qConceptsExpanded.add(canonical);
+    if (qConceptsExpanded.size >= CONFIG.V9.MAX_CONCEPTS_TOTAL) break;
   }
 
-  // synonyms expansion
+  // synonyms expansion (Expanded에만)
   for (const { token } of toks) {
     const syns = await getOrBuildSynonymsForToken(token, knowledge);
     for (const s of syns) {
-      concepts.add(toCanonical(s));
-      if (concepts.size >= CONFIG.V9.MAX_CONCEPTS_TOTAL) return concepts;
+      qConceptsExpanded.add(toCanonical(s));
+      if (qConceptsExpanded.size >= CONFIG.V9.MAX_CONCEPTS_TOTAL) break;
     }
   }
 
-  // taxonomy expansion (limited)
+  // taxonomy expansion (limited) (Expanded에만)
   for (const { token } of toks) {
     const t = toCanonical(token);
 
@@ -1523,8 +1540,8 @@ async function extractQuestionConceptsV9(question: string, knowledge: ProblemKno
       .map(toCanonical);
 
     for (const h of hypers.slice(0, CONFIG.V9.MAX_HYPERNYM_PER_TOKEN)) {
-      concepts.add(h);
-      if (concepts.size >= CONFIG.V9.MAX_CONCEPTS_TOTAL) return concepts;
+      qConceptsExpanded.add(h);
+      if (qConceptsExpanded.size >= CONFIG.V9.MAX_CONCEPTS_TOTAL) break;
     }
 
     const hypos = (knowledge.hyponymMap.get(token) ?? [])
@@ -1532,24 +1549,28 @@ async function extractQuestionConceptsV9(question: string, knowledge: ProblemKno
       .map(toCanonical);
 
     for (const h of hypos.slice(0, CONFIG.V9.MAX_HYPONYM_PER_TOKEN)) {
-      concepts.add(h);
-      if (concepts.size >= CONFIG.V9.MAX_CONCEPTS_TOTAL) return concepts;
+      qConceptsExpanded.add(h);
+      if (qConceptsExpanded.size >= CONFIG.V9.MAX_CONCEPTS_TOTAL) break;
     }
   }
 
-  // 문맥 기반 개념 확장 (V9+)
+  // 문맥 기반 개념 확장 (V9+) (Expanded에만)
   const contextualConcepts = extractContextualConcepts(question, knowledge);
   for (const c of contextualConcepts) {
-    concepts.add(c);
-    if (concepts.size >= CONFIG.V9.MAX_CONCEPTS_TOTAL) return concepts;
+    qConceptsExpanded.add(c);
+    if (qConceptsExpanded.size >= CONFIG.V9.MAX_CONCEPTS_TOTAL) break;
   }
 
-  // infer concepts
+  // infer concepts (Expanded에만)
   const qNorm = normalizeText(question).toLowerCase();
-  if (qNorm.includes("사고") || qNorm.includes("우발") || qNorm.includes("실수") || qNorm.includes("accident")) concepts.add("accident");
-  if (qNorm.includes("고의") || qNorm.includes("일부러") || qNorm.includes("의도") || qNorm.includes("계획") || qNorm.includes("intentional") || qNorm.includes("on purpose")) concepts.add("intentional");
+  if (qNorm.includes("사고") || qNorm.includes("우발") || qNorm.includes("실수") || qNorm.includes("accident")) {
+    qConceptsExpanded.add("accident");
+  }
+  if (qNorm.includes("고의") || qNorm.includes("일부러") || qNorm.includes("의도") || qNorm.includes("계획") || qNorm.includes("intentional") || qNorm.includes("on purpose")) {
+    qConceptsExpanded.add("intentional");
+  }
 
-  return concepts;
+  return { qConceptsExact, qConceptsExpanded };
 }
 
 // 문맥적 불일치 감지 (V9+)
@@ -1650,8 +1671,10 @@ function extractContextualConcepts(question: string, knowledge: ProblemKnowledge
 }
 
 // V8 호환성
+// 하위 호환성: 기존 API 유지 (Expanded 반환)
 async function extractQuestionConcepts(question: string, knowledge: ProblemKnowledge): Promise<Set<string>> {
-  return extractQuestionConceptsV9(question, knowledge);
+  const { qConceptsExpanded } = await extractQuestionConceptsV9(question, knowledge);
+  return qConceptsExpanded;
 }
 
 function extractAnswerConceptsV9(knowledge: ProblemKnowledge): Set<string> {
@@ -1699,22 +1722,25 @@ export async function analyzeQuestionV8(
     // 0) negation normalize
     const { normalized: q, invert } = normalizeNegationQuestion(qCut);
 
-    // 1) concepts (synonyms included)
-    const qConcepts = await extractQuestionConcepts(q, knowledge);
+    // 1) concepts - (C) Exact vs Expanded 분리
+    const { qConceptsExact, qConceptsExpanded } = await extractQuestionConceptsV9(q, knowledge);
     const aConcepts = extractAnswerConcepts(knowledge);
+    
+    // 하위 호환성을 위해 qConcepts는 Expanded 사용 (기존 로직 유지)
+    const qConcepts = qConceptsExpanded;
 
-    // 1-0) antonym/contradiction check (V9: 2-of-3 signal gating)
+    // 1-0) antonym/contradiction check (V9: 2-of-3 signal gating) - (C) qConceptsExact 사용
     const antiText = detectAntonymMismatchByTextV9(q, knowledge.answer, knowledge.antonymAxes);
-    const antiConcept = detectAntonymMismatchByConceptsV9(qConcepts, aConcepts, knowledge.antonymAxes, q, knowledge.answer);
+    const antiConcept = detectAntonymMismatchByConceptsV9(qConceptsExact, aConcepts, knowledge.antonymAxes, q, knowledge.answer);
     const antiLex = detectAntonymMismatchByLexiconV9(q, knowledge.answer, knowledge.antonymLexicon);
     const signalCount = antonymSignalCount({ antiText, antiConcept, antiLex });
     const hasStrongAntonymMismatch = signalCount >= CONFIG.V9.ANTONYM_REQUIRE_SIGNALS;
 
-    // 1-1) force NO by ontology / quantity mismatch (V9)
-    const force = shouldForceNoByOntologyV9({ question: q, qConcepts, aConcepts, knowledge });
+    // 1-1) force NO by ontology / quantity mismatch (V9) - (C) qConceptsExact 사용
+    const force = shouldForceNoByOntologyV9({ question: q, qConcepts: qConceptsExact, aConcepts, knowledge });
     if (force.forceNo) {
       if (hasQuantityMismatch(q, knowledge.answer, knowledge.quantityPatterns)) return invert ? "yes" : "no";
-      const hasExact = [...qConcepts].some(c => aConcepts.has(c));
+      const hasExact = [...qConceptsExact].some(c => aConcepts.has(c));
       if (!hasExact) return invert ? "yes" : "no";
     }
 
@@ -1729,43 +1755,81 @@ export async function analyzeQuestionV8(
       mapWithConcurrency(answerTop, CONFIG.EMBEDDING_CONCURRENCY, getEmbedding),
     ]);
 
-    const simContentMax = contentVecs.length ? maxSimilarity(questionVec, contentVecs) : 0;
-    const simAnswerMax = answerVecs.length ? maxSimilarity(questionVec, answerVecs) : 0;
+    const simContentMaxRaw = contentVecs.length ? maxSimilarity(questionVec, contentVecs) : 0;
+    const simAnswerMaxRaw = answerVecs.length ? maxSimilarity(questionVec, answerVecs) : 0;
 
     const simContentAvg = contentVecs.length ? avgSimilarity(questionVec, contentVecs) : 0;
     const simAnswerAvg = answerVecs.length ? avgSimilarity(questionVec, answerVecs) : 0;
 
-    let simAnswerAdj = simAnswerMax;
-    let simContentAdj = simContentMax;
+    // (D) irrelevant 판단을 먼저 수행 (bonus 적용 이전)
+    // raw similarity 기반으로 먼저 irrelevant 판정
+    const contextMismatchRaw = detectContextualMismatch(q, knowledge, simAnswerMaxRaw, simContentMaxRaw);
+    const tokenCommonRatio = calculateTokenCommonRatio(q, knowledge);
+    
+    if (contextMismatchRaw.isIrrelevant || 
+        (simAnswerMaxRaw <= CONFIG.THRESHOLD.IRRELEVANT_MAX && simContentMaxRaw <= CONFIG.THRESHOLD.IRRELEVANT_CONTENT_MAX) ||
+        (simAnswerMaxRaw <= CONFIG.THRESHOLD.IRRELEVANT_MAX && simContentMaxRaw < 0.40) ||
+        (tokenCommonRatio < 0.15 && simAnswerMaxRaw <= 0.30 && simContentMaxRaw <= 0.35)) {
+      // (F) Debug explain 로그
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[analyzeQuestionV8] Debug Explain:', {
+          qRaw: questionRaw,
+          qNormalized: q,
+          invert,
+          simAnswerMaxRaw,
+          simContentMaxRaw,
+          simAnswerFinal: simAnswerMaxRaw,
+          simContentFinal: simContentMaxRaw,
+          conceptExactHitCount: [...qConceptsExact].filter(c => aConcepts.has(c)).length,
+          conceptExpandedHitCount: [...qConceptsExpanded].filter(c => aConcepts.has(c)).length,
+          synonymUsed: qConceptsExpanded.size > qConceptsExact.size,
+          taxonomyHit: false,
+          antonymSignalCount: signalCount,
+          decisionPath: 'irrelevant_early',
+        });
+      }
+      return "irrelevant";
+    }
+
+    let simAnswerAdj = simAnswerMaxRaw;
+    let simContentAdj = simContentMaxRaw;
 
     // ✅ antonym mismatch penalty (V9: strong only)
     if (hasStrongAntonymMismatch) {
       simAnswerAdj -= CONFIG.ADJUST.ANTONYM_PENALTY;
     }
 
-    // 3) concept/infer bonus (강화)
-    const conceptMatched = [...qConcepts].some(c => aConcepts.has(c));
+    // 3) concept/infer bonus (강화) - (C) qConceptsExact만 사용
+    const conceptMatched = [...qConceptsExact].some(c => aConcepts.has(c));
+    const conceptExactHitCount = [...qConceptsExact].filter(c => aConcepts.has(c)).length;
+    const conceptExpandedHitCount = [...qConceptsExpanded].filter(c => aConcepts.has(c)).length;
+    
     if (conceptMatched) {
       simAnswerAdj += CONFIG.ADJUST.CONCEPT_MATCH_BONUS;
       // 여러 개념이 매칭되면 추가 보너스
-      const matchCount = [...qConcepts].filter(c => aConcepts.has(c)).length;
-      if (matchCount >= 2) simAnswerAdj += 0.03;
+      if (conceptExactHitCount >= 2) simAnswerAdj += 0.03;
+    }
+    
+    // (C) expanded concept는 simAnswerAdj bonus에만 소량 반영
+    if (conceptExpandedHitCount > conceptExactHitCount) {
+      const expandedBonus = Math.min(0.04, (conceptExpandedHitCount - conceptExactHitCount) * 0.02);
+      simAnswerAdj += expandedBonus;
     }
 
     const inferMatched =
-      (qConcepts.has("accident") && aConcepts.has("accident")) ||
-      (qConcepts.has("intentional") && aConcepts.has("intentional")) ||
-      (qConcepts.has("crime") && aConcepts.has("crime")) ||
-      (qConcepts.has("escape") && aConcepts.has("escape"));
+      (qConceptsExact.has("accident") && aConcepts.has("accident")) ||
+      (qConceptsExact.has("intentional") && aConcepts.has("intentional")) ||
+      (qConceptsExact.has("crime") && aConcepts.has("crime")) ||
+      (qConceptsExact.has("escape") && aConcepts.has("escape"));
     if (inferMatched) simAnswerAdj += CONFIG.ADJUST.INFER_MATCH_BONUS;
 
-    // 문맥 개념 매칭 (V9+)
+    // 문맥 개념 매칭 (V9+) - Exact만 사용
     const contextualMatches = [
-      qConcepts.has("past") && aConcepts.has("past"),
-      qConcepts.has("future") && aConcepts.has("future"),
-      qConcepts.has("causal") && aConcepts.has("causal"),
-      qConcepts.has("death_person") && aConcepts.has("death_person"),
-      qConcepts.has("murder_action") && aConcepts.has("murder_action"),
+      qConceptsExact.has("past") && aConcepts.has("past"),
+      qConceptsExact.has("future") && aConcepts.has("future"),
+      qConceptsExact.has("causal") && aConcepts.has("causal"),
+      qConceptsExact.has("death_person") && aConcepts.has("death_person"),
+      qConceptsExact.has("murder_action") && aConcepts.has("murder_action"),
     ];
     if (contextualMatches.some(m => m)) simAnswerAdj += 0.05;
 
@@ -1805,13 +1869,12 @@ export async function analyzeQuestionV8(
     } else if (simContentFinal >= CONFIG.THRESHOLD.NO_CONTENT && simAnswerFinal <= CONFIG.THRESHOLD.NO_ANSWER_MAX) {
       result = "no";
     } else {
-      // 문맥적 불일치 감지: 질문과 문제 내용/답변 간의 문맥적 거리 계산
-      const contextMismatch = detectContextualMismatch(q, knowledge, simAnswerFinal, simContentFinal);
-      
-      // irrelevant 판단: 유사도가 낮거나 문맥적 불일치가 있을 때
-      if (contextMismatch.isIrrelevant || 
-          (simAnswerFinal <= CONFIG.THRESHOLD.IRRELEVANT_MAX && simContentFinal <= CONFIG.THRESHOLD.IRRELEVANT_CONTENT_MAX) ||
-          (simAnswerFinal <= CONFIG.THRESHOLD.IRRELEVANT_MAX && simContentFinal < 0.40)) {
+      // (D) irrelevant는 이미 위에서 판정했으므로 여기서는 제외
+      // bonus 적용 후에도 여전히 낮으면 irrelevant 재확인 (안전장치)
+      const contextMismatchFinal = detectContextualMismatch(q, knowledge, simAnswerFinal, simContentFinal);
+      if (contextMismatchFinal.isIrrelevant && 
+          simAnswerFinal <= CONFIG.THRESHOLD.IRRELEVANT_MAX * 1.1 && 
+          simContentFinal <= CONFIG.THRESHOLD.IRRELEVANT_CONTENT_MAX * 1.1) {
         result = "irrelevant";
       } else {
         const inAmbiguous = simAnswerFinal >= CONFIG.AMBIGUOUS_RANGE.min && simAnswerFinal <= CONFIG.AMBIGUOUS_RANGE.max;
@@ -1831,8 +1894,36 @@ export async function analyzeQuestionV8(
       }
     }
 
-    // 5) invert apply (decisive/irrelevant keep)
+    // 5) invert apply (decisive/irrelevant keep) - (B) yes/no일 때만 적용
     if (invert && (result === "yes" || result === "no")) result = result === "yes" ? "no" : "yes";
+
+    // (F) Debug explain 로그
+    const synonymUsed = qConceptsExpanded.size > qConceptsExact.size;
+    const taxonomyHit = force.taxonomyHit;
+    let decisionPath = '';
+    if (result === "decisive") decisionPath = 'decisive_threshold';
+    else if (result === "yes") decisionPath = 'yes_threshold';
+    else if (result === "no") decisionPath = 'no_threshold';
+    else if (result === "irrelevant") decisionPath = 'irrelevant_final';
+    else decisionPath = 'fallback';
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[analyzeQuestionV8] Debug Explain:', {
+        qRaw: questionRaw,
+        qNormalized: q,
+        invert,
+        simAnswerMaxRaw,
+        simContentMaxRaw,
+        simAnswerFinal,
+        simContentFinal,
+        conceptExactHitCount,
+        conceptExpandedHitCount,
+        synonymUsed,
+        taxonomyHit,
+        antonymSignalCount: signalCount,
+        decisionPath,
+      });
+    }
 
     return result;
   } catch (e) {

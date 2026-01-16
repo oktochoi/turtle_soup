@@ -60,17 +60,16 @@ export default function AdNativeBanner({
   // 광고 스크립트 로딩
   useEffect(() => {
     if (!isAdsEnabled() || !adConfig.nativeBanner.enabled) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[AdNativeBanner] 광고 비활성화 상태:', {
-          isAdsEnabled: isAdsEnabled(),
-          nativeBannerEnabled: adConfig.nativeBanner.enabled,
-        });
-      }
+      console.warn('[AdNativeBanner] 광고 비활성화:', {
+        isAdsEnabled: isAdsEnabled(),
+        nativeBannerEnabled: adConfig.nativeBanner.enabled,
+        envVar: process.env.NEXT_PUBLIC_ADS_ENABLED,
+      });
       return;
     }
     if (!isLoaded || scriptLoadedRef.current) {
-      if (process.env.NODE_ENV === 'development' && !isLoaded) {
-        console.log('[AdNativeBanner] 아직 로딩되지 않음, isLoaded:', isLoaded);
+      if (!isLoaded) {
+        console.log('[AdNativeBanner] 뷰포트 진입 대기 중, isLoaded:', isLoaded);
       }
       return;
     }
@@ -100,24 +99,16 @@ export default function AdNativeBanner({
     script.async = true;
     script.setAttribute('data-cfasync', 'false');
     script.onload = () => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[AdNativeBanner:${position}] 스크립트 로드 완료, 컨테이너 ID: ${containerId}`);
-      }
+      console.log(`[AdNativeBanner:${position}] 스크립트 로드 완료, 컨테이너 ID: ${containerId}`);
       // 스크립트가 로드된 후 약간의 지연을 두고 광고 삽입 확인
       setTimeout(() => {
         const container = document.getElementById(containerId);
         if (container && container.children.length === 0) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn(`[AdNativeBanner:${position}] 광고가 삽입되지 않았습니다. 컨테이너 ID: ${containerId}`);
-          }
+          console.warn(`[AdNativeBanner:${position}] 광고가 삽입되지 않았습니다. 컨테이너 ID: ${containerId}`);
         } else if (container && container.children.length > 0) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`[AdNativeBanner:${position}] 광고 삽입 확인됨`);
-          }
+          console.log(`[AdNativeBanner:${position}] 광고 삽입 확인됨 (${container.children.length}개 요소)`);
         } else if (!container) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn(`[AdNativeBanner:${position}] 컨테이너를 찾을 수 없습니다: ${containerId}`);
-          }
+          console.warn(`[AdNativeBanner:${position}] 컨테이너를 찾을 수 없습니다: ${containerId}`);
         }
       }, 2000);
     };
@@ -141,25 +132,25 @@ export default function AdNativeBanner({
     }
   }, [isLoaded]);
 
-  // 디버깅: 환경 변수 확인
+  // 디버깅: 환경 변수 확인 (프로덕션에서도 로그 출력)
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[AdNativeBanner] 디버그 정보:', {
-        isAdsEnabled: isAdsEnabled(),
-        nativeBannerEnabled: adConfig.nativeBanner.enabled,
-        envVar: process.env.NEXT_PUBLIC_ADS_ENABLED,
-        nativeBannerEnvVar: process.env.NEXT_PUBLIC_NATIVEBANNER_ENABLED,
-      });
-    }
-  }, []);
+    console.log('[AdNativeBanner] 광고 상태:', {
+      isAdsEnabled: isAdsEnabled(),
+      nativeBannerEnabled: adConfig.nativeBanner.enabled,
+      envVar: process.env.NEXT_PUBLIC_ADS_ENABLED,
+      nativeBannerEnvVar: process.env.NEXT_PUBLIC_NATIVEBANNER_ENABLED,
+      isLoaded,
+      hasError,
+      nodeEnv: process.env.NODE_ENV,
+    });
+  }, [isLoaded, hasError]);
 
   if (!isAdsEnabled() || !adConfig.nativeBanner.enabled) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[AdNativeBanner] 광고 비활성화:', {
-        isAdsEnabled: isAdsEnabled(),
-        nativeBannerEnabled: adConfig.nativeBanner.enabled,
-      });
-    }
+    console.warn('[AdNativeBanner] 광고 비활성화:', {
+      isAdsEnabled: isAdsEnabled(),
+      nativeBannerEnabled: adConfig.nativeBanner.enabled,
+      envVar: process.env.NEXT_PUBLIC_ADS_ENABLED,
+    });
     return null;
   }
 

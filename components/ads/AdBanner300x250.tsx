@@ -43,17 +43,16 @@ export default function AdBanner300x250({
   // 광고 스크립트 로딩
   useEffect(() => {
     if (!isAdsEnabled() || !adConfig.banner300x250.enabled) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[AdBanner300x250] 광고 비활성화 상태:', {
-          isAdsEnabled: isAdsEnabled(),
-          bannerEnabled: adConfig.banner300x250.enabled,
-        });
-      }
+      console.warn('[AdBanner300x250] 광고 비활성화:', {
+        isAdsEnabled: isAdsEnabled(),
+        bannerEnabled: adConfig.banner300x250.enabled,
+        envVar: process.env.NEXT_PUBLIC_ADS_ENABLED,
+      });
       return;
     }
     if (!isLoaded || scriptLoadedRef.current) {
-      if (process.env.NODE_ENV === 'development' && !isLoaded) {
-        console.log('[AdBanner300x250] 아직 로딩되지 않음, isLoaded:', isLoaded);
+      if (!isLoaded) {
+        console.log('[AdBanner300x250] 뷰포트 진입 대기 중, isLoaded:', isLoaded);
       }
       return;
     }
@@ -95,24 +94,20 @@ export default function AdBanner300x250({
     script.async = true;
     script.setAttribute('data-cfasync', 'false');
     script.onload = () => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[AdBanner300x250:${position}] 스크립트 로드 완료`);
-      }
+      console.log(`[AdBanner300x250:${position}] 스크립트 로드 완료`);
       // 스크립트가 로드된 후 약간의 지연을 두고 광고 삽입 확인
       setTimeout(() => {
         const container = document.getElementById(containerId);
         if (container && container.children.length === 0) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn(`[AdBanner300x250:${position}] 광고가 삽입되지 않았습니다. 컨테이너 ID: ${containerId}`);
-          }
+          console.warn(`[AdBanner300x250:${position}] 광고가 삽입되지 않았습니다. 컨테이너 ID: ${containerId}`);
           // 스크립트가 자동으로 삽입하지 않으면 수동으로 트리거 시도
           if ((window as any).atOptions && (window as any).atOptions.key === adConfig.banner300x250.key) {
             console.log(`[AdBanner300x250:${position}] atOptions 설정 확인됨, 광고 삽입 대기 중...`);
           }
         } else if (container && container.children.length > 0) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`[AdBanner300x250:${position}] 광고 삽입 확인됨`);
-          }
+          console.log(`[AdBanner300x250:${position}] 광고 삽입 확인됨 (${container.children.length}개 요소)`);
+        } else {
+          console.warn(`[AdBanner300x250:${position}] 컨테이너를 찾을 수 없음: ${containerId}`);
         }
       }, 2000);
     };
@@ -124,25 +119,25 @@ export default function AdBanner300x250({
     scriptLoadedRef.current = true;
   }, [isLoaded, position]);
 
-  // 디버깅: 환경 변수 확인
+  // 디버깅: 환경 변수 확인 (프로덕션에서도 로그 출력)
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[AdBanner300x250] 디버그 정보:', {
-        isAdsEnabled: isAdsEnabled(),
-        bannerEnabled: adConfig.banner300x250.enabled,
-        envVar: process.env.NEXT_PUBLIC_ADS_ENABLED,
-        bannerEnvVar: process.env.NEXT_PUBLIC_BANNER_300X250_ENABLED,
-      });
-    }
-  }, []);
+    console.log('[AdBanner300x250] 광고 상태:', {
+      isAdsEnabled: isAdsEnabled(),
+      bannerEnabled: adConfig.banner300x250.enabled,
+      envVar: process.env.NEXT_PUBLIC_ADS_ENABLED,
+      bannerEnvVar: process.env.NEXT_PUBLIC_BANNER_300X250_ENABLED,
+      isLoaded,
+      hasError,
+      nodeEnv: process.env.NODE_ENV,
+    });
+  }, [isLoaded, hasError]);
 
   if (!isAdsEnabled() || !adConfig.banner300x250.enabled) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[AdBanner300x250] 광고 비활성화:', {
-        isAdsEnabled: isAdsEnabled(),
-        bannerEnabled: adConfig.banner300x250.enabled,
-      });
-    }
+    console.warn('[AdBanner300x250] 광고 비활성화:', {
+      isAdsEnabled: isAdsEnabled(),
+      bannerEnabled: adConfig.banner300x250.enabled,
+      envVar: process.env.NEXT_PUBLIC_ADS_ENABLED,
+    });
     return null;
   }
 
