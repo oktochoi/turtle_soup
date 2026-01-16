@@ -147,7 +147,7 @@ export default function Header() {
           <Link href={getLocalizedPath('/')} className="flex items-center gap-2">
             <i className="ri-question-line text-teal-400 text-xl sm:text-2xl"></i>
             <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
-              {currentLang === 'ko' ? '바다거북스프' : 'Pelican Soup Riddle'}
+              {currentLang === 'ko' ? '퀴즈 천국' : 'Quiz Paradise'}
             </span>
           </Link>
           

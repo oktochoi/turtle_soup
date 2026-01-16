@@ -8,6 +8,18 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useTranslations } from '@/hooks/useTranslations';
+import { QuizType, SINGLE_PLAYER_PROBLEM_TYPES } from '@/lib/types/quiz';
+import QuizTypeSelector from '@/components/quiz/QuizTypeSelector';
+import QuizFormSoup from '@/components/quiz/QuizFormSoup';
+import QuizFormNonsense from '@/components/quiz/QuizFormNonsense';
+import QuizFormMCQ from '@/components/quiz/QuizFormMCQ';
+import QuizFormOX from '@/components/quiz/QuizFormOX';
+import QuizFormImage from '@/components/quiz/QuizFormImage';
+import QuizFormBalance from '@/components/quiz/QuizFormBalance';
+import QuizFormLogic from '@/components/quiz/QuizFormLogic';
+import QuizFormPattern from '@/components/quiz/QuizFormPattern';
+import QuizFormFillBlank from '@/components/quiz/QuizFormFillBlank';
+import QuizFormOrder from '@/components/quiz/QuizFormOrder';
 
 export default function CreateProblem({ params }: { params: Promise<{ lang: string }> }) {
   const resolvedParams = use(params);
@@ -16,10 +28,40 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
   const router = useRouter();
   const t = useTranslations();
   const { user, isLoading: authLoading } = useAuth();
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [answer, setAnswer] = useState('');
+  const [quizType, setQuizType] = useState<QuizType | null>('soup'); // 기본값: soup
+  
+  // Soup 타입용
+  const [content, setContent] = useState(''); // story
+  const [answer, setAnswer] = useState(''); // truth
   const [hints, setHints] = useState<string[]>(['', '', '']); // 최대 3개
+  
+  // Nonsense 타입용
+  const [question, setQuestion] = useState('');
+  const [explanation, setExplanation] = useState('');
+  
+  // MCQ/OX 타입용
+  const [options, setOptions] = useState<string[]>(['', '', '', '']); // 4지선다
+  const [correctOption, setCorrectOption] = useState<number>(0); // MCQ 정답 인덱스
+  const [correctOX, setCorrectOX] = useState<'O' | 'X'>('O'); // OX 정답
+  
+  // Image 타입용
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState<string>('');
+  
+  // Balance 타입용
+  const [balanceOptions, setBalanceOptions] = useState<string[]>(['', '']);
+  
+  // Logic/Pattern 타입용
+  const [logicContent, setLogicContent] = useState('');
+  
+  // FillBlank 타입용
+  const [fillBlankAnswer, setFillBlankAnswer] = useState('');
+  
+  // Order 타입용
+  const [orderItems, setOrderItems] = useState<string[]>(['', '']);
+  const [orderSequence, setOrderSequence] = useState<number[]>([]);
+  
+  const [title, setTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -41,9 +83,70 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
       return;
     }
 
-    if (!title.trim() || !content.trim() || !answer.trim()) {
-      alert(lang === 'ko' ? '모든 필수 항목을 입력해주세요.' : 'Please fill in all required fields.');
+    if (!quizType) {
+      alert(lang === 'ko' ? '퀴즈 유형을 선택해주세요.' : 'Please select a quiz type.');
       return;
+    }
+
+    // 유형별 필수 항목 검증
+    if (!title.trim()) {
+      alert(lang === 'ko' ? '제목을 입력해주세요.' : 'Please enter a title.');
+      return;
+    }
+
+    if (quizType === 'soup') {
+      if (!content.trim() || !answer.trim()) {
+        alert(lang === 'ko' ? '모든 필수 항목을 입력해주세요.' : 'Please fill in all required fields.');
+        return;
+      }
+    } else if (quizType === 'nonsense') {
+      if (!question.trim() || !answer.trim()) {
+        alert(lang === 'ko' ? '질문과 정답을 입력해주세요.' : 'Please enter question and answer.');
+        return;
+      }
+    } else if (quizType === 'mcq') {
+      if (!question.trim() || options.some(opt => !opt.trim())) {
+        alert(lang === 'ko' ? '질문과 모든 선택지를 입력해주세요.' : 'Please enter question and all options.');
+        return;
+      }
+    } else if (quizType === 'ox') {
+      if (!question.trim()) {
+        alert(lang === 'ko' ? '질문을 입력해주세요.' : 'Please enter a question.');
+        return;
+      }
+    } else if (quizType === 'image') {
+      if (!imageFile && !imageUrl) {
+        alert(lang === 'ko' ? '이미지를 업로드해주세요.' : 'Please upload an image.');
+        return;
+      }
+      if (!answer.trim()) {
+        alert(lang === 'ko' ? '정답을 입력해주세요.' : 'Please enter an answer.');
+        return;
+      }
+    } else if (quizType === 'balance') {
+      if (balanceOptions.some(opt => !opt.trim())) {
+        alert(lang === 'ko' ? '모든 선택지를 입력해주세요.' : 'Please enter all options.');
+        return;
+      }
+    } else if (quizType === 'logic' || quizType === 'pattern') {
+      if (!question.trim() || !logicContent.trim() || !answer.trim()) {
+        alert(lang === 'ko' ? '질문, 내용, 정답을 모두 입력해주세요.' : 'Please enter question, content, and answer.');
+        return;
+      }
+    } else if (quizType === 'fill_blank') {
+      if (!question.trim() || !fillBlankAnswer.trim()) {
+        alert(lang === 'ko' ? '질문과 정답을 입력해주세요.' : 'Please enter question and answer.');
+        return;
+      }
+    } else if (quizType === 'order') {
+      if (!question.trim() || orderItems.length < 2 || orderItems.some(item => !item.trim())) {
+        alert(lang === 'ko' ? '질문과 최소 2개의 항목을 입력해주세요.' : 'Please enter question and at least 2 items.');
+        return;
+      }
+      if (orderSequence.length !== orderItems.length) {
+        alert(lang === 'ko' ? '모든 항목의 순서를 입력해주세요.' : 'Please enter order for all items.');
+        return;
+      }
     }
 
     if (!isSupabaseConfigured()) {
@@ -57,13 +160,6 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
       // Supabase 클라이언트 생성 (이미 로그인된 user 사용)
       const supabaseClient = createClient();
       
-      console.log('문제 생성 시작...', { 
-        titleLength: title.trim().length, 
-        contentLength: content.trim().length, 
-        answerLength: answer.trim().length,
-        userId: user.id 
-      });
-      
       // users 테이블에서 nickname 가져오기
       const { data: userData } = await supabaseClient
         .from('users')
@@ -73,36 +169,80 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
       
       const authorName = userData?.nickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User');
       
-      // 힌트 필터링 (빈 문자열 제거, 최대 3개)
-      const validHints = hints.filter(h => h && h.trim()).slice(0, 3);
-      const hintsData = validHints.length > 0 ? validHints : null;
+      // 퀴즈 타입별 콘텐츠 데이터 준비
+      let quizContent: any = {};
       
+      if (quizType === 'soup') {
+        // 힌트 필터링 (빈 문자열 제거, 최대 3개)
+        const validHints = hints.filter(h => h && h.trim()).slice(0, 3);
+        quizContent = {
+          story: content.trim(),
+          answer: answer.trim(),
+          hints: validHints.length > 0 ? validHints : undefined,
+        };
+      } else if (quizType === 'nonsense') {
+        quizContent = {
+          question: question.trim(),
+          answer: answer.trim(),
+          explanation: explanation.trim() || undefined,
+        };
+      } else if (quizType === 'mcq') {
+        quizContent = {
+          question: question.trim(),
+          options: options.map(opt => opt.trim()),
+          correct: correctOption,
+          explanation: explanation.trim() || undefined,
+        };
+      } else if (quizType === 'ox') {
+        quizContent = {
+          question: question.trim(),
+          correct: correctOX === 'O' ? 0 : 1, // O=0, X=1
+          explanation: explanation.trim() || undefined,
+        };
+      } else if (quizType === 'balance') {
+        quizContent = {
+          question: question.trim() || undefined, // 설명 (선택사항)
+          options: balanceOptions.map(opt => opt.trim()).filter(opt => opt),
+        };
+      }
+      
+      // problems 테이블에 퀴즈 기본 정보 저장
       const insertData: any = {
         title: title.trim(),
-        content: content.trim(),
-        answer: answer.trim(),
-        difficulty: 'medium' as const,
-        tags: [] as string[],
-        author: authorName,
+        type: quizType, // 퀴즈 타입 추가
         user_id: user.id,
+        author: authorName, // 작성자 이름 추가
+        status: 'published',
+        difficulty: 'medium', // 중간 난이도 (TEXT 타입: 'easy', 'medium', 'hard')
+        tags: [],
         lang: currentLang,
       };
       
-      // hints 컬럼이 있으면 추가
-      if (hintsData) {
-        insertData.hints = hintsData;
+      // soup 타입은 기존 방식 유지 (하위 호환성)
+      if (quizType === 'soup') {
+        insertData.content = content.trim();
+        insertData.answer = answer.trim();
+        const validHints = hints.filter(h => h && h.trim()).slice(0, 3);
+        if (validHints.length > 0) {
+          insertData.hints = validHints;
+        }
+      } else if (quizType === 'balance') {
+        // 밸런스 게임은 content 필드가 필수이므로 title을 content로 사용
+        insertData.content = title.trim();
+        insertData.answer = ''; // answer는 필수이므로 빈 문자열
+      } else {
+        // 다른 타입들도 content가 필수인 경우 처리
+        insertData.content = question.trim() || title.trim() || '';
+        insertData.answer = answer?.trim() || '';
       }
       
       console.log('Insert 데이터 준비 완료:', { 
-        titleLength: insertData.title.length,
-        contentLength: insertData.content.length,
-        answerLength: insertData.answer.length,
-        userId: insertData.user_id
+        titleLength: insertData.title?.length || 0,
+        contentLength: insertData.content?.length || 0,
+        answerLength: insertData.answer?.length || 0,
+        userId: insertData.user_id,
+        quizType: insertData.type
       });
-      
-      console.log('Supabase insert 요청 시작...');
-      console.log('Content 필드 길이:', insertData.content.length, '자');
-      console.log('Content 필드 첫 100자:', insertData.content.substring(0, 100));
       
       const { data: problem, error } = await supabaseClient
         .from('problems')
@@ -121,6 +261,51 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
 
       if (!problem) {
         throw new Error('문제가 생성되지 않았습니다.');
+      }
+
+      // 이미지 파일이 있으면 Supabase Storage에 업로드
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${problem.id}_${Date.now()}.${fileExt}`;
+        const filePath = `quiz-images/${fileName}`;
+
+        const { error: uploadError } = await supabaseClient.storage
+          .from('quiz-images')
+          .upload(filePath, imageFile);
+
+        if (uploadError) {
+          console.error('이미지 업로드 오류:', uploadError);
+          // 이미지 업로드 실패는 무시 (URL로 대체 가능)
+        } else {
+          // 업로드된 이미지 URL 가져오기
+          const { data: { publicUrl } } = supabaseClient.storage
+            .from('quiz-images')
+            .getPublicUrl(filePath);
+          
+          if (publicUrl) {
+            // quizContent에 이미지 URL 업데이트
+            if (quizContent.image_url) {
+              quizContent.image_url = publicUrl;
+            } else if (quizType === 'image') {
+              quizContent.image_url = publicUrl;
+            }
+          }
+        }
+      }
+
+      // quiz_contents 테이블에 타입별 세부 데이터 저장
+      if (quizType !== 'soup' || Object.keys(quizContent).length > 0) {
+        const { error: contentError } = await supabaseClient
+          .from('quiz_contents')
+          .insert({
+            quiz_id: problem.id,
+            content: quizContent,
+          });
+
+        if (contentError) {
+          console.error('퀴즈 콘텐츠 저장 오류:', contentError);
+          // quiz_contents 저장 실패는 무시 (하위 호환성)
+        }
       }
 
       setIsSubmitting(false);
@@ -213,90 +398,174 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         </div>
 
         <div className="space-y-4 sm:space-y-5 lg:space-y-6">
-          {/* 제목 */}
+          {/* 퀴즈 유형 선택 */}
+          <div>
+            <QuizTypeSelector
+              selectedType={quizType}
+              onSelect={setQuizType}
+              lang={currentLang}
+              disabled={isSubmitting}
+            />
+          </div>
+
+          {/* 제목 (모든 유형 공통, 밸런스 게임은 "문제") */}
           <div>
             <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-              {lang === 'ko' ? '제목' : 'Title'}
+              {lang === 'ko' ? (quizType === 'balance' ? '문제' : '제목') : (quizType === 'balance' ? 'Question' : 'Title')}
+              <span className="text-red-400 ml-1">*</span>
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={lang === 'ko' ? '문제 제목을 입력하세요' : 'Enter problem title'}
+              placeholder={lang === 'ko' ? (quizType === 'balance' ? '문제를 입력하세요' : '문제 제목을 입력하세요') : (quizType === 'balance' ? 'Enter question' : 'Enter problem title')}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm sm:text-base"
               maxLength={100}
             />
           </div>
 
-          {/* 내용 */}
-          <div>
-            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-              {lang === 'ko' ? '내용' : 'Content'}
-            </label>
-            <p className="text-xs text-slate-400 mb-2">
-              {lang === 'ko' ? '문제의 배경과 상황을 자세히 설명해주세요.' : 'Please describe the background and situation of the problem in detail.'}
-            </p>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder={lang === 'ko' ? '문제의 배경과 상황을 자세히 설명해주세요.' : 'Please describe the background and situation of the problem in detail.'}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-32 sm:h-40 resize-none text-sm sm:text-base"
-              maxLength={2000}
+          {/* 유형별 폼 */}
+          {quizType === 'soup' && (
+            <QuizFormSoup
+              story={content}
+              truth={answer}
+              hints={hints}
+              onStoryChange={setContent}
+              onTruthChange={setAnswer}
+              onHintsChange={setHints}
+              lang={currentLang}
             />
-            <div className="text-right text-xs text-slate-500 mt-1">
-              {content.length} / 2000
-            </div>
-          </div>
+          )}
 
-          {/* 정답 */}
-          <div>
-            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-              {lang === 'ko' ? '정답' : 'Answer'}
-            </label>
-            <p className="text-xs text-slate-400 mb-2">
-              {lang === 'ko' ? '문제의 정답과 해설을 작성해주세요.' : 'Please write the answer and explanation for the problem.'}
-            </p>
-            <textarea
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              placeholder={lang === 'ko' ? '문제의 정답과 해설을 작성해주세요.' : 'Please write the answer and explanation for the problem.'}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-32 sm:h-40 resize-none text-sm sm:text-base"
-              maxLength={2000}
+          {quizType === 'nonsense' && (
+            <QuizFormNonsense
+              question={question}
+              answer={answer}
+              explanation={explanation}
+              onQuestionChange={setQuestion}
+              onAnswerChange={setAnswer}
+              onExplanationChange={setExplanation}
+              lang={currentLang}
             />
-            <div className="text-right text-xs text-slate-500 mt-1">
-              {answer.length} / 2000
-            </div>
-          </div>
+          )}
 
-          {/* 힌트 섹션 */}
-          <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-700/50">
-            <label className="block text-xs sm:text-sm font-medium mb-3 text-slate-300">
-              <i className="ri-lightbulb-line mr-1 text-yellow-400"></i>
-              {lang === 'ko' ? '힌트 (선택사항, 최대 3개)' : 'Hints (Optional, max 3)'}
-            </label>
-            <div className="space-y-2">
-              {hints.map((hint, index) => (
-                <input
-                  key={index}
-                  type="text"
-                  value={hint}
-                  onChange={(e) => {
-                    const newHints = [...hints];
-                    newHints[index] = e.target.value;
-                    setHints(newHints);
-                  }}
-                  placeholder={lang === 'ko' ? `힌트 ${index + 1} (선택사항)` : `Hint ${index + 1} (optional)`}
-                  className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 sm:px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500/50 text-sm sm:text-base"
-                  maxLength={200}
-                />
-              ))}
-            </div>
-            <div className="text-xs text-slate-400 mt-2">
-              {lang === 'ko' 
-                ? '💡 힌트는 AI가 질문에 답변할 때 참고하는 추가 정보입니다. 비워두면 사용되지 않습니다.'
-                : '💡 Hints are additional information that AI uses when answering questions. Leave blank if not needed.'}
-            </div>
-          </div>
+          {quizType === 'mcq' && (
+            <QuizFormMCQ
+              question={question}
+              options={options}
+              correct={correctOption}
+              explanation={explanation}
+              onQuestionChange={setQuestion}
+              onOptionsChange={setOptions}
+              onCorrectChange={setCorrectOption}
+              onExplanationChange={setExplanation}
+              lang={currentLang}
+            />
+          )}
+
+          {quizType === 'ox' && (
+            <QuizFormOX
+              question={question}
+              correct={correctOX}
+              explanation={explanation}
+              onQuestionChange={setQuestion}
+              onCorrectChange={setCorrectOX}
+              onExplanationChange={setExplanation}
+              lang={currentLang}
+            />
+          )}
+
+          {quizType === 'image' && (
+            <QuizFormImage
+              question={question}
+              answer={answer}
+              explanation={explanation}
+              imageUrl={imageUrl}
+              onQuestionChange={setQuestion}
+              onAnswerChange={setAnswer}
+              onExplanationChange={setExplanation}
+              onImageChange={setImageFile}
+              onImageUrlChange={setImageUrl}
+              lang={currentLang}
+            />
+          )}
+
+          {quizType === 'balance' && (
+            <QuizFormBalance
+              question={question}
+              options={balanceOptions}
+              imageUrl={imageUrl}
+              onQuestionChange={setQuestion}
+              onOptionsChange={setBalanceOptions}
+              onImageChange={setImageFile}
+              onImageUrlChange={setImageUrl}
+              lang={currentLang}
+            />
+          )}
+
+          {quizType === 'logic' && (
+            <QuizFormLogic
+              question={question}
+              content={logicContent}
+              answer={answer}
+              explanation={explanation}
+              imageUrl={imageUrl}
+              onQuestionChange={setQuestion}
+              onContentChange={setLogicContent}
+              onAnswerChange={setAnswer}
+              onExplanationChange={setExplanation}
+              onImageChange={setImageFile}
+              onImageUrlChange={setImageUrl}
+              lang={currentLang}
+            />
+          )}
+
+          {quizType === 'pattern' && (
+            <QuizFormPattern
+              question={question}
+              pattern={logicContent}
+              answer={answer}
+              explanation={explanation}
+              imageUrl={imageUrl}
+              onQuestionChange={setQuestion}
+              onPatternChange={setLogicContent}
+              onAnswerChange={setAnswer}
+              onExplanationChange={setExplanation}
+              onImageChange={setImageFile}
+              onImageUrlChange={setImageUrl}
+              lang={currentLang}
+            />
+          )}
+
+          {quizType === 'fill_blank' && (
+            <QuizFormFillBlank
+              question={question}
+              answer={fillBlankAnswer}
+              explanation={explanation}
+              imageUrl={imageUrl}
+              onQuestionChange={setQuestion}
+              onAnswerChange={setFillBlankAnswer}
+              onExplanationChange={setExplanation}
+              onImageChange={setImageFile}
+              lang={currentLang}
+            />
+          )}
+
+          {quizType === 'order' && (
+            <QuizFormOrder
+              question={question}
+              items={orderItems}
+              correctOrder={orderSequence}
+              explanation={explanation}
+              imageUrl={imageUrl}
+              onQuestionChange={setQuestion}
+              onItemsChange={setOrderItems}
+              onCorrectOrderChange={setOrderSequence}
+              onExplanationChange={setExplanation}
+              onImageChange={setImageFile}
+              lang={currentLang}
+            />
+          )}
 
           <button
             onClick={handleSubmit}

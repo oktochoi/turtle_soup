@@ -8,8 +8,6 @@ import SocialBottomBar from "@/components/SocialBottomBar";
 import { getMessages, type Locale, isValidLocale, defaultLocale } from "@/lib/i18n";
 import { notFound } from "next/navigation";
 import { measurePageLoad, monitorMemoryUsage } from "@/lib/performance-monitor";
-import PopunderLoader from "@/components/ads/PopunderLoader";
-import AdSocialBar from "@/components/ads/AdSocialBar";
 
 export async function generateMetadata({
   params,
@@ -23,11 +21,11 @@ export async function generateMetadata({
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://turtle-soup-rust.vercel.app";
   const baseUrl = `${siteUrl}/${locale}`;
 
-  const siteName = locale === "ko" ? "바다거북스프" : "Pelican Soup Riddle";
+  const siteName = locale === "ko" ? "퀴즈 천국" : "Quiz Paradise";
   const siteDescription =
     locale === "ko"
-      ? "추리와 질문으로 진실을 밝혀내는 온라인 멀티플레이어 바다거북스프 게임. 친구들과 함께 실시간으로 추리 게임을 즐기세요."
-      : "A deduction game where you uncover the truth through questions. Play with friends in real-time.";
+      ? "다양한 퀴즈와 추리 게임을 즐기는 퀴즈 플랫폼. 바다거북스프, 라이어 게임, 마피아 등 다양한 게임을 친구들과 함께 플레이하세요."
+      : "A quiz platform where you can enjoy various quizzes and deduction games. Play Turtle Soup, Liar Game, Mafia and more with friends.";
 
   return {
     title: siteName,
@@ -85,11 +83,11 @@ export default async function LangLayout({
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    name: locale === "ko" ? "바다거북스프게임" : "Pelican Soup Riddle",
+    name: locale === "ko" ? "퀴즈 천국" : "Quiz Paradise",
     description:
       locale === "ko"
-        ? "추리와 질문으로 진실을 밝혀내는 온라인 멀티플레이어 바다거북스프 게임"
-        : "A deduction game where you uncover the truth through questions",
+        ? "다양한 퀴즈와 추리 게임을 즐기는 퀴즈 플랫폼"
+        : "A quiz platform where you can enjoy various quizzes and deduction games",
     url: `${siteUrl}/${locale}`,
     applicationCategory: "Game",
     operatingSystem: "Web",
@@ -100,7 +98,7 @@ export default async function LangLayout({
     },
     game: {
       "@type": "VideoGame",
-      name: locale === "ko" ? "바다거북스프" : "Pelican Soup Riddle",
+      name: locale === "ko" ? "퀴즈 천국" : "Quiz Paradise",
       description: locale === "ko" ? "추리 게임" : "Deduction Game",
       gamePlatform: "Web Browser",
       genre: locale === "ko" ? "추리게임" : "Puzzle",
@@ -130,10 +128,6 @@ export default async function LangLayout({
       <ToastContainer />
       <AnalyticsGate />
       <PerformanceMonitor />
-      
-      {/* 전역 광고 컴포넌트 */}
-      <PopunderLoader position="global" />
-      <AdSocialBar position="global" mobileOnly={true} />
     </ErrorBoundary>
   );
 }

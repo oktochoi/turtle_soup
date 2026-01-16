@@ -105,6 +105,8 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
           setGameEnded(room.game_ended || room.status === 'done');
           setRoomPassword(room.password);
           setRoomCreatedAt(room.created_at ? new Date(room.created_at) : null);
+          // quiz_type이 없으면 기본값 'soup'으로 설정 (하위 호환성)
+          // const roomQuizType = room.quiz_type || 'soup';
         }
       } catch (err) {
         console.error('방 로드 오류:', err);

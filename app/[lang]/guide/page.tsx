@@ -2,8 +2,6 @@ import type { Metadata } from 'next';
 import { getMessages, type Locale, isValidLocale, defaultLocale } from '@/lib/i18n';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import AdNativeBanner from '@/components/ads/AdNativeBanner';
-import AdBanner300x250 from '@/components/ads/AdBanner300x250';
 
 export async function generateMetadata({
   params,
@@ -89,46 +87,118 @@ export default async function GuidePage({
 
             <section>
               <h2 className="text-2xl font-bold text-teal-400 mb-4">
-                {isKo ? '멀티플레이어 모드' : 'Multiplayer Mode'}
+                {isKo ? '멀티플레이어 게임' : 'Multiplayer Games'}
               </h2>
-              <ol className="list-decimal pl-6 space-y-3">
-                <li>
-                  <strong className="text-teal-300">{isKo ? '방 만들기' : 'Create Room'}:</strong>{' '}
+              <p className="mb-6 text-slate-300">
+                {isKo
+                  ? '친구들과 함께 실시간으로 즐길 수 있는 다양한 멀티플레이어 게임을 제공합니다.'
+                  : 'We offer various multiplayer games that you can enjoy in real-time with friends.'}
+              </p>
+
+              {/* 바다거북스프 */}
+              <div className="mb-8 p-6 bg-slate-800/50 rounded-xl border border-slate-700">
+                <h3 className="text-xl font-bold text-teal-300 mb-3 flex items-center gap-2">
+                  <i className="ri-bowl-line"></i>
+                  {isKo ? '바다거북스프' : 'Turtle Soup'}
+                </h3>
+                <p className="text-slate-300 mb-4">
                   {isKo
-                    ? '호스트가 방을 만들고 이야기와 진실을 입력합니다. 비밀번호를 설정하여 비공개 방을 만들 수도 있습니다.'
-                    : 'The host creates a room and enters a story and truth. You can also create a private room by setting a password.'}
-                </li>
-                <li>
-                  <strong className="text-teal-300">{isKo ? '방 참여' : 'Join Room'}:</strong>{' '}
+                    ? 'Yes/No 질문을 통해 진실을 추리하는 클래식한 추리 게임입니다.'
+                    : 'A classic deduction game where you deduce the truth through Yes/No questions.'}
+                </p>
+                <ol className="list-decimal pl-6 space-y-2 text-sm text-slate-300">
+                  <li>
+                    {isKo
+                      ? '호스트가 방을 만들고 이야기와 정답을 입력합니다.'
+                      : 'The host creates a room and enters a story and answer.'}
+                  </li>
+                  <li>
+                    {isKo
+                      ? '플레이어들은 방 코드로 참여하여 예/아니오/상관없음 질문을 합니다.'
+                      : 'Players join with a room code and ask yes/no/irrelevant questions.'}
+                  </li>
+                  <li>
+                    {isKo
+                      ? '호스트가 질문에 답변하고, 플레이어들은 정답을 추측합니다.'
+                      : 'The host answers questions and players guess the answer.'}
+                  </li>
+                  <li>
+                    {isKo
+                      ? '정답을 맞추면 게임이 종료되고 진실이 공개됩니다.'
+                      : 'When someone guesses correctly, the game ends and the truth is revealed.'}
+                  </li>
+                </ol>
+              </div>
+
+              {/* 라이어 게임 */}
+              <div className="mb-8 p-6 bg-slate-800/50 rounded-xl border border-slate-700">
+                <h3 className="text-xl font-bold text-purple-300 mb-3 flex items-center gap-2">
+                  <i className="ri-user-unfollow-line"></i>
+                  {isKo ? '라이어 게임' : 'Liar Game'}
+                </h3>
+                <p className="text-slate-300 mb-4">
                   {isKo
-                    ? '다른 플레이어들은 방 코드를 입력하여 참여합니다. 비밀번호가 설정된 방의 경우 비밀번호도 입력해야 합니다.'
-                    : 'Other players join by entering the room code. If a password is set for the room, the password must also be entered.'}
-                </li>
-                <li>
-                  <strong className="text-teal-300">{isKo ? '질문하기' : 'Ask Questions'}:</strong>{' '}
+                    ? '한 명의 라이어를 찾아내는 심리전 게임입니다.'
+                    : 'A psychological game where you find the liar among players.'}
+                </p>
+                <ol className="list-decimal pl-6 space-y-2 text-sm text-slate-300">
+                  <li>
+                    {isKo
+                      ? '호스트가 게임 주제와 규칙을 설정합니다.'
+                      : 'The host sets the game topic and rules.'}
+                  </li>
+                  <li>
+                    {isKo
+                      ? '플레이어 중 한 명이 라이어로 지정됩니다 (라이어는 자신이 라이어인지 모릅니다).'
+                      : 'One player is designated as the liar (the liar doesn\'t know they are the liar).'}
+                  </li>
+                  <li>
+                    {isKo
+                      ? '플레이어들은 주제에 대해 질문하고 답변하며 라이어를 찾아냅니다.'
+                      : 'Players ask and answer questions about the topic to find the liar.'}
+                  </li>
+                  <li>
+                    {isKo
+                      ? '라이어를 찾아내거나 라이어가 살아남으면 게임이 종료됩니다.'
+                      : 'The game ends when the liar is found or survives.'}
+                  </li>
+                </ol>
+              </div>
+
+              {/* 마피아 */}
+              <div className="mb-8 p-6 bg-slate-800/50 rounded-xl border border-slate-700">
+                <h3 className="text-xl font-bold text-red-300 mb-3 flex items-center gap-2">
+                  <i className="ri-sword-line"></i>
+                  {isKo ? '마피아' : 'Mafia'}
+                </h3>
+                <p className="text-slate-300 mb-4">
                   {isKo
-                    ? '플레이어들은 예/아니오/상관없음으로 답변 가능한 질문을 할 수 있습니다. 예: "그 남자는 수영을 할 수 있었나요?"'
-                    : 'Players can ask questions that can be answered with yes/no/irrelevant. Example: "Could the man swim?"'}
-                </li>
-                <li>
-                  <strong className="text-teal-300">{isKo ? '답변하기' : 'Answer Questions'}:</strong>{' '}
-                  {isKo
-                    ? '호스트는 각 질문에 대해 예/아니오/상관없음으로 답변합니다.'
-                    : 'The host answers each question with yes/no/irrelevant.'}
-                </li>
-                <li>
-                  <strong className="text-teal-300">{isKo ? '정답 추측' : 'Guess the Answer'}:</strong>{' '}
-                  {isKo
-                    ? '플레이어들은 충분한 질문을 한 후 진실을 추측하여 제출할 수 있습니다.'
-                    : 'After asking enough questions, players can guess and submit the truth.'}
-                </li>
-                <li>
-                  <strong className="text-teal-300">{isKo ? '게임 종료' : 'End Game'}:</strong>{' '}
-                  {isKo
-                    ? '호스트가 정답을 확인하면 게임이 종료되고 진실이 공개됩니다.'
-                    : 'When the host confirms the answer, the game ends and the truth is revealed.'}
-                </li>
-              </ol>
+                    ? '마피아와 시민의 대결을 그린 심리 추리 게임입니다.'
+                    : 'A psychological deduction game depicting the battle between mafia and citizens.'}
+                </p>
+                <ol className="list-decimal pl-6 space-y-2 text-sm text-slate-300">
+                  <li>
+                    {isKo
+                      ? '호스트가 게임 설정과 역할을 배정합니다.'
+                      : 'The host sets up the game and assigns roles.'}
+                  </li>
+                  <li>
+                    {isKo
+                      ? '플레이어들은 마피아와 시민으로 나뉩니다.'
+                      : 'Players are divided into mafia and citizens.'}
+                  </li>
+                  <li>
+                    {isKo
+                      ? '밤에는 마피아가 활동하고, 낮에는 시민들이 토론하여 마피아를 찾습니다.'
+                      : 'Mafia acts at night, and citizens discuss during the day to find the mafia.'}
+                  </li>
+                  <li>
+                    {isKo
+                      ? '마피아를 모두 찾거나 마피아가 시민 수를 넘으면 게임이 종료됩니다.'
+                      : 'The game ends when all mafia are found or mafia outnumber citizens.'}
+                  </li>
+                </ol>
+              </div>
             </section>
 
             <section>
@@ -163,15 +233,6 @@ export default async function GuidePage({
                 </li>
               </ol>
             </section>
-
-            {/* 광고: 오프라인 모드 후 */}
-            <div className="my-6 sm:my-8">
-              <AdNativeBanner
-                position="guide-after-offline"
-                className="w-full max-w-md mx-auto"
-                cardStyle={true}
-              />
-            </div>
 
             <section>
               <h2 className="text-2xl font-bold text-teal-400 mb-4">
@@ -239,15 +300,6 @@ export default async function GuidePage({
               </ul>
             </section>
 
-            {/* 광고: 게임 팁 후 */}
-            <div className="my-6 sm:my-8">
-              <AdNativeBanner
-                position="guide-after-tips"
-                className="w-full max-w-md mx-auto"
-                cardStyle={true}
-              />
-            </div>
-
             <section>
               <h2 className="text-2xl font-bold text-teal-400 mb-4">
                 {isKo ? '랭킹 시스템' : 'Ranking System'}
@@ -298,20 +350,6 @@ export default async function GuidePage({
                 </li>
               </ul>
             </section>
-
-            {/* 광고: 출석체크 및 경험치 후 */}
-            <div className="my-6 sm:my-8">
-              <div className="flex flex-col items-center gap-4">
-                <AdNativeBanner
-                  position="guide-after-xp"
-                  className="w-full max-w-md"
-                  cardStyle={true}
-                />
-                <div className="hidden sm:block">
-                  <AdBanner300x250 position="guide-after-xp" />
-                </div>
-              </div>
-            </div>
 
             <div className="mt-8 pt-6 border-t border-slate-700">
               <div className="flex flex-wrap gap-3">

@@ -11,8 +11,6 @@ import { useTranslations } from '@/hooks/useTranslations';
 import { ProblemCardSkeleton } from '@/components/Skeleton';
 import { ProblemsEmptyState } from '@/components/EmptyState';
 import { handleError } from '@/lib/error-handler';
-import AdNativeBanner from '@/components/ads/AdNativeBanner';
-import AdBanner300x250 from '@/components/ads/AdBanner300x250';
 
 type SortOption = 'latest' | 'popular' | 'difficulty';
 
@@ -153,11 +151,39 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
     // 검색 필터
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(p => 
-        p.title.toLowerCase().includes(query) ||
-        p.content.toLowerCase().includes(query) ||
-        (p.tags && Array.isArray(p.tags) && p.tags.some(tag => tag.toLowerCase().includes(query)))
-      );
+      filtered = filtered.filter(p => {
+        const type = (p as any).type || 'soup';
+        const typeName = type === 'soup' ? '바다거북스프' :
+                        type === 'nonsense' ? '넌센스 퀴즈' :
+                        type === 'mcq' ? '객관식 퀴즈' :
+                        type === 'ox' ? 'OX 퀴즈' :
+                        type === 'image' ? '이미지 퀴즈' :
+                        type === 'balance' ? '밸런스 게임' :
+                        type === 'logic' ? '논리 퍼즐' :
+                        type === 'pattern' ? '수열/패턴' :
+                        type === 'fill_blank' ? '빈칸 퀴즈' :
+                        type === 'order' ? '순서 맞추기' :
+                        type === 'liar' ? '라이어 게임' :
+                        type === 'mafia' ? '마피아' : type;
+        const typeNameEn = type === 'soup' ? 'turtle soup' :
+                          type === 'nonsense' ? 'nonsense quiz' :
+                          type === 'mcq' ? 'multiple choice' :
+                          type === 'ox' ? 'ox quiz' :
+                          type === 'image' ? 'image quiz' :
+                          type === 'balance' ? 'balance game' :
+                          type === 'logic' ? 'logic puzzle' :
+                          type === 'pattern' ? 'pattern' :
+                          type === 'fill_blank' ? 'fill blank' :
+                          type === 'order' ? 'order matching' :
+                          type === 'liar' ? 'liar game' :
+                          type === 'mafia' ? 'mafia' : type;
+        return p.title.toLowerCase().includes(query) ||
+               p.content.toLowerCase().includes(query) ||
+               typeName.toLowerCase().includes(query) ||
+               typeNameEn.toLowerCase().includes(query) ||
+               type.toLowerCase().includes(query) ||
+               (p.tags && Array.isArray(p.tags) && p.tags.some(tag => tag.toLowerCase().includes(query)));
+      });
     }
 
     // 태그 필터
@@ -332,15 +358,6 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
           </div>
         </div>
 
-        {/* 광고: 필터 섹션 후 */}
-        <div className="my-6">
-          <AdNativeBanner
-            position="problems-after-filters"
-            className="w-full max-w-md mx-auto"
-            cardStyle={true}
-          />
-        </div>
-
         {/* 문제 목록 */}
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
@@ -408,22 +425,6 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
               );
             })}
             </div>
-
-            {/* 광고: 문제 리스트 중간 (6개 문제 후) */}
-            {paginatedProblems.length > 6 && currentPage === 1 && (
-              <div className="my-6">
-                <div className="flex flex-col items-center gap-4">
-                  <AdNativeBanner
-                    position="problems-middle"
-                    className="w-full max-w-md"
-                    cardStyle={true}
-                  />
-                  <div className="hidden sm:block">
-                    <AdBanner300x250 position="problems-middle" />
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* 페이지네이션 */}
             {totalPages > 1 && (

@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useTranslations } from '@/hooks/useTranslations';
+import { QuizType, MULTIPLAYER_QUIZ_TYPES } from '@/lib/types/quiz';
+import QuizTypeSelectorMultiplayer from '@/components/quiz/QuizTypeSelectorMultiplayer';
 
 export default function CreateRoom({ params }: { params: Promise<{ lang: string }> }) {
   const resolvedParams = use(params);
@@ -14,6 +16,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
   const t = useTranslations();
+  const [quizType, setQuizType] = useState<QuizType | null>('liar'); // 기본값: liar
   const [story, setStory] = useState('');
   const [truth, setTruth] = useState('');
   const [maxQuestions, setMaxQuestions] = useState<number | null>(30);
@@ -36,6 +39,23 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
   };
 
   const handleCreate = async () => {
+    if (!quizType) {
+      alert(lang === 'ko' ? '게임 유형을 선택해주세요.' : 'Please select a game type.');
+      return;
+    }
+
+    // 멀티플레이는 soup, 라이어, 마피아 지원
+    if (!MULTIPLAYER_QUIZ_TYPES.includes(quizType)) {
+      alert(lang === 'ko' ? '멀티플레이 방은 바다거북스프, 라이어 게임 또는 마피아만 지원합니다.' : 'Multiplayer rooms only support Turtle Soup, Liar Game or Mafia.');
+      return;
+    }
+
+    // 라이어/마피아는 story/truth 구조 다름 - 일단 soup 형식으로 통일
+    if (!story.trim() || !truth.trim() || !nickname.trim()) {
+      alert(t.room.fillAllFields);
+      return;
+    }
+
     if (!story.trim() || !truth.trim() || !nickname.trim()) {
       alert(t.room.fillAllFields);
       return;
@@ -93,6 +113,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
         game_ended: false,
         status: 'active',
         hints: hintsData, // JSON 배열로 저장
+        quiz_type: quizType, // 퀴즈 유형 추가 (rooms 테이블에 컬럼이 있어야 함)
       };
       
       // lang 컬럼이 있으면 추가
@@ -172,6 +193,17 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
         </div>
 
         <div className="space-y-4 sm:space-y-5">
+          {/* 멀티플레이 게임 유형 선택 */}
+          <div>
+            <QuizTypeSelectorMultiplayer
+              selectedType={quizType}
+              onSelect={setQuizType}
+              lang={lang}
+              disabled={isCreating}
+            />
+          </div>
+
+          {/* 호스트 닉네임 */}
           <div>
             <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
               <i className="ri-user-line mr-1"></i>
@@ -187,69 +219,85 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
             />
           </div>
 
-          <div>
-            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-              <i className="ri-file-text-line mr-1"></i>
-              {t.room.surfaceStory}
-            </label>
-            <textarea
-              value={story}
-              onChange={(e) => setStory(e.target.value)}
-              placeholder={t.room.surfaceStoryPlaceholder}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-32 resize-none text-sm"
-              maxLength={500}
-            />
-            <div className="text-right text-xs text-slate-500 mt-1">
-              {story.length} / 500
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-              <i className="ri-key-line mr-1"></i>
-              {t.room.truth}
-            </label>
-            <textarea
-              value={truth}
-              onChange={(e) => setTruth(e.target.value)}
-              placeholder={t.room.truthPlaceholder}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-40 resize-none text-sm"
-              maxLength={500}
-            />
-            <div className="text-right text-xs text-slate-500 mt-1">
-              {truth.length} / 500
-            </div>
-          </div>
-
-          {/* 힌트 섹션 */}
-          <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-700/50">
-            <label className="block text-xs sm:text-sm font-medium mb-3 text-slate-300">
-              <i className="ri-lightbulb-line mr-1 text-yellow-400"></i>
-              {lang === 'ko' ? '힌트 (선택사항, 최대 3개)' : 'Hints (Optional, max 3)'}
-            </label>
-            <div className="space-y-2">
-              {hints.map((hint, index) => (
-                <input
-                  key={index}
-                  type="text"
-                  value={hint}
-                  onChange={(e) => {
-                    const newHints = [...hints];
-                    newHints[index] = e.target.value;
-                    setHints(newHints);
-                  }}
-                  placeholder={lang === 'ko' ? `힌트 ${index + 1} (선택사항)` : `Hint ${index + 1} (optional)`}
-                  className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500/50 text-sm"
-                  maxLength={200}
+          {/* 게임 설정 (soup, 라이어, 마피아 공통) */}
+          {quizType && MULTIPLAYER_QUIZ_TYPES.includes(quizType) && (
+            <>
+              <div>
+                <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                  <i className="ri-file-text-line mr-1"></i>
+                  {quizType === 'soup' 
+                    ? (lang === 'ko' ? '이야기' : 'Story')
+                    : (lang === 'ko' ? '게임 설명' : 'Game Description')
+                  }
+                </label>
+                <textarea
+                  value={story}
+                  onChange={(e) => setStory(e.target.value)}
+                  placeholder={
+                    quizType === 'soup'
+                      ? (lang === 'ko' ? '이야기를 입력하세요' : 'Enter the story')
+                      : (lang === 'ko' ? '게임의 배경과 규칙을 설명해주세요' : 'Describe the game background and rules')
+                  }
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-32 resize-none text-sm"
+                  maxLength={5000}
                 />
-              ))}
-            </div>
-            <div className="text-xs text-slate-400 mt-2">
-              {lang === 'ko' 
-                ? '💡 힌트는 AI가 질문에 답변할 때 참고하는 추가 정보입니다. 비워두면 사용되지 않습니다.'
-                : '💡 Hints are additional information that AI uses when answering questions. Leave blank if not needed.'}
-            </div>
-          </div>
+                <div className="text-right text-xs text-slate-500 mt-1">
+                  {story.length} / 5000
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                  <i className="ri-information-line mr-1"></i>
+                  {quizType === 'soup'
+                    ? (lang === 'ko' ? '정답' : 'Answer')
+                    : (lang === 'ko' ? '추가 정보' : 'Additional Info')
+                  }
+                </label>
+                <textarea
+                  value={truth}
+                  onChange={(e) => setTruth(e.target.value)}
+                  placeholder={
+                    quizType === 'soup'
+                      ? (lang === 'ko' ? '정답을 입력하세요' : 'Enter the answer')
+                      : (lang === 'ko' ? '게임에 필요한 추가 정보나 설정을 입력하세요' : 'Enter additional information or settings for the game')
+                  }
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-40 resize-none text-sm"
+                  maxLength={1000}
+                />
+                <div className="text-right text-xs text-slate-500 mt-1">
+                  {truth.length} / 1000
+                </div>
+              </div>
+
+              {/* 바다거북스프만 힌트 입력 */}
+              {quizType === 'soup' && (
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                    <i className="ri-lightbulb-line mr-1"></i>
+                    {lang === 'ko' ? '힌트 (선택사항, 최대 3개)' : 'Hints (Optional, up to 3)'}
+                  </label>
+                  <div className="space-y-2">
+                    {hints.map((hint, index) => (
+                      <input
+                        key={index}
+                        type="text"
+                        value={hint}
+                        onChange={(e) => {
+                          const newHints = [...hints];
+                          newHints[index] = e.target.value;
+                          setHints(newHints);
+                        }}
+                        placeholder={lang === 'ko' ? `힌트 ${index + 1}` : `Hint ${index + 1}`}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                        maxLength={200}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
 
           <div>
             <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">

@@ -28,6 +28,7 @@ export type Room = {
   status: 'active' | 'done';
   created_at: string;
   hints?: string[] | null; // 최대 3개의 힌트
+  quiz_type?: 'soup' | 'reasoning' | 'nonsense' | 'mcq' | 'ox' | 'image' | 'poll' | 'balance' | 'logic' | 'pattern' | 'liar' | 'mafia' | 'battle' | null; // 퀴즈 유형
 };
 
 export type Player = {

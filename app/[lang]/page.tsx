@@ -9,8 +9,6 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { triggerEvent, getOrCreateGuestId } from '@/lib/progress-client';
 import { useTranslations } from '@/hooks/useTranslations';
 import type { Problem } from '@/lib/types';
-import AdNativeBanner from '@/components/ads/AdNativeBanner';
-import AdBanner300x250 from '@/components/ads/AdBanner300x250';
 
 export default function Home() {
   const params = useParams();
@@ -440,20 +438,6 @@ export default function Home() {
                 </span>
               )}
             </button>
-          </div>
-
-          {/* 광고: 출석체크 후 */}
-          <div className="my-6">
-            <div className="flex flex-col items-center gap-4">
-              <AdNativeBanner
-                position="home-after-checkin"
-                className="w-full max-w-md"
-                cardStyle={true}
-              />
-              <div className="hidden sm:block">
-                <AdBanner300x250 position="home-after-checkin" />
-              </div>
-            </div>
           </div>
 
           {/* 오늘의 문제 */}
