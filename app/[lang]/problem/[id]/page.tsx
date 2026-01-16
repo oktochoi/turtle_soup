@@ -14,6 +14,8 @@ import UserLabel from '@/components/UserLabel';
 import { useTranslations } from '@/hooks/useTranslations';
 import { createNotification } from '@/lib/notifications';
 import { checkIfLearnedError } from '@/lib/check-learned-error';
+import JsonLd from '@/components/JsonLd';
+import NativeAd from '@/app/components/NativeAd';
 
 export default function ProblemPage({ params }: { params: Promise<{ lang: string; id: string }> }) {
   const resolvedParams = use(params);
@@ -1451,8 +1453,40 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
 
   const difficultyBadge = getDifficultyFromRating(averageRating);
 
+  // JSON-LD 구조화된 데이터
+  const structuredData = problem ? {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": problem.title,
+    "description": problem.content?.substring(0, 200) || '',
+    "author": {
+      "@type": "Person",
+      "name": problem.author || 'Anonymous'
+    },
+    "datePublished": problem.created_at,
+    "dateModified": problem.updated_at || problem.created_at,
+    "interactionStatistic": [
+      {
+        "@type": "InteractionCounter",
+        "interactionType": "https://schema.org/ViewAction",
+        "userInteractionCount": problem.view_count || 0
+      },
+      {
+        "@type": "InteractionCounter",
+        "interactionType": "https://schema.org/LikeAction",
+        "userInteractionCount": problem.like_count || 0
+      }
+    ],
+    "commentCount": problem.comment_count || 0,
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": typeof window !== 'undefined' ? `${window.location.origin}/${lang}/problem/${problemId}` : ''
+    }
+  } : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+      {structuredData && <JsonLd data={structuredData} />}
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-3 sm:py-4 lg:py-6 xl:py-8 max-w-4xl">
         <div className="mb-4 sm:mb-6">
           <Link href={`/${lang}`}>
@@ -2079,6 +2113,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                   </p>
                 </div>
               )}
+        <NativeAd />
 
               {/* 힌트 보기 */}
               {problem && (problem as any).hints && Array.isArray((problem as any).hints) && (problem as any).hints.length > 0 && (
@@ -2200,6 +2235,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
             </div>
           )}
         </div>
+        <NativeAd />
 
         {/* 댓글 섹션 */}
         <div className="bg-slate-800 rounded-xl p-4 sm:p-6 lg:p-8 border border-slate-700">

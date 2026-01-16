@@ -1,5 +1,6 @@
 /**
  * 통합 에러 핸들링 유틸리티
+ * Pro 플랜에서 Vercel Logs와 통합하여 에러 추적 강화
  */
 
 export interface AppError {
@@ -8,6 +9,13 @@ export interface AppError {
   details?: any;
   hint?: string;
   userMessage?: string;
+  errorType?: string;
+  errorString?: string;
+  originalError?: any;
+  stack?: string;
+  timestamp?: string;
+  url?: string;
+  userAgent?: string;
 }
 
 /**
@@ -120,29 +128,43 @@ export function handleError(
 ): AppError {
   const appError = formatError(error);
 
-  // 콘솔에 상세 로그 출력
-  if (context) {
-    console.error(`[${context}]`, {
-      code: appError.code,
-      message: appError.message,
-      details: appError.details,
-      hint: appError.hint,
-      userMessage: appError.userMessage,
-      originalError: error,
-      errorType: error?.constructor?.name,
-      errorString: String(error),
-    });
-  } else {
-    console.error('Error:', {
-      code: appError.code,
-      message: appError.message,
-      details: appError.details,
-      hint: appError.hint,
-      userMessage: appError.userMessage,
-      originalError: error,
-      errorType: error?.constructor?.name,
-      errorString: String(error),
-    });
+  // 에러 로깅 (Vercel Logs에 자동으로 전송됨)
+  const errorLog = {
+    context: context || 'Unknown',
+    code: appError.code,
+    message: appError.message,
+    details: appError.details,
+    hint: appError.hint,
+    userMessage: appError.userMessage,
+    errorType: (error as any)?.constructor?.name,
+    errorString: String(error),
+    timestamp: new Date().toISOString(),
+    url: typeof window !== 'undefined' ? window.location.href : undefined,
+    userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : undefined,
+    stack: (error as any)?.stack,
+    originalError: process.env.NODE_ENV === 'development' ? error : undefined,
+  };
+
+  // 프로덕션에서는 구조화된 로그로 출력 (Vercel Logs에서 수집)
+  console.error(`[${context || 'Error'}]`, JSON.stringify(errorLog));
+
+  // 개발 환경에서는 상세한 에러 정보 출력
+  if (process.env.NODE_ENV === 'development') {
+    console.error(`[${context || 'Error'} Details]`, errorLog);
+  }
+
+  // Vercel Analytics에 에러 이벤트 전송 (선택사항)
+  if (typeof window !== 'undefined' && (window as any).va) {
+    try {
+      (window as any).va('event', 'error', {
+        error_type: errorLog.errorType,
+        error_code: appError.code,
+        error_message: appError.message.substring(0, 100), // 메시지 길이 제한
+        context: context || 'Unknown',
+      });
+    } catch (e) {
+      // Analytics 전송 실패는 무시
+    }
   }
 
   // 사용자에게 Toast 표시

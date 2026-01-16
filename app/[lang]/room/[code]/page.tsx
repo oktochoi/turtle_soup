@@ -748,54 +748,9 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
 
     loadInitialData();
 
-    // 주기적으로 방 상태 확인 (Polling) - Realtime이 작동하지 않을 경우를 대비
-    const pollRoomStatus = async () => {
-      try {
-        const { data: roomData, error } = await supabase
-          .from('rooms')
-          .select('status, game_ended')
-          .eq('code', roomCode)
-          .single();
-        
-        if (error) {
-          // 방을 찾을 수 없으면 삭제된 것으로 간주 (게임 종료됨)
-          if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
-            console.log('🔄 Polling: 방이 삭제되었습니다 - 게임 종료 상태로 간주');
-            setGameEnded(true);
-            return;
-          }
-          console.error('방 상태 확인 오류:', error);
-          return;
-        }
-        
-        if (roomData) {
-          if (roomData.status === 'done' || roomData.game_ended) {
-            console.log('🔄 Polling: 게임 종료 상태 감지 - 모든 사용자에게 모달 표시');
-            setGameEnded(true);
-          }
-        } else {
-          // 방 데이터가 없으면 삭제된 것으로 간주
-          console.log('🔄 Polling: 방 데이터가 없습니다 - 게임 종료 상태로 간주');
-          setGameEnded(true);
-        }
-      } catch (err) {
-        console.error('방 상태 Polling 오류:', err);
-        // 오류 발생 시에도 게임 종료로 간주 (방이 삭제되었을 가능성)
-        setGameEnded(true);
-      }
-    };
-
-    // 2초마다 방 상태 확인
-    const pollInterval = setInterval(pollRoomStatus, 2000);
-
-    // 5분마다 비활성 방 정리 API 호출 (1시간 이상 활동이 없으면 방 제거)
-    const cleanupInterval = setInterval(async () => {
-      try {
-        await fetch('/api/rooms/cleanup', { method: 'POST' });
-      } catch (error) {
-        console.error('방 정리 API 호출 오류:', error);
-      }
-    }, 5 * 60 * 1000); // 5분마다
+    // Polling 제거 - Realtime으로 대체됨
+    // Realtime 구독이 모든 상태 변경을 실시간으로 처리하므로 polling 불필요
+    console.log('✅ Realtime 구독 활성화 - Polling 제거됨');
 
     // 현재 방의 활동 시간도 체크하여 1시간 이상 비활성이면 경고
     const checkInactivity = async () => {
@@ -832,8 +787,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
       roomChannel.unsubscribe();
       playersChannel.unsubscribe();
       chatTimeChannel.unsubscribe();
-      clearInterval(pollInterval);
-      clearInterval(cleanupInterval);
+      // Polling 제거됨 - Realtime으로 대체
       clearInterval(inactivityCheckInterval);
     };
   }, [roomCode, showNicknameModal]);

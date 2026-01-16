@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth-helpers';
 
 export async function POST() {
   try {
-    const supabase = await createClient();
+    // 관리자만 접근 가능
+    const { supabase } = await requireAdmin();
     
     // 1시간 이상 활동이 없는 방을 자동으로 제거하는 함수 호출
     const { data, error } = await supabase.rpc('cleanup_inactive_rooms');

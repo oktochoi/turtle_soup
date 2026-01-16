@@ -172,6 +172,12 @@ export default function Header() {
               <div className="flex items-center gap-3 ml-2">
                 {isAdmin && (
                   <div className="flex items-center gap-2">
+                    <Link href={getLocalizedPath('/admin/dashboard')}>
+                      <button className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-teal-500/20 text-teal-400 border border-teal-500/50 hover:bg-teal-500/30">
+                        <i className="ri-dashboard-line mr-1"></i>
+                        {currentLang === 'ko' ? '대시보드' : 'Dashboard'}
+                      </button>
+                    </Link>
                     <Link href={getLocalizedPath('/admin/reports')}>
                       <button className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30">
                         <i className="ri-shield-user-line mr-1"></i>

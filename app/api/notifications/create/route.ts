@@ -13,9 +13,26 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { userId, type, title, message, link } = body;
 
+    // 입력 검증
+    if (!userId || !type || !title || !message) {
+      return NextResponse.json(
+        { error: '필수 필드가 누락되었습니다.' },
+        { status: 400 }
+      );
+    }
+
     // 본인에게 알림을 보내는 것은 방지
     if (userId === user.id) {
       return NextResponse.json({ success: true, skipped: true });
+    }
+
+    // 타입 검증
+    const allowedTypes = ['comment_on_problem', 'like_on_problem', 'reply_to_comment', 'system'];
+    if (!allowedTypes.includes(type)) {
+      return NextResponse.json(
+        { error: '유효하지 않은 알림 타입입니다.' },
+        { status: 400 }
+      );
     }
 
     // 알림 생성 (service_role이 필요하므로, 현재 사용자 권한으로는 RLS 정책에 따라 실패할 수 있음)

@@ -7,6 +7,7 @@ import { AnalyticsGate } from "@/components/AnalyticsGate";
 import SocialBottomBar from "@/components/SocialBottomBar";
 import { getMessages, type Locale, isValidLocale, defaultLocale } from "@/lib/i18n";
 import { notFound } from "next/navigation";
+import { measurePageLoad, monitorMemoryUsage } from "@/lib/performance-monitor";
 
 export async function generateMetadata({
   params,
@@ -47,6 +48,17 @@ export async function generateMetadata({
       alternateLocale: locale === 'ko' ? 'en_US' : 'ko_KR',
     },
   };
+}
+
+// 성능 모니터링 클라이언트 컴포넌트
+function PerformanceMonitor() {
+  if (typeof window !== 'undefined') {
+    measurePageLoad();
+    if (process.env.NODE_ENV === 'development') {
+      monitorMemoryUsage();
+    }
+  }
+  return null;
 }
 
 export default async function LangLayout({
@@ -111,7 +123,7 @@ export default async function LangLayout({
       </div>
       <ToastContainer />
       <AnalyticsGate />
+      <PerformanceMonitor />
     </ErrorBoundary>
   );
 }
-

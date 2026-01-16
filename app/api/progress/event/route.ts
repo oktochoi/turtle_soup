@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { applyEvent, getOrCreateUserByGuestId, getOrCreateUserByAuthId } from '@/lib/progress';
 import type { XPEventType, EventPayload } from '@/types/progress';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
+import { validateQuestionOrGuess } from '@/lib/input-validation';
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate Limiting 체크 (선택사항)
     const body = await request.json();
     const { 
       userId, 

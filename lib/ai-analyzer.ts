@@ -1043,7 +1043,11 @@ async function loadEmbeddingModel(maxRetries = 1): Promise<Pipeline> {
     let lastError: any = null;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const { pipeline } = await import("@xenova/transformers");
+        const { pipeline, env } = await import("@xenova/transformers");
+        // 모델 로딩 시 절대 경로 사용하도록 설정
+        if (typeof window !== 'undefined') {
+          env.allowLocalModels = false; // Hugging Face Hub에서 직접 로드
+        }
         const model = await pipeline("feature-extraction", "Xenova/paraphrase-multilingual-MiniLM-L12-v2", {
           quantized: true,
         });
@@ -1401,9 +1405,9 @@ export async function buildProblemKnowledge(
   };
 }
 
-// -------------------------
+    // -------------------------
 // Learned data cache (동적 학습 데이터)
-// -------------------------
+    // -------------------------
 let learnedSynonymsCache: Map<string, string[]> | null = null;
 let learnedAntonymsCache: Map<string, string[]> | null = null;
 let learnedDataLoadPromise: Promise<void> | null = null;
@@ -1428,16 +1432,16 @@ async function loadLearnedDataOnce(): Promise<void> {
   })();
   
   return learnedDataLoadPromise;
-}
+    }
 
-// -------------------------
+    // -------------------------
 // Synonym expansion (per problem, lazy)
 // 목표: 유의어 사전 수동 관리 최소화 - 문제 내부에서 embedding으로 자동 확장
 // - 전역 유의어 사전을 먼저 확인 (살인자-범인 등 일반적인 유의어)
 // - 학습된 유의어를 확인 (버그 리포트에서 추출)
 // - 문제의 entitySet 내에서 embedding 유사도 기반으로 동적 유의어 발견
 // - CONFIG.LEXICON.SYNONYM_SIM_THRESHOLD 이상의 유사도를 가진 토큰들을 유의어로 확장
-// -------------------------
+    // -------------------------
 async function getConceptVecCached(concept: string, knowledge: ProblemKnowledge): Promise<Float32Array> {
   const key = concept;
   const cached = knowledge.conceptVecCache.get(key);
@@ -1770,7 +1774,7 @@ export async function analyzeQuestionV8(
 
     // generalization push-to-NO (V9: taxonomyHit 또는 conceptMatched면 약화)
     if (isGeneralizationQuestion(q) && !conceptMatched && !force.taxonomyHit) {
-      simContentAdj += CONFIG.ADJUST.GENERALIZATION_NO_BONUS;
+        simContentAdj += CONFIG.ADJUST.GENERALIZATION_NO_BONUS;
       simAnswerAdj -= CONFIG.ADJUST.TAXONOMY_GENERALIZATION_PENALTY;
     }
 

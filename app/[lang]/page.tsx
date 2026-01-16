@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { triggerEvent, getOrCreateGuestId } from '@/lib/progress-client';
 import { useTranslations } from '@/hooks/useTranslations';
 import type { Problem } from '@/lib/types';
+import NativeAd from '../components/NativeAd';
 
 export default function Home() {
   const params = useParams();
@@ -342,7 +343,6 @@ export default function Home() {
             {t.home.subtitle}
           </p>
         </header>
-
         <div className="flex flex-col lg:flex-row gap-5 sm:gap-6 animate-fade-in-up">
           {/* 멀티플레이어 섹션 */}
           <div className="group relative bg-slate-800/40 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 hover:border-teal-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-teal-500/20 hover:-translate-y-1 flex-1">
@@ -391,6 +391,7 @@ export default function Home() {
             </div>
           </div>
         </div>
+        <NativeAd />
 
         <section className="mt-8 sm:mt-12 lg:mt-16 space-y-6">
           {/* 출석체크 */}
@@ -523,6 +524,8 @@ export default function Home() {
               </div>
             </div>
           </Link>
+          
+          <NativeAd />
 
           <div className="bg-slate-800/40 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 animate-fade-in-up delay-200">
             <h2 className="font-bold mb-5 text-teal-400 flex items-center text-base sm:text-lg lg:text-xl">

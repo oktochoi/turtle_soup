@@ -11,6 +11,7 @@ import { useTranslations } from '@/hooks/useTranslations';
 import { ProblemCardSkeleton } from '@/components/Skeleton';
 import { ProblemsEmptyState } from '@/components/EmptyState';
 import { handleError } from '@/lib/error-handler';
+import NativeAd from '@/app/components/NativeAd';
 
 type SortOption = 'latest' | 'popular' | 'difficulty';
 
@@ -457,6 +458,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
             )}
           </>
         )}
+        <NativeAd />
       </div>
     </div>
   );

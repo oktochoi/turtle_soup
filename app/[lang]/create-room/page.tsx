@@ -164,7 +164,6 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
             </button>
           </Link>
         </div>
-
         <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
             {t.room.createNewRoomTitle}

@@ -592,7 +592,11 @@ async function loadEmbeddingModel(maxRetries = 1): Promise<Pipeline> {
     let lastError: any = null;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const { pipeline } = await import("@xenova/transformers");
+        const { pipeline, env } = await import("@xenova/transformers");
+        // 모델 로딩 시 절대 경로 사용하도록 설정
+        if (typeof window !== 'undefined') {
+          env.allowLocalModels = false; // Hugging Face Hub에서 직접 로드
+        }
         const model = await pipeline("feature-extraction", "Xenova/paraphrase-multilingual-MiniLM-L12-v2", {
           quantized: true,
         });

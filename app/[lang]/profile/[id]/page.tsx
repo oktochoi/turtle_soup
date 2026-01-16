@@ -173,6 +173,69 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
     }
   };
 
+  // 닉네임 수정 함수
+  const handleEditNickname = () => {
+    if (!user) return;
+    setNewNickname(user.nickname);
+    setIsEditingNickname(true);
+  };
+  
+  const handleCancelEditNickname = () => {
+    setIsEditingNickname(false);
+    setNewNickname('');
+  };
+  
+  const handleSaveNickname = async () => {
+    if (!user || !newNickname.trim()) {
+      showToast(lang === 'ko' ? '닉네임을 입력해주세요.' : 'Please enter a nickname.', 'error');
+      return;
+    }
+    
+    if (newNickname.trim().length < 2 || newNickname.trim().length > 20) {
+      showToast(lang === 'ko' ? '닉네임은 2자 이상 20자 이하여야 합니다.' : 'Nickname must be between 2 and 20 characters.', 'error');
+      return;
+    }
+    
+    // 자기 자신의 프로필인지 확인
+    const isOwnProfile = (user.auth_user_id && currentUser?.id === user.auth_user_id) || 
+                         (!user.auth_user_id && !currentUser);
+    
+    if (!isOwnProfile) {
+      showToast(lang === 'ko' ? '자신의 닉네임만 수정할 수 있습니다.' : 'You can only edit your own nickname.', 'error');
+      return;
+    }
+    
+    setIsSavingNickname(true);
+    try {
+      const { error } = await supabase
+        .from('game_users')
+        .update({ nickname: newNickname.trim() })
+        .eq('id', userId);
+      
+      if (error) throw error;
+      
+      // users 테이블도 업데이트 (auth_user_id가 있는 경우)
+      if (user.auth_user_id) {
+        const { error: usersError } = await supabase
+          .from('users')
+          .update({ nickname: newNickname.trim() })
+          .eq('id', user.auth_user_id);
+        
+        if (usersError) {
+          console.error('users 테이블 업데이트 오류:', usersError);
+        }
+      }
+      
+      setUser({ ...user, nickname: newNickname.trim() });
+      setIsEditingNickname(false);
+      showToast(lang === 'ko' ? '닉네임이 변경되었습니다.' : 'Nickname has been changed.', 'success');
+    } catch (error) {
+      handleError(error, '닉네임 변경', true);
+    } finally {
+      setIsSavingNickname(false);
+    }
+  };
+
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
       case 'legendary': return 'from-yellow-400 to-amber-500 border-yellow-400';
