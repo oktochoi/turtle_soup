@@ -182,6 +182,10 @@ export default function AdNativeBanner({
         width: '100%',
         margin: '0 auto',
         minHeight: mobile && forceMobileAspectRatio ? '60px' : 'auto',
+        position: 'relative',
+        overflow: 'hidden',
+        zIndex: 1,
+        isolation: 'isolate',
       }}
     >
       {hasError ? (
@@ -194,8 +198,11 @@ export default function AdNativeBanner({
           className={cardStyle ? 'ad-native-container' : ''}
           style={{
             width: '100%',
+            maxWidth: '100%',
             minHeight: mobile && forceMobileAspectRatio ? '60px' : 'auto',
             aspectRatio: mobile && forceMobileAspectRatio ? '4/1' : undefined,
+            overflow: 'hidden',
+            position: 'relative',
           }}
         />
       )}

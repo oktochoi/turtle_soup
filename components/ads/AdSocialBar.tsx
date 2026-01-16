@@ -150,20 +150,33 @@ export default function AdSocialBar({
         bottom: 0,
         left: 0,
         right: 0,
-        zIndex: 1000,
+        zIndex: 50, // 다른 UI보다 낮게 (헤더/푸터는 보통 100 이상)
         maxHeight: mobile ? '80px' : '100px',
+        overflow: 'hidden',
+        isolation: 'isolate',
       }}
     >
       {showCloseButton && (
         <button
           onClick={handleClose}
-          className="absolute top-2 right-2 z-10 bg-slate-900/80 hover:bg-slate-800 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs transition-colors"
+          className="absolute top-2 right-2 z-[60] bg-slate-900/80 hover:bg-slate-800 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs transition-colors"
           aria-label="닫기"
+          style={{
+            zIndex: 60,
+          }}
         >
           ×
         </button>
       )}
-      <div id={`ad-social-bar-${position}`} />
+      <div 
+        id={`ad-social-bar-${position}`}
+        style={{
+          width: '100%',
+          maxWidth: '100%',
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+      />
     </div>
   );
 }

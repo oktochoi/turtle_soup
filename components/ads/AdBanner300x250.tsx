@@ -158,6 +158,10 @@ export default function AdBanner300x250({
         width: '100%',
         maxWidth: '300px',
         margin: '0 auto',
+        position: 'relative',
+        overflow: 'hidden',
+        zIndex: 1,
+        isolation: 'isolate',
       }}
     >
       {hasError ? (
@@ -172,6 +176,8 @@ export default function AdBanner300x250({
             maxWidth: '300px',
             margin: '0 auto',
             minHeight: '250px',
+            overflow: 'hidden',
+            position: 'relative',
           }}
         />
       )}

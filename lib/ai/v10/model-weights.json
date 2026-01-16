@@ -1,0 +1,38 @@
+{
+  "bias": {
+    "yes": 0,
+    "no": 0,
+    "irrelevant": 0,
+    "decisive": 0
+  },
+  "weights": {
+    "yes": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "no": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "irrelevant": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "decisive": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  },
+  "featureNames": [
+    "simAnswerMaxRaw",
+    "simContentMaxRaw",
+    "simAnswerAvg",
+    "simContentAvg",
+    "simQA",
+    "simQC",
+    "tokenCommonRatio",
+    "domainMatchRatio",
+    "exactConceptHitCount",
+    "expandedConceptHitCount",
+    "hasNegation",
+    "hasModality",
+    "questionLen",
+    "antonymSignalCount",
+    "quantityMismatch",
+    "taxonomyHit",
+    "forceNoTriggered",
+    "decisionPathV9"
+  ],
+  "version": "1.0.0",
+  "trainedAt": "2024-01-01T00:00:00.000Z",
+  "trainingSamples": 0
+}
+

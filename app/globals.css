@@ -67,3 +67,66 @@
 .animate-gradient {
   animation: gradient 3s ease infinite;
 }
+
+/* 광고 컨테이너 스타일 - UI를 막지 않도록 제한 */
+.ad-banner-300x250,
+.ad-native-banner,
+.ad-social-bar {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  isolation: isolate;
+}
+
+/* 광고 iframe이 컨테이너를 벗어나지 않도록 제한 */
+.ad-banner-300x250 iframe,
+.ad-native-banner iframe,
+.ad-social-bar iframe {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+/* 모바일에서 광고 크기 제한 */
+@media (max-width: 768px) {
+  .ad-banner-300x250 {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  .ad-banner-300x250 > div,
+  .ad-banner-300x250 iframe {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  .ad-native-banner {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  .ad-native-banner > div,
+  .ad-native-banner iframe {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}
+
+/* 광고가 다른 UI 요소 위에 표시되지 않도록 z-index 제한 */
+.ad-banner-300x250,
+.ad-native-banner {
+  z-index: 1 !important;
+}
+
+.ad-social-bar {
+  z-index: 50 !important;
+}
+
+/* 광고 컨테이너 내부 요소가 벗어나지 않도록 */
+.ad-banner-300x250 > *,
+.ad-native-banner > *,
+.ad-social-bar > * {
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
