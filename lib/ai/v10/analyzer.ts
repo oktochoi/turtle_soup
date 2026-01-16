@@ -7,7 +7,6 @@ import {
   JudgeResult,
   ProblemKnowledge,
   analyzeQuestionV8,
-  CONFIG,
   getEmbedding,
   selectTopKSentences,
   mapWithConcurrency,
@@ -25,6 +24,24 @@ import {
   detectContextualMismatch,
   calculateTokenCommonRatio,
 } from '../../ai-analyzer';
+
+/**
+ * V10 Config (copied from ai-analyzer.ts CONFIG)
+ */
+const   V10_CONFIG = {
+  TOP_K_CONTENT: 16,
+  TOP_K_ANSWER: 16,
+  EMBEDDING_CONCURRENCY: 4,
+  MIN_QUESTION_LEN: 4,
+  MAX_QUESTION_LEN: 420,
+  LEXICON: {
+    MIN_TOKEN_LEN: 2,
+    MAX_TOKENS: 120,
+  },
+  V9: {
+    ANTONYM_REQUIRE_SIGNALS: 2, // text/concept/lexicon 중 2개 이상일 때만 강한 mismatch
+  },
+};
 
 /**
  * Helper: Normalize text (copied from ai-analyzer.ts)
@@ -72,10 +89,10 @@ function tokenizeKo(text: string): string[] {
   for (const r of raw) {
     const s = roughStemKo(r);
     if (!s) continue;
-    if (s.length < CONFIG.LEXICON.MIN_TOKEN_LEN) continue;
+    if (s.length < V10_CONFIG.LEXICON.MIN_TOKEN_LEN) continue;
     tokens.push(s);
   }
-  return tokens.slice(0, CONFIG.LEXICON.MAX_TOKENS);
+  return tokens.slice(0, V10_CONFIG.LEXICON.MAX_TOKENS);
 }
 
 /**
@@ -90,10 +107,10 @@ function tokenizeEn(text: string): string[] {
   for (const r of raw) {
     const cleaned = r.replace(/[.,!?;:()[\]{}<>~`@#$%^&*_+=|\\/]/g, "");
     if (!cleaned) continue;
-    if (cleaned.length < CONFIG.LEXICON.MIN_TOKEN_LEN) continue;
+    if (cleaned.length < V10_CONFIG.LEXICON.MIN_TOKEN_LEN) continue;
     tokens.push(cleaned);
   }
-  return tokens.slice(0, CONFIG.LEXICON.MAX_TOKENS);
+  return tokens.slice(0, V10_CONFIG.LEXICON.MAX_TOKENS);
 }
 
 /**
@@ -208,11 +225,11 @@ export async function analyzeQuestionV10(
   }
 
   const q0 = normalizeText(questionRaw);
-  if (q0.length < CONFIG.MIN_QUESTION_LEN) {
+  if (q0.length < V10_CONFIG.MIN_QUESTION_LEN) {
     return createIrrelevantResult(questionRaw, knowledge);
   }
 
-  const qCut = q0.length > CONFIG.MAX_QUESTION_LEN ? q0.slice(0, CONFIG.MAX_QUESTION_LEN) : q0;
+  const qCut = q0.length > V10_CONFIG.MAX_QUESTION_LEN ? q0.slice(0, V10_CONFIG.MAX_QUESTION_LEN) : q0;
 
   if (typeof window === "undefined") {
     return createIrrelevantResult(questionRaw, knowledge);
@@ -234,19 +251,19 @@ export async function analyzeQuestionV10(
   const antiConcept = detectAntonymMismatchByConceptsV9(qConceptsExact, aConcepts, knowledge.antonymAxes, q, knowledge.answer);
   const antiLex = detectAntonymMismatchByLexiconV9(q, knowledge.answer, knowledge.antonymLexicon);
   const signalCount = antonymSignalCount({ antiText, antiConcept, antiLex });
-  const hasStrongAntonymMismatch = signalCount >= CONFIG.V9.ANTONYM_REQUIRE_SIGNALS;
+  const hasStrongAntonymMismatch = signalCount >= V10_CONFIG.V9.ANTONYM_REQUIRE_SIGNALS;
 
   // 3) Force NO check
   const force = shouldForceNoByOntologyV9({ question: q, qConcepts: qConceptsExact, aConcepts, knowledge });
 
   // 4) Embeddings (V9 style)
   const questionVec = await getEmbedding(q);
-  const contentTop = knowledge.content ? selectTopKSentences(q, knowledge.contentSentences, CONFIG.TOP_K_CONTENT) : [];
-  const answerTop = knowledge.answer ? selectTopKSentences(q, knowledge.answerSentences, CONFIG.TOP_K_ANSWER) : [];
+  const contentTop = knowledge.content ? selectTopKSentences(q, knowledge.contentSentences, V10_CONFIG.TOP_K_CONTENT) : [];
+  const answerTop = knowledge.answer ? selectTopKSentences(q, knowledge.answerSentences, V10_CONFIG.TOP_K_ANSWER) : [];
 
   const [contentVecs, answerVecs] = await Promise.all([
-    mapWithConcurrency(contentTop, CONFIG.EMBEDDING_CONCURRENCY, getEmbedding),
-    mapWithConcurrency(answerTop, CONFIG.EMBEDDING_CONCURRENCY, getEmbedding),
+    mapWithConcurrency(contentTop, V10_CONFIG.EMBEDDING_CONCURRENCY, getEmbedding),
+    mapWithConcurrency(answerTop, V10_CONFIG.EMBEDDING_CONCURRENCY, getEmbedding),
   ]);
 
   const simContentMaxRaw = contentVecs.length ? maxSimilarity(questionVec, contentVecs) : 0;
