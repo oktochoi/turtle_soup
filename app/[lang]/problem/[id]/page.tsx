@@ -2113,7 +2113,6 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
                   </p>
                 </div>
               )}
-        <NativeAd />
 
               {/* 힌트 보기 */}
               {problem && (problem as any).hints && Array.isArray((problem as any).hints) && (problem as any).hints.length > 0 && (
@@ -2235,7 +2234,6 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
             </div>
           )}
         </div>
-        <NativeAd />
 
         {/* 댓글 섹션 */}
         <div className="bg-slate-800 rounded-xl p-4 sm:p-6 lg:p-8 border border-slate-700">
@@ -2419,6 +2417,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
           </div>
         </div>
       </div>
+      <NativeAd />
 
       {/* 공유 모달 */}
       {showShareModal && (
@@ -2807,7 +2806,6 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
           </div>
         </div>
       )}
-  <NativeAd />
       {/* CTA 바 공간 확보 (모바일에서 하단 버튼이 콘텐츠에 가려지지 않도록) */}
       <div className="h-24 sm:h-28"></div>
     </div>
