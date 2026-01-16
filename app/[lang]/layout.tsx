@@ -8,6 +8,8 @@ import SocialBottomBar from "@/components/SocialBottomBar";
 import { getMessages, type Locale, isValidLocale, defaultLocale } from "@/lib/i18n";
 import { notFound } from "next/navigation";
 import { measurePageLoad, monitorMemoryUsage } from "@/lib/performance-monitor";
+import PopunderLoader from "@/components/ads/PopunderLoader";
+import AdSocialBar from "@/components/ads/AdSocialBar";
 
 export async function generateMetadata({
   params,
@@ -128,6 +130,10 @@ export default async function LangLayout({
       <ToastContainer />
       <AnalyticsGate />
       <PerformanceMonitor />
+      
+      {/* 전역 광고 컴포넌트 */}
+      <PopunderLoader position="global" />
+      <AdSocialBar position="global" mobileOnly={true} />
     </ErrorBoundary>
   );
 }

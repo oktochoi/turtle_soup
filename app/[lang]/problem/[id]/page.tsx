@@ -14,6 +14,8 @@ import { useTranslations } from '@/hooks/useTranslations';
 import { createNotification } from '@/lib/notifications';
 import { checkIfLearnedError } from '@/lib/check-learned-error';
 import JsonLd from '@/components/JsonLd';
+import AdBanner300x250 from '@/components/ads/AdBanner300x250';
+import AdNativeBanner from '@/components/ads/AdNativeBanner';
 
 export default function ProblemPage({ params }: { params: Promise<{ lang: string; id: string }> }) {
   const resolvedParams = use(params);
@@ -2231,6 +2233,27 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
               />
             </div>
           )}
+        </div>
+
+        {/* 광고: 정답 확인 후 댓글 전 */}
+        <div className="my-6 sm:my-8">
+          <div className="flex flex-col items-center gap-4">
+            {/* Native Banner (모바일 우선, 4:1 비율) */}
+            <AdNativeBanner
+              position="problem-after-answer"
+              className="w-full max-w-md"
+              cardStyle={true}
+              forceMobileAspectRatio={true}
+            />
+            
+            {/* Banner 300x250 (데스크톱에서만 또는 모바일에서 1회) */}
+            <div className="hidden sm:block">
+              <AdBanner300x250
+                position="problem-after-answer"
+                className="w-full"
+              />
+            </div>
+          </div>
         </div>
 
         {/* 댓글 섹션 */}
