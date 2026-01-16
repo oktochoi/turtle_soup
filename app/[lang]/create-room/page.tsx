@@ -198,7 +198,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
             <QuizTypeSelectorMultiplayer
               selectedType={quizType}
               onSelect={setQuizType}
-              lang={lang}
+              lang={(lang === 'ko' || lang === 'en') ? lang : 'ko'}
               disabled={isCreating}
             />
           </div>
