@@ -70,28 +70,49 @@ export default function SocialBottomBar() {
             ))}
           </div>
           
-          {/* 법적 링크 */}
+          {/* 법적 링크 및 정보 링크 */}
           <div className="w-full pt-4 border-t border-slate-700/50">
-            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs sm:text-sm">
+              <Link 
+                href={`/${lang}/about`}
+                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
+              >
+                {lang === 'ko' ? '사이트 소개' : 'About'}
+              </Link>
+              <span className="text-slate-600">|</span>
+              <Link 
+                href={`/${lang}/guide`}
+                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
+              >
+                {lang === 'ko' ? '게임 가이드' : 'Guide'}
+              </Link>
+              <span className="text-slate-600">|</span>
+              <Link 
+                href={`/${lang}/community-guidelines`}
+                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
+              >
+                {lang === 'ko' ? '커뮤니티 가이드라인' : 'Guidelines'}
+              </Link>
+              <span className="text-slate-600">|</span>
               <Link 
                 href={`/${lang}/privacy`}
                 className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
               >
-                개인정보처리방침
+                {lang === 'ko' ? '개인정보처리방침' : 'Privacy'}
               </Link>
               <span className="text-slate-600">|</span>
               <Link 
                 href={`/${lang}/terms`}
                 className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
               >
-                이용약관
+                {lang === 'ko' ? '이용약관' : 'Terms'}
               </Link>
               <span className="text-slate-600">|</span>
               <Link 
                 href={`/${lang}/contact`}
                 className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
               >
-                문의하기
+                {lang === 'ko' ? '문의하기' : 'Contact'}
               </Link>
             </div>
           </div>

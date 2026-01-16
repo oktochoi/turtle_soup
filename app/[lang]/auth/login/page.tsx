@@ -12,48 +12,8 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
   const lang = resolvedParams.lang || 'ko';
   const router = useRouter();
   const t = useTranslations();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        // 이메일 확인 오류인 경우 더 친절한 메시지
-        if (error.message?.includes('Email not confirmed') || error.message?.includes('email_not_confirmed')) {
-          setError(t.auth.emailNotConfirmed);
-          return;
-        }
-        // 잘못된 로그인 정보 에러 처리
-        if (error.message?.includes('Invalid login credentials') || error.message?.includes('invalid') || error.message?.includes('credentials')) {
-          setError(t.auth.invalidCredentials);
-          return;
-        }
-        throw error;
-      }
-
-      if (data.user) {
-        router.push(`/${lang}`);
-        router.refresh();
-      }
-    } catch (error: any) {
-      console.error('로그인 오류:', error);
-      setError(error.message || t.auth.loginFail);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleGoogleLogin = async () => {
     setError(null);
@@ -101,66 +61,18 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
         </div>
 
         <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-slate-700 shadow-xl">
-          <form onSubmit={handleLogin} className="space-y-6">
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-400 rounded-lg p-3 text-sm">
-                {error}
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium mb-2 text-slate-300">
-                {t.auth.email}
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t.auth.emailPlaceholder}
-                required
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/50 text-red-400 rounded-lg p-3 text-sm mb-6">
+              {error}
             </div>
+          )}
 
-            <div>
-              <label className="block text-sm font-medium mb-2 text-slate-300">
-                {t.auth.password}
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t.auth.passwordPlaceholder}
-                required
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-teal-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? t.auth.loggingIn : t.auth.login}
-            </button>
-          </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-600"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-slate-800 text-slate-400">{t.auth.or}</span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={isLoading}
-              className="mt-6 w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-900 font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-gray-500/50 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300"
-            >
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-900 font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-gray-500/50 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300"
+          >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
@@ -181,16 +93,6 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
               </svg>
               <span>{t.auth.loginWithGoogle}</span>
             </button>
-          </div>
-
-          <div className="mt-6 text-center">
-            <p className="text-slate-400 text-sm">
-              {t.auth.noAccount}{' '}
-              <Link href={`/${lang}/auth/signup`} className="text-teal-400 hover:text-teal-300 font-semibold">
-                {t.auth.signup}
-              </Link>
-            </p>
-          </div>
         </div>
 
         <div className="mt-6 text-center">
