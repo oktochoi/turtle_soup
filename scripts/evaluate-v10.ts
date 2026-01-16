@@ -165,18 +165,18 @@ export async function evaluateV10VsV9(): Promise<EvaluationResult> {
   // Wrong yes/no (should be irrelevant but predicted as yes/no)
   const wrongYesNoV9 = expected
     .map((e, i) => e === 'irrelevant' && (v9Predictions[i] === 'yes' || v9Predictions[i] === 'no') ? 1 : 0)
-    .reduce((a, b) => a + b, 0);
+    .reduce((a: number, b: number) => a + b, 0);
   const wrongYesNoV10 = expected
     .map((e, i) => e === 'irrelevant' && (v10Predictions[i] === 'yes' || v10Predictions[i] === 'no') ? 1 : 0)
-    .reduce((a, b) => a + b, 0);
+    .reduce((a: number, b: number) => a + b, 0);
   
   // Wrong irrelevant (should be yes/no but predicted as irrelevant)
   const wrongIrrelevantV9 = expected
     .map((e, i) => (e === 'yes' || e === 'no') && v9Predictions[i] === 'irrelevant' ? 1 : 0)
-    .reduce((a, b) => a + b, 0);
+    .reduce((a: number, b: number) => a + b, 0);
   const wrongIrrelevantV10 = expected
     .map((e, i) => (e === 'yes' || e === 'no') && v10Predictions[i] === 'irrelevant' ? 1 : 0)
-    .reduce((a, b) => a + b, 0);
+    .reduce((a: number, b: number) => a + b, 0);
   
   // Improvements
   let v10Better = 0;
