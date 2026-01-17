@@ -34,6 +34,7 @@ interface ProblemContentProps {
   quizShowAnswer: boolean;
   balanceVoteStats: number[];
   onBalanceVoteStatsChange: (stats: number[]) => void;
+  hasVoted?: boolean; // 이미 투표했는지 여부 (밸런스 게임, 투표)
   t: any;
 }
 
@@ -57,6 +58,7 @@ export default function ProblemContent({
   quizShowAnswer,
   balanceVoteStats,
   onBalanceVoteStatsChange,
+  hasVoted = false,
   t,
 }: ProblemContentProps) {
   if (isEditing) {
@@ -301,10 +303,12 @@ export default function ProblemContent({
                 question={problem.title}
                 options={quizContent.options}
                 onAnswer={async (selectedIndex) => {
-                  onQuizAnswer(selectedIndex);
-                  // 통계는 부모 컴포넌트에서 처리
+                  if (!hasVoted) {
+                    onQuizAnswer(selectedIndex);
+                    // 통계는 부모 컴포넌트에서 처리
+                  }
                 }}
-                showAnswer={quizShowAnswer}
+                showAnswer={quizShowAnswer || hasVoted}
                 userAnswer={typeof userQuizAnswer === 'number' ? userQuizAnswer : undefined}
                 stats={balanceVoteStats}
                 lang={lang === 'ko' || lang === 'en' ? lang : 'ko'}

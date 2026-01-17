@@ -94,6 +94,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   const [userQuizAnswer, setUserQuizAnswer] = useState<any>(null); // 사용자가 선택한 답
   const [quizShowAnswer, setQuizShowAnswer] = useState(false); // 정답 표시 여부
   const [balanceVoteStats, setBalanceVoteStats] = useState<number[]>([]); // 밸런스 게임 투표 통계
+  const [hasVoted, setHasVoted] = useState(false); // 이미 투표했는지 여부 (밸런스 게임, 투표)
 
   const generateRoomCode = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -713,6 +714,25 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
         
         if (!quizContentError && quizContentData) {
           setQuizContent(quizContentData.content);
+          
+          // localStorage에서 투표 여부 확인 (밸런스 게임, 투표)
+          if (quizType === 'balance' || quizType === 'poll') {
+            const votedKey = `quiz_voted_${data.id}`;
+            const hasVotedBefore = localStorage.getItem(votedKey) === 'true';
+            if (hasVotedBefore) {
+              setHasVoted(true);
+              setQuizShowAnswer(true);
+              // 저장된 답변 불러오기
+              const savedAnswer = localStorage.getItem(`quiz_answer_${data.id}`);
+              if (savedAnswer !== null) {
+                if (quizType === 'balance') {
+                  setUserQuizAnswer(parseInt(savedAnswer, 10));
+                } else {
+                  setUserQuizAnswer(savedAnswer);
+                }
+              }
+            }
+          }
           
           // 밸런스 게임인 경우 투표 통계 로드
           if (quizType === 'balance') {
@@ -1671,8 +1691,20 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
           onCancelEdit={handleCancelEdit}
           userQuizAnswer={userQuizAnswer}
           onQuizAnswer={async (answer) => {
+            // 이미 투표한 경우 무시
+            if (hasVoted && (quizType === 'balance' || quizType === 'poll')) {
+              return;
+            }
+
             setUserQuizAnswer(answer);
             setQuizShowAnswer(true);
+            
+            // localStorage에 투표 여부 저장
+            if (quizType === 'balance' || quizType === 'poll') {
+              localStorage.setItem(`quiz_voted_${problemId}`, 'true');
+              localStorage.setItem(`quiz_answer_${problemId}`, String(answer));
+              setHasVoted(true);
+            }
   
             // 밸런스 게임 투표 저장
             if (quizType === 'balance' && typeof answer === 'number' && user) {
@@ -1727,6 +1759,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
           quizShowAnswer={quizShowAnswer}
           balanceVoteStats={balanceVoteStats}
           onBalanceVoteStatsChange={setBalanceVoteStats}
+          hasVoted={hasVoted}
           t={t}
         />
   
