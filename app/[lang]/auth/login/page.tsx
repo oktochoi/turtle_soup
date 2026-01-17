@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useTranslations } from '@/hooks/useTranslations';
+import { isApp } from '@/utils/isApp';
 
 export default function LoginPage({ params }: { params: Promise<{ lang: string }> }) {
   const resolvedParams = use(params);
@@ -67,9 +68,8 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
     try {
       const supabase = createClient();
       
-      // 앱 환경 감지 (User Agent 확인)
-      const isAppEnvironment = typeof window !== 'undefined' && 
-                               navigator.userAgent.includes('TurtleSoupApp');
+      // 앱 환경 감지
+      const isAppEnvironment = isApp();
       
       let redirectUrl: string;
       
