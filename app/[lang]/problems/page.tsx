@@ -11,6 +11,7 @@ import { useTranslations } from '@/hooks/useTranslations';
 import { ProblemCardSkeleton } from '@/components/Skeleton';
 import { ProblemsEmptyState } from '@/components/EmptyState';
 import { handleError } from '@/lib/error-handler';
+import { QUIZ_TYPE_METADATA, type QuizType } from '@/lib/types/quiz';
 
 type SortOption = 'latest' | 'popular' | 'difficulty';
 
@@ -26,6 +27,8 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
   
   // 필터 상태
   const [difficultyFilter, setDifficultyFilter] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
+  const [quizTypeFilter, setQuizTypeFilter] = useState<QuizType | 'all'>('all');
+  const [featuredFilter, setFeaturedFilter] = useState<'all' | 'featured'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('latest');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -47,7 +50,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
   useEffect(() => {
     filterAndSortProblems();
     setCurrentPage(1); // 필터 변경 시 첫 페이지로 리셋
-  }, [problems, difficultyFilter, searchQuery, sortOption, selectedTags]);
+  }, [problems, difficultyFilter, quizTypeFilter, featuredFilter, searchQuery, sortOption, selectedTags]);
 
   const loadProblems = async () => {
     try {
@@ -137,6 +140,22 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
   const filterAndSortProblems = () => {
     let filtered = [...problems];
 
+    // 관리자 채택 필터
+    if (featuredFilter === 'featured') {
+      filtered = filtered.filter(p => {
+        const status = (p as any).status || 'published';
+        return status === 'featured';
+      });
+    }
+
+    // 퀴즈 타입 필터
+    if (quizTypeFilter !== 'all') {
+      filtered = filtered.filter(p => {
+        const problemType = (p as any).type || 'soup';
+        return problemType === quizTypeFilter;
+      });
+    }
+
     // 난이도 필터 (별점 기반으로 변경)
     if (difficultyFilter !== 'all') {
       filtered = filtered.filter(p => {
@@ -160,9 +179,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                         type === 'image' ? '이미지 퀴즈' :
                         type === 'balance' ? '밸런스 게임' :
                         type === 'logic' ? '논리 퍼즐' :
-                        type === 'pattern' ? '수열/패턴' :
                         type === 'fill_blank' ? '빈칸 퀴즈' :
-                        type === 'order' ? '순서 맞추기' :
                         type === 'liar' ? '라이어 게임' :
                         type === 'mafia' ? '마피아' : type;
         const typeNameEn = type === 'soup' ? 'turtle soup' :
@@ -172,9 +189,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                           type === 'image' ? 'image quiz' :
                           type === 'balance' ? 'balance game' :
                           type === 'logic' ? 'logic puzzle' :
-                          type === 'pattern' ? 'pattern' :
                           type === 'fill_blank' ? 'fill blank' :
-                          type === 'order' ? 'order matching' :
                           type === 'liar' ? 'liar game' :
                           type === 'mafia' ? 'mafia' : type;
         return p.title.toLowerCase().includes(query) ||
@@ -270,6 +285,70 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm sm:text-base"
               />
+            </div>
+
+            {/* 관리자 채택 필터 */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                {lang === 'ko' ? '관리자 채택' : 'Featured'}:
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setFeaturedFilter('all')}
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
+                    featuredFilter === 'all'
+                      ? 'bg-teal-500 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  {t.problem.all}
+                </button>
+                <button
+                  onClick={() => setFeaturedFilter('featured')}
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
+                    featuredFilter === 'featured'
+                      ? 'bg-yellow-500 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  <i className="ri-star-fill mr-1"></i>
+                  {lang === 'ko' ? '관리자 채택' : 'Featured'}
+                </button>
+              </div>
+            </div>
+
+            {/* 퀴즈 타입 필터 */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                {lang === 'ko' ? '게임 유형' : 'Game Type'}:
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setQuizTypeFilter('all')}
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
+                    quizTypeFilter === 'all'
+                      ? 'bg-teal-500 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  {t.problem.all}
+                </button>
+                {Object.values(QUIZ_TYPE_METADATA)
+                  .filter(metadata => metadata.playMode === 'single' || metadata.playMode === 'both')
+                  .map(metadata => (
+                    <button
+                      key={metadata.type}
+                      onClick={() => setQuizTypeFilter(metadata.type)}
+                      className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
+                        quizTypeFilter === metadata.type
+                          ? 'bg-purple-500 text-white'
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      }`}
+                    >
+                      {lang === 'ko' ? metadata.name : metadata.nameEn}
+                    </button>
+                  ))}
+              </div>
             </div>
 
             {/* 난이도 필터 */}
@@ -374,15 +453,75 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
               const averageRating = (problem as any).average_rating || 0;
               const ratingCount = (problem as any).rating_count || 0;
               const difficultyBadge = getDifficultyFromRating(averageRating);
+              
+              // 이미지 URL 추출 (quizContent에서)
+              let imageUrl: string | null = null;
+              try {
+                // quiz_content 필드 확인 (다양한 필드명 시도)
+                const quizContentRaw = (problem as any).quiz_content 
+                  || (problem as any).quizContent 
+                  || (problem as any).content;
+                
+                if (!quizContentRaw) {
+                  // quiz_content가 없으면 다음 문제로
+                } else {
+                  const quizContent = typeof quizContentRaw === 'string' 
+                    ? JSON.parse(quizContentRaw) 
+                    : quizContentRaw;
+                  
+                  // quiz_type 확인
+                  const quizType = (problem as any).quiz_type || (problem as any).quizType;
+                  
+                  if (quizContent && typeof quizContent === 'object') {
+                    // image_url이 직접 있는 경우 (모든 타입)
+                    if (quizContent.image_url) {
+                      imageUrl = quizContent.image_url;
+                    }
+                    // imageUrl (camelCase)도 확인
+                    else if (quizContent.imageUrl) {
+                      imageUrl = quizContent.imageUrl;
+                    }
+                  }
+                }
+              } catch (e) {
+                // JSON 파싱 실패 시 무시
+              }
+              
               return (
                 <div
                   key={problem.id}
-                  className="bg-slate-800 rounded-xl p-3 sm:p-4 lg:p-6 border border-slate-700 hover:border-teal-500/50 transition-all duration-200"
+                  className="bg-slate-800/80 backdrop-blur-sm rounded-xl p-4 sm:p-5 lg:p-6 border border-slate-700/60 hover:border-slate-600 transition-all duration-200 shadow-md hover:shadow-lg"
                 >
-                  <div className="flex items-start justify-between mb-2 sm:mb-3 gap-2">
-                    <h3 className="text-base sm:text-lg lg:text-xl font-bold text-white flex-1 break-words">
-                      {problem.title}
-                    </h3>
+                  {/* 이미지 썸네일 (제목 위에 표시) */}
+                  {imageUrl && (
+                    <div className="mb-3 sm:mb-4 rounded-lg overflow-hidden bg-slate-900">
+                      <img
+                        src={imageUrl}
+                        alt={problem.title}
+                        className="w-full h-32 sm:h-40 object-cover"
+                        loading="lazy"
+                        onError={(e) => {
+                          // 이미지 로드 실패 시 숨김
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-start justify-between mb-3 sm:mb-4 gap-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <h3 className="text-base sm:text-lg lg:text-xl font-bold text-white break-words hover:text-slate-100 transition-colors">
+                          {problem.title}
+                        </h3>
+                        {(problem as any).status === 'featured' && (
+                          <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded text-xs font-medium border border-amber-500/30 flex items-center gap-1 whitespace-nowrap">
+                            <i className="ri-star-fill text-amber-400"></i>
+                            {lang === 'ko' ? '관리자 채택' : 'Featured'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
                       <span className={`px-2 py-1 rounded text-xs font-semibold ${difficultyBadge.color} text-white whitespace-nowrap`}>
                         {difficultyBadge.emoji} {difficultyBadge.text}
@@ -417,7 +556,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                   </div>
 
                   <Link href={`/${lang}/problem/${problem.id}`}>
-                    <button className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2 sm:py-2.5 rounded-lg transition-all duration-200 text-sm sm:text-base touch-manipulation">
+                    <button className="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 sm:py-3 rounded-lg transition-all duration-200 text-sm sm:text-base touch-manipulation">
                       {t.problem.solve}
                     </button>
                   </Link>

@@ -39,21 +39,6 @@ export default function QuizFormImage({
         />
       )}
 
-      {/* 질문 */}
-      <div>
-        <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-          <i className="ri-question-line mr-1"></i>
-          {lang === 'ko' ? '질문 (선택사항)' : 'Question (Optional)'}
-        </label>
-        <textarea
-          value={question}
-          onChange={(e) => onQuestionChange(e.target.value)}
-          placeholder={lang === 'ko' ? '예: 이 장소는 어디일까요?' : 'Example: Where is this place?'}
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
-          maxLength={300}
-        />
-      </div>
-
       {/* 정답 */}
       <div>
         <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">

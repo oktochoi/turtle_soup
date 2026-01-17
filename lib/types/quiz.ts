@@ -206,7 +206,7 @@ export const QUIZ_TYPE_METADATA: Record<QuizType, QuizTypeMetadata> = {
   },
   nonsense: {
     type: 'nonsense',
-    name: '넌센스 퀴즈',
+    name: '아재개그',
     nameEn: 'Nonsense Quiz',
     icon: 'nonsense',
     description: '말장난과 발상의 전환으로 재미를 주는 퀴즈',
@@ -423,9 +423,7 @@ export const SINGLE_PLAYER_PROBLEM_TYPES: QuizType[] = [
   'image',
   'balance',
   'logic',
-  'pattern',
   'fill_blank',
-  'order',
 ];
 
 /**

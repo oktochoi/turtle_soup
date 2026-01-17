@@ -17,9 +17,8 @@ import QuizFormOX from '@/components/quiz/QuizFormOX';
 import QuizFormImage from '@/components/quiz/QuizFormImage';
 import QuizFormBalance from '@/components/quiz/QuizFormBalance';
 import QuizFormLogic from '@/components/quiz/QuizFormLogic';
-import QuizFormPattern from '@/components/quiz/QuizFormPattern';
 import QuizFormFillBlank from '@/components/quiz/QuizFormFillBlank';
-import QuizFormOrder from '@/components/quiz/QuizFormOrder';
+import { convertImageToSvgFile } from '@/lib/utils/imageToSvg';
 
 export default function CreateProblem({ params }: { params: Promise<{ lang: string }> }) {
   const resolvedParams = use(params);
@@ -51,15 +50,11 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
   // Balance 타입용
   const [balanceOptions, setBalanceOptions] = useState<string[]>(['', '']);
   
-  // Logic/Pattern 타입용
+  // Logic 타입용
   const [logicContent, setLogicContent] = useState('');
   
   // FillBlank 타입용
   const [fillBlankAnswer, setFillBlankAnswer] = useState('');
-  
-  // Order 타입용
-  const [orderItems, setOrderItems] = useState<string[]>(['', '']);
-  const [orderSequence, setOrderSequence] = useState<number[]>([]);
   
   const [title, setTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -100,20 +95,17 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         return;
       }
     } else if (quizType === 'nonsense') {
-      if (!question.trim() || !answer.trim()) {
-        alert(lang === 'ko' ? '질문과 정답을 입력해주세요.' : 'Please enter question and answer.');
+      if (!answer.trim()) {
+        alert(lang === 'ko' ? '정답을 입력해주세요.' : 'Please enter answer.');
         return;
       }
     } else if (quizType === 'mcq') {
-      if (!question.trim() || options.some(opt => !opt.trim())) {
-        alert(lang === 'ko' ? '질문과 모든 선택지를 입력해주세요.' : 'Please enter question and all options.');
+      if (options.some(opt => !opt.trim())) {
+        alert(lang === 'ko' ? '모든 선택지를 입력해주세요.' : 'Please enter all options.');
         return;
       }
     } else if (quizType === 'ox') {
-      if (!question.trim()) {
-        alert(lang === 'ko' ? '질문을 입력해주세요.' : 'Please enter a question.');
-        return;
-      }
+      // OX 퀴즈는 질문 없이 제목만 사용
     } else if (quizType === 'image') {
       if (!imageFile && !imageUrl) {
         alert(lang === 'ko' ? '이미지를 업로드해주세요.' : 'Please upload an image.');
@@ -128,23 +120,14 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         alert(lang === 'ko' ? '모든 선택지를 입력해주세요.' : 'Please enter all options.');
         return;
       }
-    } else if (quizType === 'logic' || quizType === 'pattern') {
-      if (!question.trim() || !logicContent.trim() || !answer.trim()) {
-        alert(lang === 'ko' ? '질문, 내용, 정답을 모두 입력해주세요.' : 'Please enter question, content, and answer.');
+    } else if (quizType === 'logic') {
+      if (!logicContent.trim() || !answer.trim()) {
+        alert(lang === 'ko' ? '내용과 정답을 모두 입력해주세요.' : 'Please enter content and answer.');
         return;
       }
     } else if (quizType === 'fill_blank') {
-      if (!question.trim() || !fillBlankAnswer.trim()) {
-        alert(lang === 'ko' ? '질문과 정답을 입력해주세요.' : 'Please enter question and answer.');
-        return;
-      }
-    } else if (quizType === 'order') {
-      if (!question.trim() || orderItems.length < 2 || orderItems.some(item => !item.trim())) {
-        alert(lang === 'ko' ? '질문과 최소 2개의 항목을 입력해주세요.' : 'Please enter question and at least 2 items.');
-        return;
-      }
-      if (orderSequence.length !== orderItems.length) {
-        alert(lang === 'ko' ? '모든 항목의 순서를 입력해주세요.' : 'Please enter order for all items.');
+      if (!fillBlankAnswer.trim()) {
+        alert(lang === 'ko' ? '정답을 입력해주세요.' : 'Please enter answer.');
         return;
       }
     }
@@ -182,20 +165,17 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         };
       } else if (quizType === 'nonsense') {
         quizContent = {
-          question: question.trim(),
           answer: answer.trim(),
           explanation: explanation.trim() || undefined,
         };
       } else if (quizType === 'mcq') {
         quizContent = {
-          question: question.trim(),
           options: options.map(opt => opt.trim()),
           correct: correctOption,
           explanation: explanation.trim() || undefined,
         };
       } else if (quizType === 'ox') {
         quizContent = {
-          question: question.trim(),
           correct: correctOX === 'O' ? 0 : 1, // O=0, X=1
           explanation: explanation.trim() || undefined,
         };
@@ -232,7 +212,13 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         insertData.answer = ''; // answer는 필수이므로 빈 문자열
       } else {
         // 다른 타입들도 content가 필수인 경우 처리
-        insertData.content = question.trim() || title.trim() || '';
+        // 질문 필드가 없는 타입들은 title을 content로 사용
+        const questionTypesWithoutQuestion = ['nonsense', 'mcq', 'ox', 'image', 'logic', 'fill_blank'];
+        if (questionTypesWithoutQuestion.includes(quizType)) {
+          insertData.content = title.trim() || '';
+        } else {
+          insertData.content = question.trim() || title.trim() || '';
+        }
         insertData.answer = answer?.trim() || '';
       }
       
@@ -263,32 +249,109 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         throw new Error('문제가 생성되지 않았습니다.');
       }
 
-      // 이미지 파일이 있으면 Supabase Storage에 업로드
+      // 이미지 업로드 성공 여부 추적
+      let imageUploadFailed = false;
+      let bucketNotFound = false;
+
+      // 이미지 파일이 있으면 SVG로 변환 후 Supabase Storage에 업로드
       if (imageFile) {
-        const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${problem.id}_${Date.now()}.${fileExt}`;
-        const filePath = `quiz-images/${fileName}`;
+        try {
+          // 이미지를 SVG로 변환
+          const svgFile = await convertImageToSvgFile(imageFile);
+          const fileName = `${problem.id}_${Date.now()}.svg`;
+          const filePath = `quiz-images/${fileName}`;
 
-        const { error: uploadError } = await supabaseClient.storage
-          .from('quiz-images')
-          .upload(filePath, imageFile);
-
-        if (uploadError) {
-          console.error('이미지 업로드 오류:', uploadError);
-          // 이미지 업로드 실패는 무시 (URL로 대체 가능)
-        } else {
-          // 업로드된 이미지 URL 가져오기
-          const { data: { publicUrl } } = supabaseClient.storage
+          const { error: uploadError } = await supabaseClient.storage
             .from('quiz-images')
-            .getPublicUrl(filePath);
-          
-          if (publicUrl) {
-            // quizContent에 이미지 URL 업데이트
-            if (quizContent.image_url) {
-              quizContent.image_url = publicUrl;
-            } else if (quizType === 'image') {
-              quizContent.image_url = publicUrl;
+            .upload(filePath, svgFile);
+
+          if (uploadError) {
+            console.error('이미지 업로드 오류:', uploadError);
+            imageUploadFailed = true;
+            
+            // 버킷이 없는 경우 특별 처리
+            if (uploadError.message?.includes('Bucket not found') || uploadError.message?.includes('bucket') || uploadError.message?.includes('does not exist')) {
+              bucketNotFound = true;
+              console.warn('⚠️ quiz-images 버킷이 없습니다. Supabase 대시보드에서 Storage > Buckets에서 "quiz-images" 버킷을 생성해주세요.');
+            } else {
+              // 다른 업로드 오류는 원본 파일로 재시도
+              try {
+                const fileExt = imageFile.name.split('.').pop();
+                const fileNameOriginal = `${problem.id}_${Date.now()}.${fileExt}`;
+                const filePathOriginal = `quiz-images/${fileNameOriginal}`;
+
+                const { error: retryError } = await supabaseClient.storage
+                  .from('quiz-images')
+                  .upload(filePathOriginal, imageFile);
+
+                if (!retryError) {
+                  const { data: { publicUrl } } = supabaseClient.storage
+                    .from('quiz-images')
+                    .getPublicUrl(filePathOriginal);
+                  
+                  if (publicUrl) {
+                    if (quizContent.image_url) {
+                      quizContent.image_url = publicUrl;
+                    } else if (quizType === 'image') {
+                      quizContent.image_url = publicUrl;
+                    }
+                  }
+                }
+              } catch (retryError) {
+                console.error('이미지 재업로드 오류:', retryError);
+              }
             }
+          } else {
+            // 업로드 성공
+            const { data: { publicUrl } } = supabaseClient.storage
+              .from('quiz-images')
+              .getPublicUrl(filePath);
+            
+            if (publicUrl) {
+              // quizContent에 이미지 URL 업데이트
+              if (quizContent.image_url) {
+                quizContent.image_url = publicUrl;
+              } else if (quizType === 'image') {
+                quizContent.image_url = publicUrl;
+              }
+            }
+          }
+        } catch (error: any) {
+          console.error('이미지 SVG 변환 오류:', error);
+          
+          // SVG 변환 실패 시 원본 파일로 업로드 시도
+          try {
+            const fileExt = imageFile.name.split('.').pop();
+            const fileName = `${problem.id}_${Date.now()}.${fileExt}`;
+            const filePath = `quiz-images/${fileName}`;
+
+            const { error: uploadError } = await supabaseClient.storage
+              .from('quiz-images')
+              .upload(filePath, imageFile);
+
+            if (uploadError) {
+              imageUploadFailed = true;
+              if (uploadError.message?.includes('Bucket not found') || uploadError.message?.includes('bucket') || uploadError.message?.includes('does not exist')) {
+                bucketNotFound = true;
+                console.warn('⚠️ quiz-images 버킷이 없습니다. Supabase 대시보드에서 Storage > Buckets에서 "quiz-images" 버킷을 생성해주세요.');
+              } else {
+                console.error('이미지 업로드 오류:', uploadError);
+              }
+            } else {
+              const { data: { publicUrl } } = supabaseClient.storage
+                .from('quiz-images')
+                .getPublicUrl(filePath);
+              
+              if (publicUrl) {
+                if (quizContent.image_url) {
+                  quizContent.image_url = publicUrl;
+                } else if (quizType === 'image') {
+                  quizContent.image_url = publicUrl;
+                }
+              }
+            }
+          } catch (retryError) {
+            console.error('이미지 재업로드 오류:', retryError);
           }
         }
       }
@@ -309,6 +372,16 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
       }
 
       setIsSubmitting(false);
+      
+      // 버킷이 없어서 이미지 업로드가 실패한 경우 사용자에게 안내
+      if (imageFile && bucketNotFound) {
+        alert(
+          lang === 'ko' 
+            ? '✅ 문제는 성공적으로 생성되었습니다!\n\n⚠️ 하지만 이미지를 업로드할 수 없었습니다.\n\n📦 Supabase 대시보드에서 다음을 수행해주세요:\n1. Storage 메뉴로 이동\n2. Buckets 탭 클릭\n3. "New bucket" 버튼 클릭\n4. 이름: quiz-images\n5. Public bucket: 체크 ✅\n6. File size limit: 5MB (선택사항)\n7. Create 버튼 클릭\n\n버킷을 생성한 후 다시 이미지를 업로드해주세요!'
+            : '✅ Problem created successfully!\n\n⚠️ However, image upload failed.\n\n📦 Please create a storage bucket in Supabase Dashboard:\n1. Go to Storage menu\n2. Click Buckets tab\n3. Click "New bucket"\n4. Name: quiz-images\n5. Check "Public bucket" ✅\n6. File size limit: 5MB (optional)\n7. Click Create\n\nAfter creating the bucket, you can upload images!'
+        );
+      }
+      
       router.push(`/${lang}/problem/${problem.id}`);
     } catch (error: any) {
       console.error('문제 생성 오류:', error);
@@ -408,17 +481,29 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
             />
           </div>
 
-          {/* 제목 (모든 유형 공통, 밸런스 게임은 "문제") */}
+          {/* 제목 (모든 유형 공통, 밸런스 게임과 질문 없는 타입들은 "문제") */}
           <div>
             <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-              {lang === 'ko' ? (quizType === 'balance' ? '문제' : '제목') : (quizType === 'balance' ? 'Question' : 'Title')}
+              {lang === 'ko' 
+                ? (['balance', 'nonsense', 'mcq', 'ox', 'image', 'logic', 'pattern', 'fill_blank', 'order'].includes(quizType || '')) 
+                  ? '문제' 
+                  : '제목'
+                : (['balance', 'nonsense', 'mcq', 'ox', 'image', 'logic', 'pattern', 'fill_blank', 'order'].includes(quizType || '')) 
+                  ? 'Question' 
+                  : 'Title'}
               <span className="text-red-400 ml-1">*</span>
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={lang === 'ko' ? (quizType === 'balance' ? '문제를 입력하세요' : '문제 제목을 입력하세요') : (quizType === 'balance' ? 'Enter question' : 'Enter problem title')}
+              placeholder={lang === 'ko' 
+                ? (['balance', 'nonsense', 'mcq', 'ox', 'image', 'logic', 'pattern', 'fill_blank', 'order'].includes(quizType || '')) 
+                  ? '문제를 입력하세요' 
+                  : '문제 제목을 입력하세요'
+                : (['balance', 'nonsense', 'mcq', 'ox', 'image', 'logic', 'pattern', 'fill_blank', 'order'].includes(quizType || '')) 
+                  ? 'Enter question' 
+                  : 'Enter problem title'}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm sm:text-base"
               maxLength={100}
             />
@@ -439,10 +524,10 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
 
           {quizType === 'nonsense' && (
             <QuizFormNonsense
-              question={question}
+              question={''}
               answer={answer}
               explanation={explanation}
-              onQuestionChange={setQuestion}
+              onQuestionChange={() => {}}
               onAnswerChange={setAnswer}
               onExplanationChange={setExplanation}
               lang={currentLang}
@@ -451,11 +536,11 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
 
           {quizType === 'mcq' && (
             <QuizFormMCQ
-              question={question}
+              question={''}
               options={options}
               correct={correctOption}
               explanation={explanation}
-              onQuestionChange={setQuestion}
+              onQuestionChange={() => {}}
               onOptionsChange={setOptions}
               onCorrectChange={setCorrectOption}
               onExplanationChange={setExplanation}
@@ -465,10 +550,10 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
 
           {quizType === 'ox' && (
             <QuizFormOX
-              question={question}
+              question={''}
               correct={correctOX}
               explanation={explanation}
-              onQuestionChange={setQuestion}
+              onQuestionChange={() => {}}
               onCorrectChange={setCorrectOX}
               onExplanationChange={setExplanation}
               lang={currentLang}
@@ -477,11 +562,11 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
 
           {quizType === 'image' && (
             <QuizFormImage
-              question={question}
+              question={''}
               answer={answer}
               explanation={explanation}
               imageUrl={imageUrl}
-              onQuestionChange={setQuestion}
+              onQuestionChange={() => {}}
               onAnswerChange={setAnswer}
               onExplanationChange={setExplanation}
               onImageChange={setImageFile}
@@ -505,30 +590,13 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
 
           {quizType === 'logic' && (
             <QuizFormLogic
-              question={question}
+              question={''}
               content={logicContent}
               answer={answer}
               explanation={explanation}
               imageUrl={imageUrl}
-              onQuestionChange={setQuestion}
+              onQuestionChange={() => {}}
               onContentChange={setLogicContent}
-              onAnswerChange={setAnswer}
-              onExplanationChange={setExplanation}
-              onImageChange={setImageFile}
-              onImageUrlChange={setImageUrl}
-              lang={currentLang}
-            />
-          )}
-
-          {quizType === 'pattern' && (
-            <QuizFormPattern
-              question={question}
-              pattern={logicContent}
-              answer={answer}
-              explanation={explanation}
-              imageUrl={imageUrl}
-              onQuestionChange={setQuestion}
-              onPatternChange={setLogicContent}
               onAnswerChange={setAnswer}
               onExplanationChange={setExplanation}
               onImageChange={setImageFile}
@@ -539,11 +607,11 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
 
           {quizType === 'fill_blank' && (
             <QuizFormFillBlank
-              question={question}
+              question={''}
               answer={fillBlankAnswer}
               explanation={explanation}
               imageUrl={imageUrl}
-              onQuestionChange={setQuestion}
+              onQuestionChange={() => {}}
               onAnswerChange={setFillBlankAnswer}
               onExplanationChange={setExplanation}
               onImageChange={setImageFile}
@@ -551,21 +619,6 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
             />
           )}
 
-          {quizType === 'order' && (
-            <QuizFormOrder
-              question={question}
-              items={orderItems}
-              correctOrder={orderSequence}
-              explanation={explanation}
-              imageUrl={imageUrl}
-              onQuestionChange={setQuestion}
-              onItemsChange={setOrderItems}
-              onCorrectOrderChange={setOrderSequence}
-              onExplanationChange={setExplanation}
-              onImageChange={setImageFile}
-              lang={currentLang}
-            />
-          )}
 
           <button
             onClick={handleSubmit}

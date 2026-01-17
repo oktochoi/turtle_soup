@@ -55,21 +55,6 @@ export default function QuizFormFillBlank({
         </div>
       )}
 
-      {/* 질문 (빈칸 포함) */}
-      <div>
-        <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-          <i className="ri-question-line mr-1"></i>
-          {lang === 'ko' ? '질문 (빈칸은 ___ 또는 [빈칸]로 표시)' : 'Question (Use ___ or [blank] for blanks)'}
-        </label>
-        <textarea
-          value={question}
-          onChange={(e) => onQuestionChange(e.target.value)}
-          placeholder={lang === 'ko' ? '예: 나는 ___을 좋아한다' : 'Example: I like ___'}
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
-          maxLength={500}
-        />
-      </div>
-
       {/* 정답 */}
       <div>
         <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">

@@ -55,6 +55,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
@@ -512,12 +513,38 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
     }
   }, [problemId, lang]);
 
-  // 작성자 확인 (user_id 기반)
+  // 작성자 및 관리자 확인 (user_id 기반)
   useEffect(() => {
     if (problem && user) {
       setIsOwner(problem.user_id === user.id);
+      
+      // 관리자 권한 확인 (데이터베이스에서 조회)
+      const checkAdmin = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('is_admin')
+            .eq('id', user.id)
+            .maybeSingle();
+          
+          if (error) {
+            console.error('관리자 권한 확인 오류:', error);
+            setIsAdminUser(false);
+            return;
+          }
+          
+          const adminStatus = data?.is_admin === true;
+          setIsAdminUser(adminStatus);
+        } catch (error) {
+          console.error('관리자 권한 확인 오류:', error);
+          setIsAdminUser(false);
+        }
+      };
+      
+      checkAdmin();
     } else {
       setIsOwner(false);
+      setIsAdminUser(false);
     }
   }, [problem, user]);
 
@@ -1554,6 +1581,37 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
           editTitle={editTitle}
           onEditTitleChange={setEditTitle}
           isOwner={isOwner}
+          isAdmin={isAdminUser}
+          onToggleFeatured={async () => {
+            if (!problem || !isAdminUser) return;
+            try {
+              const currentStatus = (problem as any).status || 'published';
+              const newStatus = currentStatus === 'featured' ? 'published' : 'featured';
+              
+              const { error } = await supabase
+                .from('problems')
+                .update({ status: newStatus })
+                .eq('id', problemId);
+              
+              if (error) throw error;
+              
+              // 문제 상태 업데이트
+              setProblem({
+                ...problem,
+                ...({ status: newStatus } as any),
+              });
+              
+              showToast(
+                newStatus === 'featured' 
+                  ? (lang === 'ko' ? '관리자 채택되었습니다.' : 'Problem featured.')
+                  : (lang === 'ko' ? '관리자 채택이 해제되었습니다.' : 'Feature removed.'),
+                'success'
+              );
+            } catch (error) {
+              console.error('관리자 채택 오류:', error);
+              showToast(lang === 'ko' ? '관리자 채택 실패' : 'Failed to toggle feature', 'error');
+            }
+          }}
           onEditClick={() => {
             if (problem) {
               setEditTitle(problem.title);

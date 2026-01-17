@@ -6,6 +6,11 @@ import QuizPlayMCQ from '@/components/quiz/QuizPlayMCQ';
 import QuizPlayOX from '@/components/quiz/QuizPlayOX';
 import QuizPlayImage from '@/components/quiz/QuizPlayImage';
 import QuizPlayBalance from '@/components/quiz/QuizPlayBalance';
+import QuizPlayNonsense from '@/components/quiz/QuizPlayNonsense';
+import QuizPlayLogic from '@/components/quiz/QuizPlayLogic';
+import QuizPlayPattern from '@/components/quiz/QuizPlayPattern';
+import QuizPlayFillBlank from '@/components/quiz/QuizPlayFillBlank';
+import QuizPlayOrder from '@/components/quiz/QuizPlayOrder';
 import type { Problem } from '@/lib/types';
 import type { QuizType } from '@/lib/types/quiz';
 
@@ -117,7 +122,7 @@ export default function ProblemContent({
     <>
       {/* Soup 타입: 기존 방식 */}
       {quizType === 'soup' && (
-        <div className="bg-slate-900 rounded-lg p-4 sm:p-6 mb-4">
+        <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 mb-4 border border-slate-700/50">
           {problem.author && (
             <div className="mb-3 pb-3 border-b border-slate-700">
               <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
@@ -142,7 +147,7 @@ export default function ProblemContent({
 
       {/* 다른 퀴즈 타입: 플레이 컴포넌트 */}
       {quizType !== 'soup' && quizContent && (
-        <div className="bg-slate-900 rounded-lg p-4 sm:p-6 mb-4">
+        <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 mb-4 border border-slate-700/50">
           {problem.author && (
             <div className="mb-3 pb-3 border-b border-slate-700">
               <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
@@ -163,10 +168,10 @@ export default function ProblemContent({
           )}
 
           {/* MCQ 퀴즈 */}
-          {quizType === 'mcq' && quizContent.question && quizContent.options && (
+          {quizType === 'mcq' && quizContent.options && (
             <QuizPlayMCQ
               content={{
-                question: quizContent.question,
+                question: problem.title, // 제목을 문제로 사용
                 options: quizContent.options,
                 correct: quizContent.correct ?? 0,
                 explanation: quizContent.explanation,
@@ -181,9 +186,9 @@ export default function ProblemContent({
           )}
 
           {/* OX 퀴즈 */}
-          {quizType === 'ox' && quizContent.question && (
+          {quizType === 'ox' && (
             <QuizPlayOX
-              question={quizContent.question}
+              question={problem.title} // 제목을 문제로 사용
               correct={quizContent.correct === 0 ? 'O' : 'X'}
               onAnswer={(answer) => {
                 onQuizAnswer(answer);
@@ -199,7 +204,7 @@ export default function ProblemContent({
           {quizType === 'image' && quizContent.image_url && (
             <QuizPlayImage
               imageUrl={quizContent.image_url}
-              question={quizContent.question}
+              question={problem.title} // 제목을 문제로 사용
               answer={quizContent.answer || ''}
               onAnswer={(userAnswer) => {
                 onQuizAnswer(userAnswer);
@@ -207,6 +212,84 @@ export default function ProblemContent({
               showAnswer={quizShowAnswer}
               userAnswer={typeof userQuizAnswer === 'string' ? userQuizAnswer : undefined}
               explanation={quizContent.explanation}
+              lang={lang === 'ko' || lang === 'en' ? lang : 'ko'}
+            />
+          )}
+
+          {/* 넌센스 퀴즈 */}
+          {quizType === 'nonsense' && quizContent.answer && (
+            <QuizPlayNonsense
+              question={problem.title} // 제목을 문제로 사용
+              answer={quizContent.answer}
+              explanation={quizContent.explanation}
+              onAnswer={(userAnswer) => {
+                onQuizAnswer(userAnswer);
+              }}
+              showAnswer={quizShowAnswer}
+              userAnswer={typeof userQuizAnswer === 'string' ? userQuizAnswer : undefined}
+              lang={lang === 'ko' || lang === 'en' ? lang : 'ko'}
+            />
+          )}
+
+          {/* 논리 퍼즐 */}
+          {quizType === 'logic' && quizContent.content && quizContent.answer && (
+            <QuizPlayLogic
+              question={problem.title} // 제목을 문제로 사용
+              content={quizContent.content}
+              answer={quizContent.answer}
+              explanation={quizContent.explanation}
+              onAnswer={(userAnswer) => {
+                onQuizAnswer(userAnswer);
+              }}
+              showAnswer={quizShowAnswer}
+              userAnswer={typeof userQuizAnswer === 'string' ? userQuizAnswer : undefined}
+              lang={lang === 'ko' || lang === 'en' ? lang : 'ko'}
+            />
+          )}
+
+          {/* 패턴 퀴즈 */}
+          {quizType === 'pattern' && quizContent.pattern && quizContent.answer && (
+            <QuizPlayPattern
+              question={problem.title} // 제목을 문제로 사용
+              pattern={quizContent.pattern}
+              answer={quizContent.answer}
+              explanation={quizContent.explanation}
+              onAnswer={(userAnswer) => {
+                onQuizAnswer(userAnswer);
+              }}
+              showAnswer={quizShowAnswer}
+              userAnswer={typeof userQuizAnswer === 'string' ? userQuizAnswer : undefined}
+              lang={lang === 'ko' || lang === 'en' ? lang : 'ko'}
+            />
+          )}
+
+          {/* 빈칸 퀴즈 */}
+          {quizType === 'fill_blank' && quizContent.answer && (
+            <QuizPlayFillBlank
+              question={problem.title} // 제목을 문제로 사용 (빈칸 포함)
+              answer={quizContent.answer}
+              explanation={quizContent.explanation}
+              onAnswer={(userAnswer) => {
+                onQuizAnswer(userAnswer);
+              }}
+              showAnswer={quizShowAnswer}
+              userAnswer={typeof userQuizAnswer === 'string' ? userQuizAnswer : undefined}
+              lang={lang === 'ko' || lang === 'en' ? lang : 'ko'}
+            />
+          )}
+
+          {/* 순서맞추기 */}
+          {quizType === 'order' && quizContent.items && quizContent.correctOrder && (
+            <QuizPlayOrder
+              question={problem.title} // 제목을 문제로 사용
+              items={quizContent.items}
+              correctOrder={quizContent.correctOrder}
+              explanation={quizContent.explanation}
+              onAnswer={(order) => {
+                onQuizAnswer(order);
+              }}
+              showAnswer={quizShowAnswer}
+              userAnswer={Array.isArray(userQuizAnswer) ? userQuizAnswer : undefined}
               lang={lang === 'ko' || lang === 'en' ? lang : 'ko'}
             />
           )}

@@ -174,22 +174,117 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
     }
   };
 
+  // 게임 타입에 따른 배경색 결정
+  // 1. 바다거북스프: Charcoal Mono (어두운 회색 기반)
+  // 2. 마피아: Navy Ink + Purple (차분한 남색 + 보라 포인트)
+  // 3. 라이어게임: Warm Gray + Olive (따뜻한 회색 계열)
+  const getBackgroundClass = () => {
+    if (quizType === 'mafia') {
+      // Navy Ink + Purple
+      return 'min-h-screen text-white';
+    } else if (quizType === 'liar') {
+      // Warm Gray + Olive
+      return 'min-h-screen text-[#F1F0ED]';
+    } else {
+      // Charcoal Mono (바다거북스프)
+      return 'min-h-screen text-[#E5E7EB]';
+    }
+  };
+
+  // 게임 타입에 따른 배경 스타일
+  const getBackgroundStyle = () => {
+    if (quizType === 'mafia') {
+      return { backgroundColor: '#070A12' }; // Navy Ink
+    } else if (quizType === 'liar') {
+      return { backgroundColor: '#0E0D0B' }; // Warm Gray
+    } else {
+      return { backgroundColor: '#0B0F14' }; // Charcoal Mono
+    }
+  };
+
+  // 게임 타입에 따른 입력 필드 색상 결정
+  const getInputClass = () => {
+    if (quizType === 'mafia') {
+      // Navy Ink + Purple
+      return 'w-full rounded-xl px-4 py-3 text-[#E6EAF2] placeholder-[#98A2B3] focus:outline-none focus:ring-2 focus:ring-[#A78BFA] focus:border-transparent text-sm';
+    } else if (quizType === 'liar') {
+      // Warm Gray + Olive
+      return 'w-full rounded-xl px-4 py-3 text-[#F1F0ED] placeholder-[#A8A29E] focus:outline-none focus:ring-2 focus:ring-[#A3B18A] focus:border-transparent text-sm';
+    } else {
+      // Charcoal Mono
+      return 'w-full rounded-xl px-4 py-3 text-[#E5E7EB] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#38BDF8] focus:border-transparent text-sm';
+    }
+  };
+
+  // 게임 타입에 따른 입력 필드 배경/테두리 스타일
+  const getInputStyle = () => {
+    if (quizType === 'mafia') {
+      return { backgroundColor: '#0D1220', borderColor: '#1C2541' }; // Surface, Border
+    } else if (quizType === 'liar') {
+      return { backgroundColor: '#171614', borderColor: '#2A2824' }; // Surface, Border
+    } else {
+      return { backgroundColor: '#0F172A', borderColor: '#243041' }; // Surface2, Border
+    }
+  };
+
+  // 게임 타입에 따른 라벨 색상 결정
+  const getLabelClass = () => {
+    if (quizType === 'mafia') {
+      return 'block text-xs sm:text-sm font-medium mb-2 text-[#98A2B3]';
+    } else if (quizType === 'liar') {
+      return 'block text-xs sm:text-sm font-medium mb-2 text-[#A8A29E]';
+    } else {
+      return 'block text-xs sm:text-sm font-medium mb-2 text-[#94A3B8]';
+    }
+  };
+
+  // 게임 타입에 따른 카드 배경색
+  const getCardClass = () => {
+    if (quizType === 'mafia') {
+      return 'bg-[#0D1220] border-[#1C2541]';
+    } else if (quizType === 'liar') {
+      return 'bg-[#171614] border-[#2A2824]';
+    } else {
+      return 'bg-[#111827] border-[#243041]';
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className={getBackgroundClass()} style={getBackgroundStyle()}>
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-2xl">
         <div className="mb-4 sm:mb-6">
           <Link href={`/${lang}`}>
-            <button className="text-slate-400 hover:text-white transition-colors whitespace-nowrap text-sm sm:text-base">
+            <button className={`${
+              quizType === 'mafia' 
+                ? 'text-[#98A2B3] hover:text-[#E6EAF2]'
+                : quizType === 'liar'
+                ? 'text-[#A8A29E] hover:text-[#F1F0ED]'
+                : 'text-[#94A3B8] hover:text-[#E5E7EB]'
+            } transition-colors whitespace-nowrap text-sm sm:text-base`}>
               <i className="ri-arrow-left-line mr-2"></i>
               {t.common.back}
             </button>
           </Link>
         </div>
         <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+          <h1 className={`text-2xl sm:text-3xl font-bold mb-2 ${
+            quizType === 'mafia' 
+              ? 'bg-gradient-to-r from-[#A78BFA] to-[#60A5FA] bg-clip-text text-transparent'
+              : quizType === 'liar'
+              ? 'bg-gradient-to-r from-[#A3B18A] to-[#7F8F69] bg-clip-text text-transparent'
+              : 'bg-gradient-to-r from-[#38BDF8] to-[#38BDF8] bg-clip-text text-transparent'
+          }`}>
             {t.room.createNewRoomTitle}
           </h1>
-          <p className="text-slate-400 text-xs sm:text-sm">{t.room.startGameAsHost}</p>
+          <p className={
+            quizType === 'mafia' 
+              ? 'text-[#98A2B3] text-xs sm:text-sm'
+              : quizType === 'liar'
+              ? 'text-[#A8A29E] text-xs sm:text-sm'
+              : 'text-[#94A3B8] text-xs sm:text-sm'
+          }>
+            {t.room.startGameAsHost}
+          </p>
         </div>
 
         <div className="space-y-4 sm:space-y-5">
@@ -205,7 +300,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
 
           {/* 호스트 닉네임 */}
           <div>
-            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+            <label className={getLabelClass()}>
               <i className="ri-user-line mr-1"></i>
               {t.room.host}
             </label>
@@ -214,7 +309,8 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               placeholder={t.room.hostNickname}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+              className={getInputClass() + ' border'}
+              style={getInputStyle()}
               maxLength={20}
             />
           </div>
@@ -223,7 +319,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
           {quizType && MULTIPLAYER_QUIZ_TYPES.includes(quizType) && (
             <>
               <div>
-                <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                <label className={getLabelClass()}>
                   <i className="ri-file-text-line mr-1"></i>
                   {quizType === 'soup' 
                     ? (lang === 'ko' ? '이야기' : 'Story')
@@ -238,16 +334,23 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                       ? (lang === 'ko' ? '이야기를 입력하세요' : 'Enter the story')
                       : (lang === 'ko' ? '게임의 배경과 규칙을 설명해주세요' : 'Describe the game background and rules')
                   }
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-32 resize-none text-sm"
+                  className={getInputClass() + ' h-32 resize-none border'}
+                  style={getInputStyle()}
                   maxLength={5000}
                 />
-                <div className="text-right text-xs text-slate-500 mt-1">
+                <div className={`text-right text-xs mt-1 ${
+                  quizType === 'mafia' 
+                    ? 'text-[#98A2B3]'
+                    : quizType === 'liar'
+                    ? 'text-[#A8A29E]'
+                    : 'text-[#94A3B8]'
+                }`}>
                   {story.length} / 5000
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                <label className={getLabelClass()}>
                   <i className="ri-information-line mr-1"></i>
                   {quizType === 'soup'
                     ? (lang === 'ko' ? '정답' : 'Answer')
@@ -262,10 +365,17 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                       ? (lang === 'ko' ? '정답을 입력하세요' : 'Enter the answer')
                       : (lang === 'ko' ? '게임에 필요한 추가 정보나 설정을 입력하세요' : 'Enter additional information or settings for the game')
                   }
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-40 resize-none text-sm"
+                  className={getInputClass() + ' h-40 resize-none border'}
+                  style={getInputStyle()}
                   maxLength={1000}
                 />
-                <div className="text-right text-xs text-slate-500 mt-1">
+                <div className={`text-right text-xs mt-1 ${
+                  quizType === 'mafia' 
+                    ? 'text-[#98A2B3]'
+                    : quizType === 'liar'
+                    ? 'text-[#A8A29E]'
+                    : 'text-[#94A3B8]'
+                }`}>
                   {truth.length} / 1000
                 </div>
               </div>
@@ -273,7 +383,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
               {/* 바다거북스프만 힌트 입력 */}
               {quizType === 'soup' && (
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                  <label className={getLabelClass()}>
                     <i className="ri-lightbulb-line mr-1"></i>
                     {lang === 'ko' ? '힌트 (선택사항, 최대 3개)' : 'Hints (Optional, up to 3)'}
                   </label>
@@ -289,7 +399,8 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                           setHints(newHints);
                         }}
                         placeholder={lang === 'ko' ? `힌트 ${index + 1}` : `Hint ${index + 1}`}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                        className={getInputClass() + ' border'}
+                        style={getInputStyle()}
                         maxLength={200}
                       />
                     ))}
@@ -300,7 +411,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
           )}
 
           <div>
-            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+            <label className={getLabelClass()}>
               <i className="ri-lock-line mr-1"></i>
               {t.room.roomPasswordOptional}
             </label>
@@ -317,7 +428,15 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                   }}
                   className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-teal-500 focus:ring-teal-500"
                 />
-                <span className="text-xs sm:text-sm text-slate-400">{t.room.setPassword}</span>
+                <span className={`text-xs sm:text-sm ${
+                  quizType === 'mafia' 
+                    ? 'text-[#98A2B3]'
+                    : quizType === 'liar'
+                    ? 'text-[#A8A29E]'
+                    : 'text-[#94A3B8]'
+                }`}>
+                  {t.room.setPassword}
+                </span>
               </label>
               {usePassword && (
                 <input
@@ -325,12 +444,19 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t.room.enterRoomPasswordPlaceholder}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                  className={getInputClass() + ' border'}
+                  style={getInputStyle()}
                   maxLength={20}
                 />
               )}
               {usePassword && (
-                <p className="text-xs text-slate-500">
+                <p className={`text-xs ${
+                  quizType === 'mafia' 
+                    ? 'text-[#98A2B3]'
+                    : quizType === 'liar'
+                    ? 'text-[#A8A29E]'
+                    : 'text-[#94A3B8]'
+                }`}>
                   {t.room.passwordDescription}
                 </p>
               )}
@@ -338,7 +464,7 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
           </div>
 
           <div>
-            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+            <label className={getLabelClass()}>
               <i className="ri-question-answer-line mr-1"></i>
               {t.room.maxQuestions}
             </label>
@@ -354,9 +480,21 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                     const value = Number(e.target.value);
                     setMaxQuestions(value === 50 ? null : value);
                   }}
-                  className="flex-1 accent-teal-500"
+                  className={`flex-1 ${
+                    quizType === 'mafia' 
+                      ? 'accent-[#A78BFA]' 
+                      : quizType === 'liar'
+                      ? 'accent-[#A3B18A]'
+                      : 'accent-[#38BDF8]'
+                  }`}
                 />
-                <span className="text-xl sm:text-2xl font-bold text-teal-400 w-16 sm:w-20 text-center">
+                <span className={`text-xl sm:text-2xl font-bold w-16 sm:w-20 text-center ${
+                  quizType === 'mafia' 
+                    ? 'text-[#A78BFA]' 
+                    : quizType === 'liar'
+                    ? 'text-[#A3B18A]'
+                    : 'text-[#38BDF8]'
+                }`}>
                   {maxQuestions === null ? t.room.unlimited : maxQuestions}
                 </span>
               </div>
@@ -364,10 +502,18 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                 <button
                   type="button"
                   onClick={() => setMaxQuestions(null)}
-                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all border ${
                     maxQuestions === null
-                      ? 'bg-teal-500 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      ? (quizType === 'mafia' 
+                          ? 'bg-[#A78BFA] text-white border-[#A78BFA] hover:bg-[#8B6CFA]' 
+                          : quizType === 'liar'
+                          ? 'bg-[#A3B18A] text-[#0E0D0B] border-[#A3B18A] hover:bg-[#7F8F69]'
+                          : 'bg-[#38BDF8] text-white border-[#38BDF8] hover:bg-[#0EA5E9]')
+                      : (quizType === 'mafia'
+                          ? 'bg-[#0D1220] text-[#E6EAF2] border-[#1C2541] hover:bg-[#1C2541]'
+                          : quizType === 'liar'
+                          ? 'bg-[#171614] text-[#F1F0ED] border-[#2A2824] hover:bg-[#2A2824]'
+                          : 'bg-[#111827] text-[#E5E7EB] border-[#243041] hover:bg-[#1F2937]')
                   }`}
                 >
                   {t.room.unlimited}
@@ -375,10 +521,18 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                 <button
                   type="button"
                   onClick={() => setMaxQuestions(30)}
-                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all border ${
                     maxQuestions === 30
-                      ? 'bg-teal-500 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      ? (quizType === 'mafia' 
+                          ? 'bg-[#A78BFA] text-white border-[#A78BFA] hover:bg-[#8B6CFA]' 
+                          : quizType === 'liar'
+                          ? 'bg-[#A3B18A] text-[#0E0D0B] border-[#A3B18A] hover:bg-[#7F8F69]'
+                          : 'bg-[#38BDF8] text-white border-[#38BDF8] hover:bg-[#0EA5E9]')
+                      : (quizType === 'mafia'
+                          ? 'bg-[#0D1220] text-[#E6EAF2] border-[#1C2541] hover:bg-[#1C2541]'
+                          : quizType === 'liar'
+                          ? 'bg-[#171614] text-[#F1F0ED] border-[#2A2824] hover:bg-[#2A2824]'
+                          : 'bg-[#111827] text-[#E5E7EB] border-[#243041] hover:bg-[#1F2937]')
                   }`}
                 >
                   30{lang === 'ko' ? t.room.questionsCount : ''}
@@ -386,10 +540,18 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                 <button
                   type="button"
                   onClick={() => setMaxQuestions(50)}
-                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all border ${
                     maxQuestions === 50
-                      ? 'bg-teal-500 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      ? (quizType === 'mafia' 
+                          ? 'bg-[#A78BFA] text-white border-[#A78BFA] hover:bg-[#8B6CFA]' 
+                          : quizType === 'liar'
+                          ? 'bg-[#A3B18A] text-[#0E0D0B] border-[#A3B18A] hover:bg-[#7F8F69]'
+                          : 'bg-[#38BDF8] text-white border-[#38BDF8] hover:bg-[#0EA5E9]')
+                      : (quizType === 'mafia'
+                          ? 'bg-[#0D1220] text-[#E6EAF2] border-[#1C2541] hover:bg-[#1C2541]'
+                          : quizType === 'liar'
+                          ? 'bg-[#171614] text-[#F1F0ED] border-[#2A2824] hover:bg-[#2A2824]'
+                          : 'bg-[#111827] text-[#E5E7EB] border-[#243041] hover:bg-[#1F2937]')
                   }`}
                 >
                   50{lang === 'ko' ? t.room.questionsCount : ''}
@@ -401,7 +563,13 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
           <button
             onClick={handleCreate}
             disabled={isCreating || !user}
-            className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-teal-500/50 mt-6 sm:mt-8 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+            className={`w-full font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg mt-6 sm:mt-8 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base ${
+              quizType === 'mafia'
+                ? 'bg-gradient-to-r from-[#A78BFA] to-[#60A5FA] hover:from-[#8B6CFA] hover:to-[#4F8FFA] text-white hover:shadow-[#A78BFA]/50'
+                : quizType === 'liar'
+                ? 'bg-gradient-to-r from-[#A3B18A] to-[#7F8F69] hover:from-[#7F8F69] hover:to-[#6B7A5A] text-[#0E0D0B] hover:shadow-[#A3B18A]/50'
+                : 'bg-gradient-to-r from-[#38BDF8] to-[#38BDF8] hover:from-[#0EA5E9] hover:to-[#0284C7] text-white hover:shadow-[#38BDF8]/50'
+            }`}
           >
             <i className="ri-door-open-line mr-2"></i>
             {isCreating 

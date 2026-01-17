@@ -44,10 +44,12 @@ export default function QuizTypeSelector({
               <div className="text-center">
                 <div className={`text-xl sm:text-2xl mb-1 sm:mb-2 ${isSelected ? 'text-teal-400' : 'text-slate-400'}`}>
                   {type === 'soup' && <i className="ri-bowl-line"></i>}
+                  {type === 'reasoning' && <i className="ri-search-line"></i>}
                   {type === 'nonsense' && <i className="ri-lightbulb-flash-line"></i>}
                   {type === 'mcq' && <i className="ri-list-check"></i>}
                   {type === 'ox' && <i className="ri-checkbox-circle-line"></i>}
                   {type === 'image' && <i className="ri-image-line"></i>}
+                  {type === 'poll' && <i className="ri-bar-chart-line"></i>}
                   {type === 'balance' && <i className="ri-scales-line"></i>}
                   {type === 'logic' && <i className="ri-brain-line"></i>}
                   {type === 'pattern' && <i className="ri-numbers-line"></i>}
