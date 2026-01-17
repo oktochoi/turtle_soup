@@ -15,24 +15,56 @@ interface ChatPanelProps {
   roomCode: string;
   nickname: string;
   lang: string;
+  title?: string; // 커스텀 제목 (선택적)
+  gamePhase?: 'LOBBY' | 'ROLE_REVEAL' | 'SPEAKING' | 'VOTING' | 'RESULT'; // 게임 단계
 }
 
-export default function ChatPanel({ roomCode, nickname, lang }: ChatPanelProps) {
+export default function ChatPanel({ roomCode, nickname, lang, title, gamePhase }: ChatPanelProps) {
   const t = useTranslations();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageText, setMessageText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const lastScrollTop = useRef(0);
 
-  // 스크롤을 맨 아래로
+  // 스크롤을 맨 아래로 (사용자가 스크롤을 올리지 않았을 때만)
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!isUserScrolling) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   };
+
+  // 스크롤 이벤트 감지
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const currentScrollTop = container.scrollTop;
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+      const isNearBottom = scrollHeight - currentScrollTop - clientHeight < 100; // 하단 100px 이내
+
+      // 사용자가 위로 스크롤했는지 확인
+      if (currentScrollTop < lastScrollTop.current) {
+        setIsUserScrolling(true);
+      } else if (isNearBottom) {
+        // 다시 하단 근처로 왔으면 자동 스크롤 재개
+        setIsUserScrolling(false);
+      }
+
+      lastScrollTop.current = currentScrollTop;
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isUserScrolling]);
 
   // 실시간 채팅 구독
   useEffect(() => {
@@ -201,7 +233,7 @@ export default function ChatPanel({ roomCode, nickname, lang }: ChatPanelProps) 
     return () => {
       chatChannel.unsubscribe();
     };
-  }, [roomCode]);
+  }, [roomCode, nickname]); // nickname을 의존성에 추가하여 재구독 보장
 
   const handleSubmitMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -302,7 +334,7 @@ export default function ChatPanel({ roomCode, nickname, lang }: ChatPanelProps) 
       <div className="p-3 sm:p-4 border-b border-slate-700">
         <h3 className="text-sm sm:text-base font-semibold text-teal-400 flex items-center gap-2">
           <i className="ri-chat-3-line"></i>
-          {t.room.chat}
+          {title || t.room.chat}
         </h3>
       </div>
 
@@ -318,11 +350,24 @@ export default function ChatPanel({ roomCode, nickname, lang }: ChatPanelProps) 
           </div>
         ) : messages.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-xs sm:text-sm text-slate-400">{t.room.noMessagesYet}</p>
-            <p className="text-xs text-slate-500 mt-1">{t.room.startChatting}</p>
-            <p className="text-xs text-amber-400/70 mt-2 px-2">
-              {t.room.realtimeMessagesWorking}
-            </p>
+            {gamePhase === 'SPEAKING' || gamePhase === 'VOTING' || gamePhase === 'RESULT' ? (
+              <>
+                <p className="text-xs sm:text-sm text-slate-400">
+                  {lang === 'ko' ? '아직 메시지가 없습니다.' : 'No messages yet.'}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {lang === 'ko' ? '게임 대화를 시작해보세요!' : 'Start the game chat!'}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-xs sm:text-sm text-slate-400">{t.room.noMessagesYet}</p>
+                <p className="text-xs text-slate-500 mt-1">{t.room.startChatting}</p>
+                <p className="text-xs text-amber-400/70 mt-2 px-2">
+                  {t.room.realtimeMessagesWorking}
+                </p>
+              </>
+            )}
           </div>
         ) : (
           messages.map((msg) => {

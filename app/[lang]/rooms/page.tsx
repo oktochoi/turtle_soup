@@ -20,6 +20,11 @@ type Room = {
   created_at: string;
   game_ended?: boolean;
   status?: string;
+  quiz_type?: string;
+  room_name?: string;
+  theme?: string;
+  level?: string;
+  max_players?: number;
   player_count: number;
   last_activity_at?: string | null;
   last_chat_at?: string | null;
@@ -64,7 +69,6 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
           event: '*',
           schema: 'public',
           table: 'rooms',
-          filter: 'status=eq.active',
         },
         () => {
           loadRooms();
@@ -94,8 +98,8 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
       
       let query = supabase
         .from('rooms')
-        .select('code, story, host_nickname, password, max_questions, created_at, game_ended, status, lang, last_activity_at')
-        .in('status', ['active', 'done']);
+        .select('code, story, host_nickname, password, max_questions, created_at, game_ended, status, quiz_type, room_name, theme, level, max_players, lang, last_activity_at')
+        .in('status', ['active', 'done', 'LOBBY', 'PLAYING', 'FINISHED']);
       
       // lang 컬럼으로 필터링 시도
       const result = await query.eq('lang', currentLang).order('created_at', { ascending: false });
@@ -106,8 +110,8 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
         // lang 컬럼 없이 모든 방 가져오기
         const allResult = await supabase
           .from('rooms')
-          .select('code, story, host_nickname, password, max_questions, created_at, game_ended, status, last_activity_at')
-          .in('status', ['active', 'done'])
+          .select('code, story, host_nickname, password, max_questions, created_at, game_ended, status, quiz_type, room_name, theme, level, max_players, last_activity_at')
+          .in('status', ['active', 'done', 'LOBBY', 'PLAYING', 'FINISHED'])
           .order('created_at', { ascending: false });
         
         if (allResult.error) throw allResult.error;
@@ -241,13 +245,18 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
     setFilteredRooms(filtered);
   }, [searchQuery, privacyFilter, minPlayers, sortOption, rooms]);
 
-  const handleJoinRoom = (roomCode: string, hasPassword: boolean) => {
+  const handleJoinRoom = (roomCode: string, hasPassword: boolean, quizType?: string) => {
     if (hasPassword) {
       setSelectedRoom(roomCode);
       setShowPasswordModal(true);
     } else {
-      // 비밀번호가 없으면 바로 방으로 이동 (닉네임은 room 페이지에서 입력받음)
-      router.push(`/${lang}/room/${roomCode}`);
+      // 게임 타입에 따라 다른 경로로 이동
+      const roomPath = quizType === 'liar' 
+        ? `/${lang}/liar_room/${roomCode}`
+        : quizType === 'mafia'
+        ? `/${lang}/mafia_room/${roomCode}`
+        : `/${lang}/turtle_room/${roomCode}`;
+      router.push(roomPath);
     }
   };
 
@@ -259,11 +268,21 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
     }
     
     setError('');
-    // 비밀번호를 URL에 포함하여 방으로 이동 (닉네임은 room 페이지에서 입력받음)
+    // 선택된 방의 게임 타입 확인
+    const selectedRoomData = rooms.find(r => r.code === selectedRoom);
+    const quizType = selectedRoomData?.quiz_type;
+    
+    // 게임 타입에 따라 다른 경로로 이동
+    const roomPath = quizType === 'liar' 
+      ? `/${lang}/liar_room/${selectedRoom}`
+      : quizType === 'mafia'
+      ? `/${lang}/mafia_room/${selectedRoom}`
+      : `/${lang}/turtle_room/${selectedRoom}`;
+    
     const urlParams = new URLSearchParams({
       password: password.trim(),
     });
-    router.push(`/${lang}/room/${selectedRoom}?${urlParams.toString()}`);
+    router.push(`${roomPath}?${urlParams.toString()}`);
     setShowPasswordModal(false);
     setPassword('');
   };
@@ -490,8 +509,25 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                 <div className="mb-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-lg font-bold text-teal-400">{room.code}</span>
-                    <div className="flex items-center gap-2">
-                      {(room.game_ended || room.status === 'done') && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* 게임 타입 배지 */}
+                      {room.quiz_type && (
+                        <span className={`px-2 py-1 rounded text-xs border font-semibold ${
+                          room.quiz_type === 'liar' 
+                            ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
+                            : room.quiz_type === 'mafia'
+                            ? 'bg-purple-500/20 text-purple-400 border-purple-500/50'
+                            : 'bg-teal-500/20 text-teal-400 border-teal-500/50'
+                        }`}>
+                          {room.quiz_type === 'liar' 
+                            ? (lang === 'ko' ? '라이어 게임' : 'Liar Game')
+                            : room.quiz_type === 'mafia'
+                            ? (lang === 'ko' ? '마피아' : 'Mafia')
+                            : (lang === 'ko' ? '바다거북스프' : 'Turtle Soup')
+                          }
+                        </span>
+                      )}
+                      {(room.game_ended || room.status === 'done' || room.status === 'FINISHED') && (
                         <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs border border-red-500/50">
                           <i className="ri-stop-circle-line mr-1"></i>
                           {t.room.ended}
@@ -510,7 +546,19 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                       )}
                     </div>
                   </div>
-                  <p className="text-sm text-slate-300 line-clamp-2 mb-3">{room.story}</p>
+                  {/* 라이어 게임인 경우 room_name 표시, 그 외에는 story 표시 */}
+                  {room.quiz_type === 'liar' ? (
+                    <div className="mb-3">
+                      <p className="text-sm font-semibold text-slate-200 mb-1">{room.room_name || (lang === 'ko' ? '라이어 게임 방' : 'Liar Game Room')}</p>
+                      {room.theme && (
+                        <p className="text-xs text-slate-400">
+                          {lang === 'ko' ? '주제' : 'Theme'}: {room.theme} | {lang === 'ko' ? '난이도' : 'Difficulty'}: {room.level}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-300 line-clamp-2 mb-3">{room.story}</p>
+                  )}
                   <div className="flex flex-col gap-2 text-xs text-slate-400 mb-3">
                     <div className="flex items-center gap-4 flex-wrap">
                       <span>
@@ -519,7 +567,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                       </span>
                       <span>
                         <i className="ri-group-line mr-1"></i>
-                        {room.player_count}{lang === 'ko' ? t.room.playersCount : ''}
+                        {room.player_count}{room.quiz_type === 'liar' && room.max_players ? ` / ${room.max_players}` : ''}{lang === 'ko' ? t.room.playersCount : ''}
                       </span>
                     </div>
                     <div className="flex items-center gap-4 flex-wrap pt-2 border-t border-slate-700/50">
@@ -562,9 +610,9 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  {!(room.game_ended || room.status === 'done') && (
+                  {!(room.game_ended || room.status === 'done' || room.status === 'FINISHED') && (
                     <button
-                      onClick={() => handleJoinRoom(room.code, !!room.password)}
+                      onClick={() => handleJoinRoom(room.code, !!room.password, room.quiz_type)}
                       className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-2.5 rounded-lg transition-all text-sm"
                     >
                       <i className="ri-login-box-line mr-2"></i>
@@ -572,8 +620,15 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                     </button>
                   )}
                   <button
-                    onClick={() => router.push(`/${lang}/room/${room.code}?spectator=true`)}
-                    className={`${!(room.game_ended || room.status === 'done') ? 'flex-1' : 'w-full'} bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 rounded-lg transition-all text-sm border border-slate-600`}
+                    onClick={() => {
+                      const spectatorPath = room.quiz_type === 'liar' 
+                        ? `/${lang}/liar_room/${room.code}?spectator=true`
+                        : room.quiz_type === 'mafia'
+                        ? `/${lang}/mafia_room/${room.code}?spectator=true`
+                        : `/${lang}/turtle_room/${room.code}?spectator=true`;
+                      router.push(spectatorPath);
+                    }}
+                    className={`${!(room.game_ended || room.status === 'done' || room.status === 'FINISHED') ? 'flex-1' : 'w-full'} bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 rounded-lg transition-all text-sm border border-slate-600`}
                     title={t.room.spectateModeTooltip}
                   >
                     <i className="ri-eye-line mr-2"></i>

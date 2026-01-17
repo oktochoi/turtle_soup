@@ -13,6 +13,28 @@ import { ProblemsEmptyState } from '@/components/EmptyState';
 import { handleError } from '@/lib/error-handler';
 import { QUIZ_TYPE_METADATA, type QuizType } from '@/lib/types/quiz';
 
+// 게임 유형별 색상 팔레트
+const getQuizTypeColors = (quizType: QuizType) => {
+  const colorMap: Record<QuizType, { bg: string; text: string; border: string }> = {
+    soup: { bg: 'bg-cyan-500/20', text: 'text-cyan-300', border: 'border-cyan-500/30' },
+    reasoning: { bg: 'bg-indigo-500/20', text: 'text-indigo-300', border: 'border-indigo-500/30' },
+    nonsense: { bg: 'bg-yellow-500/20', text: 'text-yellow-300', border: 'border-yellow-500/30' },
+    mcq: { bg: 'bg-blue-500/20', text: 'text-blue-300', border: 'border-blue-500/30' },
+    ox: { bg: 'bg-green-500/20', text: 'text-green-300', border: 'border-green-500/30' },
+    image: { bg: 'bg-purple-500/20', text: 'text-purple-300', border: 'border-purple-500/30' },
+    poll: { bg: 'bg-pink-500/20', text: 'text-pink-300', border: 'border-pink-500/30' },
+    balance: { bg: 'bg-rose-500/20', text: 'text-rose-300', border: 'border-rose-500/30' },
+    logic: { bg: 'bg-violet-500/20', text: 'text-violet-300', border: 'border-violet-500/30' },
+    pattern: { bg: 'bg-sky-500/20', text: 'text-sky-300', border: 'border-sky-500/30' },
+    liar: { bg: 'bg-amber-500/20', text: 'text-amber-300', border: 'border-amber-500/30' },
+    mafia: { bg: 'bg-red-500/20', text: 'text-red-300', border: 'border-red-500/30' },
+    battle: { bg: 'bg-orange-500/20', text: 'text-orange-300', border: 'border-orange-500/30' },
+    fill_blank: { bg: 'bg-emerald-500/20', text: 'text-emerald-300', border: 'border-emerald-500/30' },
+    order: { bg: 'bg-teal-500/20', text: 'text-teal-300', border: 'border-teal-500/30' },
+  };
+  return colorMap[quizType] || { bg: 'bg-slate-500/20', text: 'text-slate-300', border: 'border-slate-500/30' };
+};
+
 type SortOption = 'latest' | 'popular' | 'difficulty';
 
 export default function ProblemsPage({ params }: { params: Promise<{ lang: string }> }) {
@@ -151,7 +173,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
     // 퀴즈 타입 필터
     if (quizTypeFilter !== 'all') {
       filtered = filtered.filter(p => {
-        const problemType = (p as any).type || 'soup';
+        const problemType = (p as any).quiz_type || (p as any).quizType || (p as any).type || 'soup';
         return problemType === quizTypeFilter;
       });
     }
@@ -334,7 +356,13 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                   {t.problem.all}
                 </button>
                 {Object.values(QUIZ_TYPE_METADATA)
-                  .filter(metadata => metadata.playMode === 'single' || metadata.playMode === 'both')
+                  .filter(metadata => {
+                    // 싱글플레이 또는 둘 다 가능한 것만
+                    if (metadata.playMode !== 'single' && metadata.playMode !== 'both') return false;
+                    // 제거된 타입 필터링
+                    if (['reasoning', 'poll', 'pattern', 'order'].includes(metadata.type)) return false;
+                    return true;
+                  })
                   .map(metadata => (
                     <button
                       key={metadata.type}
@@ -456,35 +484,90 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
               
               // 이미지 URL 추출 (quizContent에서)
               let imageUrl: string | null = null;
+              // quiz_type 필드 확인 (다양한 필드명 시도)
+              const quizType = (problem as any).quiz_type 
+                || (problem as any).quizType 
+                || (problem as any).type 
+                || 'soup';
+              
+              // 디버깅: quiz_type이 없거나 잘못된 경우 로그
+              if (!quizType || quizType === 'soup') {
+                console.log('문제 ID:', problem.id, 'quiz_type:', quizType, '전체 problem:', problem);
+              }
+              
+              const quizTypeMetadata = QUIZ_TYPE_METADATA[quizType as QuizType];
+              
               try {
                 // quiz_content 필드 확인 (다양한 필드명 시도)
                 const quizContentRaw = (problem as any).quiz_content 
                   || (problem as any).quizContent 
                   || (problem as any).content;
                 
-                if (!quizContentRaw) {
-                  // quiz_content가 없으면 다음 문제로
-                } else {
-                  const quizContent = typeof quizContentRaw === 'string' 
-                    ? JSON.parse(quizContentRaw) 
-                    : quizContentRaw;
+                if (quizContentRaw) {
+                  let quizContent: any = null;
                   
-                  // quiz_type 확인
-                  const quizType = (problem as any).quiz_type || (problem as any).quizType;
+                  // 문자열인 경우 JSON인지 확인 후 파싱
+                  if (typeof quizContentRaw === 'string') {
+                    // JSON 문자열인지 확인 (시작이 { 또는 [인 경우만)
+                    const trimmed = quizContentRaw.trim();
+                    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                      try {
+                        quizContent = JSON.parse(quizContentRaw);
+                      } catch (e) {
+                        // JSON이 아니면 무시 (일반 텍스트일 수 있음)
+                        quizContent = null;
+                      }
+                    } else {
+                      // JSON이 아닌 일반 텍스트는 무시
+                      quizContent = null;
+                    }
+                  } else {
+                    // 이미 객체인 경우
+                    quizContent = quizContentRaw;
+                  }
                   
-                  if (quizContent && typeof quizContent === 'object') {
+                  if (quizContent && typeof quizContent === 'object' && !Array.isArray(quizContent)) {
                     // image_url이 직접 있는 경우 (모든 타입)
-                    if (quizContent.image_url) {
+                    if (quizContent.image_url && typeof quizContent.image_url === 'string') {
                       imageUrl = quizContent.image_url;
                     }
                     // imageUrl (camelCase)도 확인
-                    else if (quizContent.imageUrl) {
+                    else if (quizContent.imageUrl && typeof quizContent.imageUrl === 'string') {
                       imageUrl = quizContent.imageUrl;
+                    }
+                    // image 필드도 확인
+                    else if (quizContent.image && typeof quizContent.image === 'string') {
+                      imageUrl = quizContent.image;
                     }
                   }
                 }
+                
+                // quiz_content에서 찾지 못한 경우, problem의 image_url 필드 직접 확인
+                if (!imageUrl) {
+                  const directImageUrl = (problem as any).image_url || (problem as any).imageUrl || (problem as any).image;
+                  if (directImageUrl && typeof directImageUrl === 'string') {
+                    imageUrl = directImageUrl;
+                  }
+                }
+                
+                // Supabase Storage URL인 경우 public URL로 변환
+                if (imageUrl && imageUrl.includes('supabase.co/storage/v1/object')) {
+                  // 이미 public URL이면 그대로 사용
+                  if (imageUrl.includes('/public/')) {
+                    // 그대로 사용
+                  } else {
+                    // signed URL인 경우 public으로 변환 시도
+                    imageUrl = imageUrl.replace('/sign/', '/public/');
+                  }
+                }
+                
+                // 최종적으로 유효한 URL인지 확인 (http:// 또는 https://로 시작하는지)
+                if (imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+                  imageUrl = null;
+                }
               } catch (e) {
-                // JSON 파싱 실패 시 무시
+                // 예상치 못한 오류는 무시하고 이미지 없이 진행
+                imageUrl = null;
               }
               
               return (
@@ -492,17 +575,43 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                   key={problem.id}
                   className="bg-slate-800/80 backdrop-blur-sm rounded-xl p-4 sm:p-5 lg:p-6 border border-slate-700/60 hover:border-slate-600 transition-all duration-200 shadow-md hover:shadow-lg"
                 >
-                  {/* 이미지 썸네일 (제목 위에 표시) */}
+                  {/* 게임 유형 뱃지 */}
+                  {quizTypeMetadata ? (
+                    <div className="mb-2">
+                      {(() => {
+                        const colors = getQuizTypeColors(quizType as QuizType);
+                        return (
+                          <span className={`inline-block px-2 py-1 ${colors.bg} ${colors.text} rounded text-xs font-medium border ${colors.border}`}>
+                            {lang === 'ko' ? quizTypeMetadata.name : quizTypeMetadata.nameEn}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    // quiz_type이 없거나 잘못된 경우 디버깅용 표시
+                    <div className="mb-2">
+                      <span className="inline-block px-2 py-1 bg-red-500/20 text-red-300 rounded text-xs font-medium border border-red-500/30">
+                        {lang === 'ko' ? `타입 없음 (${quizType})` : `No Type (${quizType})`}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* 이미지 썸네일 (가운데 정렬, 중앙 표시) - 이미지가 있을 때만 표시 */}
                   {imageUrl && (
-                    <div className="mb-3 sm:mb-4 rounded-lg overflow-hidden bg-slate-900">
+                    <div className="mb-3 sm:mb-4 rounded-lg overflow-hidden bg-slate-900 flex items-center justify-center" style={{ minHeight: '120px' }}>
                       <img
                         src={imageUrl}
                         alt={problem.title}
-                        className="w-full h-32 sm:h-40 object-cover"
+                        className="w-full h-32 sm:h-40 object-contain"
                         loading="lazy"
+                        crossOrigin="anonymous"
                         onError={(e) => {
+                          console.error('이미지 로드 실패:', imageUrl, '문제 ID:', problem.id, '문제 제목:', problem.title);
                           // 이미지 로드 실패 시 숨김
                           (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                        onLoad={() => {
+                          console.log('이미지 로드 성공:', imageUrl, '문제 ID:', problem.id);
                         }}
                       />
                     </div>

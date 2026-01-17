@@ -25,6 +25,9 @@ import ShareModal from './components/ShareModal';
 import CommentsSection from './components/CommentsSection';
 import BugReportModal from './components/BugReportModal';
 import ProblemCTABar from './components/ProblemCTABar';
+import QuestionInputSection from './components/QuestionInputSection';
+import AnswerInputSection from './components/AnswerInputSection';
+import AdminQuestionList from './components/AdminQuestionList';
 
 export default function ProblemPage({ params }: { params: Promise<{ lang: string; id: string }> }) {
   const resolvedParams = use(params);
@@ -1729,561 +1732,128 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   
         {/* 질문하기 섹션 (Soup 타입만) */}
         {quizType === 'soup' && (
-          <div className="bg-slate-800 rounded-xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 border border-slate-700">
-            <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 flex items-center gap-2">
-              <i className="ri-question-line text-teal-400"></i>
-              {t.problem.question}
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-400 mb-3 sm:mb-4">
-              {t.problem.questionDescription}
-            </p>
-  
-            <div className="space-y-3 mb-4">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="text"
-                  placeholder={t.problem.questionPlaceholder}
-                  value={questionText}
-                  onChange={(e) => {
-                    setQuestionText(e.target.value);
-                    setSuggestedAnswer(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      if (!suggestedAnswer) {
-                        handleAnalyzeBeforeSubmit();
-                      } else {
-                        handleSubmitQuestion();
+          <>
+            <QuestionInputSection
+              lang={lang}
+              questionText={questionText}
+              suggestedAnswer={suggestedAnswer}
+              isAnalyzing={isAnalyzing}
+              localQuestions={localQuestions}
+              onQuestionTextChange={(text) => {
+                setQuestionText(text);
+                setSuggestedAnswer(null);
+              }}
+              onSuggestedAnswerChange={setSuggestedAnswer}
+              onAnalyzeBeforeSubmit={handleAnalyzeBeforeSubmit}
+              onSubmitQuestion={handleSubmitQuestion}
+              onClearLocalQuestions={clearLocalQuestions}
+              onBugReport={(type, question, answer) => {
+                setBugReportType(type);
+                setBugReportQuestion(question);
+                setBugReportAnswer(answer);
+                setShowBugReportModal(true);
+              }}
+              getAnswerBadge={getAnswerBadge}
+              t={t}
+            />
+            <AnswerInputSection
+              lang={lang}
+              problem={problem}
+              userGuess={userGuess}
+              similarityScore={similarityScore}
+              isCalculatingSimilarity={isCalculatingSimilarity}
+              hasSubmittedAnswer={hasSubmittedAnswer}
+              showAnswer={showAnswer}
+              showHints={showHints}
+              hints={(problem as any)?.hints}
+              onUserGuessChange={(guess) => {
+                setUserGuess(guess);
+                setSimilarityScore(null);
+              }}
+              onSubmitAnswer={async () => {
+                if (!userGuess.trim() || !problem) {
+                  showToast(t.problem.enterAnswerAlert, 'warning');
+                  return;
+                }
+
+                setIsCalculatingSimilarity(true);
+                try {
+                  const similarity =
+                    lang === 'en'
+                      ? await calculateAnswerSimilarityEn(
+                          userGuess.trim(),
+                          problem.answer,
+                          problem.content,
+                          problemKnowledge as any
+                        )
+                      : await calculateAnswerSimilarity(
+                          userGuess.trim(),
+                          problem.answer,
+                          problem.content
+                        );
+
+                  setSimilarityScore(similarity);
+                  setHasSubmittedAnswer(true);
+
+                  // ✅ 맞춘 기록 저장
+                  if (similarity >= 80 && user) {
+                    try {
+                      const { data: existingSolve } = await supabase
+                        .from('user_problem_solves')
+                        .select('id')
+                        .eq('user_id', user.id)
+                        .eq('problem_id', problemId)
+                        .maybeSingle();
+
+                      if (!existingSolve) {
+                        const { error: solveError } = await supabase
+                          .from('user_problem_solves')
+                          .insert({
+                            user_id: user.id,
+                            problem_id: problemId,
+                            similarity_score: Math.round(similarity),
+                          });
+                        if (solveError) console.error('정답 기록 저장 오류:', solveError);
                       }
+                    } catch (error) {
+                      console.error('정답 수 증가 오류:', error);
                     }
-                  }}
-                  className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm sm:text-base"
-                />
-  
-                {!suggestedAnswer && (
-                  <button
-                    onClick={handleAnalyzeBeforeSubmit}
-                    disabled={!questionText.trim() || isAnalyzing}
-                    className="px-3 sm:px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap text-sm sm:text-base touch-manipulation"
-                    title="AI 답변 제안 받기"
-                  >
-                    {isAnalyzing ? t.problem.analyzing : '🔧'}
-                  </button>
-                )}
-              </div>
-  
-              {/* AI 제안 답변 표시 */}
-              {suggestedAnswer && (
-                <div className="bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs sm:text-sm text-slate-300">
-                      {t.problem.aiSuggestedAnswer}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          if (questionText && suggestedAnswer) {
-                            setBugReportType('wrong_yes_no');
-                            setBugReportQuestion(questionText);
-                            setBugReportAnswer(suggestedAnswer);
-                            setShowBugReportModal(true);
-                          }
-                        }}
-                        className="text-xs px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all touch-manipulation flex items-center gap-1"
-                        title={lang === 'ko' ? '오류 리포트 보내기' : 'Send Error Report'}
-                      >
-                        <i className="ri-bug-line"></i>
-                        <span className="hidden sm:inline">
-                          {lang === 'ko' ? '오류 리포트' : 'Report'}
-                        </span>
-                      </button>
-  
-                      <button
-                        onClick={() => setSuggestedAnswer(null)}
-                        className="text-xs text-slate-400 hover:text-slate-300 touch-manipulation"
-                      >
-                        {t.problem.reAnalyze}
-                      </button>
-                    </div>
-                  </div>
-  
-                  <div className="flex items-center gap-2 mb-3">
-                    {(() => {
-                      const badge = getAnswerBadge(suggestedAnswer);
-                      return badge ? (
-                        <span
-                          className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border ${badge.color}`}
-                        >
-                          {badge.text}
-                        </span>
-                      ) : null;
-                    })()}
-                  </div>
-  
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <button
-                      onClick={() => setSuggestedAnswer('yes')}
-                      className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
-                        suggestedAnswer === 'yes'
-                          ? 'bg-green-500 text-white'
-                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                      }`}
-                    >
-                      {t.problem.yes}
-                    </button>
-                    <button
-                      onClick={() => setSuggestedAnswer('no')}
-                      className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
-                        suggestedAnswer === 'no'
-                          ? 'bg-red-500 text-white'
-                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                      }`}
-                    >
-                      {t.problem.no}
-                    </button>
-                    <button
-                      onClick={() => setSuggestedAnswer('irrelevant')}
-                      className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
-                        suggestedAnswer === 'irrelevant'
-                          ? 'bg-yellow-500 text-white'
-                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                      }`}
-                    >
-                      {t.problem.irrelevant}
-                    </button>
-                    <button
-                      onClick={() => setSuggestedAnswer('decisive')}
-                      className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
-                        suggestedAnswer === 'decisive'
-                          ? 'bg-purple-500 text-white'
-                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                      }`}
-                    >
-                      {t.problem.decisive}
-                    </button>
-                  </div>
-                </div>
-              )}
-  
-              <button
-                onClick={handleSubmitQuestion}
-                disabled={!questionText.trim() || isAnalyzing}
-                className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2.5 sm:py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base touch-manipulation"
-              >
-                {t.problem.question}
-              </button>
-            </div>
-  
-            {/* 로컬 질문 내역 */}
-            {localQuestions.length > 0 && (
-              <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-3">
-                  <h3 className="text-base sm:text-lg font-semibold">
-                    {t.problem.questionHistory}
-                  </h3>
-                  <button
-                    onClick={clearLocalQuestions}
-                    className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-all text-xs sm:text-sm touch-manipulation"
-                  >
-                    <i className="ri-delete-bin-line mr-1"></i>
-                    {t.problem.clearHistory}
-                  </button>
-                </div>
-  
-                <div className="space-y-2 sm:space-y-3">
-                  {localQuestions.map((q, index) => {
-                    const answerColor =
-                      q.answer === 'yes' || q.answer === '예'
-                        ? 'text-green-400'
-                        : q.answer === 'no' || q.answer === '아니오'
-                        ? 'text-red-400'
-                        : q.answer === 'irrelevant' || q.answer === '상관없음'
-                        ? 'text-yellow-400'
-                        : q.answer === 'decisive' || q.answer === '결정적인'
-                        ? 'text-purple-400'
-                        : 'text-slate-400';
-  
-                    return (
-                      <div
-                        key={index}
-                        className="bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700"
-                      >
-                        <div className="space-y-2">
-                          <div className="flex items-start gap-2">
-                            <span className="text-xs sm:text-sm font-semibold text-cyan-400 flex-shrink-0">
-                              Q:
-                            </span>
-                            <p className="text-xs sm:text-sm text-white flex-1 break-words">
-                              {q.question}
-                            </p>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="text-xs sm:text-sm font-semibold text-teal-400 flex-shrink-0">
-                              A:
-                            </span>
-                            <p className={`text-xs sm:text-sm font-semibold ${answerColor}`}>
-                              {q.answer}
-                            </p>
-                          </div>
-  
-                          <div className="flex justify-end mt-2">
-                            <button
-                              onClick={() => {
-                                setBugReportType('wrong_yes_no');
-                                setBugReportQuestion(q.question);
-                                setBugReportAnswer(q.answer as any);
-                                setShowBugReportModal(true);
-                              }}
-                              className="text-xs px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all touch-manipulation flex items-center gap-1"
-                              title={lang === 'ko' ? '오류 리포트 보내기' : 'Send Error Report'}
-                            >
-                              <i className="ri-bug-line"></i>
-                              <span>{lang === 'ko' ? '오류 리포트' : 'Report'}</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-  
-            {/* 정답 입력 칸 */}
-            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
-                  <i className="ri-checkbox-circle-line text-purple-400"></i>
-                  {t.problem.submitAnswerTitle}
-                </h3>
-  
-                <button
-                  onClick={() => {
-                    if (userGuess && problem) {
-                      setBugReportType('wrong_similarity');
-                      setBugReportQuestion(null);
-                      setBugReportAnswer(null);
-                      setShowBugReportModal(true);
-                    } else {
-                      alert(
-                        lang === 'ko'
-                          ? '정답을 입력한 후 오류를 신고할 수 있습니다.'
-                          : 'Please enter an answer before reporting an error.'
-                      );
-                    }
-                  }}
-                  className="text-xs px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all touch-manipulation flex items-center gap-1"
-                  title={lang === 'ko' ? '오류 리포트 보내기' : 'Send Error Report'}
-                >
-                  <i className="ri-bug-line"></i>
-                  <span className="hidden sm:inline">{lang === 'ko' ? '오류 리포트' : 'Report'}</span>
-                </button>
-              </div>
-  
-              <p className="text-xs sm:text-sm text-slate-400 mb-3 sm:mb-4">
-                {t.problem.submitAnswerDescription}
-              </p>
-  
-              <div className="space-y-3">
-                <textarea
-                  placeholder={t.problem.answerPlaceholder}
-                  value={userGuess}
-                  onChange={(e) => {
-                    setUserGuess(e.target.value);
-                    setSimilarityScore(null);
-                  }}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 h-24 sm:h-32 resize-none text-sm sm:text-base"
-                  maxLength={500}
-                />
-  
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-slate-500">
-                    {userGuess.length} / 500
-                  </span>
-  
-                  <button
-                    onClick={async () => {
-                      if (!userGuess.trim() || !problem) {
-                        showToast(t.problem.enterAnswerAlert, 'warning');
-                        return;
-                      }
-  
-                      setIsCalculatingSimilarity(true);
-                      try {
-                        const similarity =
-                          lang === 'en'
-                            ? await calculateAnswerSimilarityEn(
-                                userGuess.trim(),
-                                problem.answer,
-                                problem.content,
-                                problemKnowledge as any
-                              )
-                            : await calculateAnswerSimilarity(
-                                userGuess.trim(),
-                                problem.answer,
-                                problem.content
-                              );
-  
-                        setSimilarityScore(similarity);
-                        setHasSubmittedAnswer(true);
-  
-                        // ✅ 맞춘 기록 저장
-                        if (similarity >= 80 && user) {
-                          try {
-                            const { data: existingSolve } = await supabase
-                              .from('user_problem_solves')
-                              .select('id')
-                              .eq('user_id', user.id)
-                              .eq('problem_id', problemId)
-                              .maybeSingle();
-  
-                            if (!existingSolve) {
-                              const { error: solveError } = await supabase
-                                .from('user_problem_solves')
-                                .insert({
-                                  user_id: user.id,
-                                  problem_id: problemId,
-                                  similarity_score: Math.round(similarity),
-                                });
-                              if (solveError) console.error('정답 기록 저장 오류:', solveError);
-                            }
-                          } catch (error) {
-                            console.error('정답 수 증가 오류:', error);
-                          }
-                        }
-                      } catch (error) {
-                        console.error('유사도 계산 오류:', error);
-                        showToast(t.problem.similarityCalculationFail, 'error');
-                      } finally {
-                        setIsCalculatingSimilarity(false);
-                      }
-                    }}
-                    disabled={!userGuess.trim() || isCalculatingSimilarity}
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 sm:px-6 py-2 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm whitespace-nowrap touch-manipulation"
-                  >
-                    {isCalculatingSimilarity ? (
-                      <>
-                        <i className="ri-loader-4-line animate-spin mr-1"></i>
-                        {t.problem.calculating}
-                      </>
-                    ) : (
-                      <>
-                        <i className="ri-checkbox-circle-line mr-1"></i>
-                        {t.problem.submitAnswer}
-                      </>
-                    )}
-                  </button>
-                </div>
-  
-                {/* 유사도 결과 */}
-                {similarityScore !== null && (
-                  <div
-                    className={`mt-3 rounded-lg p-4 border ${
-                      similarityScore >= 80
-                        ? 'bg-green-500/10 border-green-500/50'
-                        : similarityScore >= 60
-                        ? 'bg-yellow-500/10 border-yellow-500/50'
-                        : 'bg-red-500/10 border-red-500/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-sm sm:text-base flex items-center gap-2">
-                        {similarityScore >= 80 ? (
-                          <>
-                            <i className="ri-checkbox-circle-fill text-green-400"></i>
-                            <span className="text-green-400">{t.problem.highMatch}</span>
-                          </>
-                        ) : similarityScore >= 60 ? (
-                          <>
-                            <i className="ri-alert-line text-yellow-400"></i>
-                            <span className="text-yellow-400">{t.problem.mediumMatch}</span>
-                          </>
-                        ) : (
-                          <>
-                            <i className="ri-close-circle-line text-red-400"></i>
-                            <span className="text-red-400">{t.problem.lowMatch}</span>
-                          </>
-                        )}
-                      </h4>
-  
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-xl sm:text-2xl font-bold ${
-                            similarityScore >= 80
-                              ? 'text-green-400'
-                              : similarityScore >= 60
-                              ? 'text-yellow-400'
-                              : 'text-red-400'
-                          }`}
-                        >
-                          {similarityScore}%
-                        </span>
-  
-                        <button
-                          onClick={() => {
-                            if (userGuess && problem) {
-                              setBugReportType('wrong_similarity');
-                              setBugReportQuestion(null);
-                              setBugReportAnswer(null);
-                              setShowBugReportModal(true);
-                            }
-                          }}
-                          className="text-xs px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all touch-manipulation flex items-center gap-1"
-                          title={lang === 'ko' ? '오류 리포트 보내기' : 'Send Error Report'}
-                        >
-                          <i className="ri-bug-line"></i>
-                          <span className="hidden sm:inline">{lang === 'ko' ? '오류 리포트' : 'Report'}</span>
-                        </button>
-                      </div>
-                    </div>
-  
-                    <p className="text-xs sm:text-sm text-slate-300 mt-2">
-                      {similarityScore >= 80
-                        ? t.problem.highMatchDesc
-                        : similarityScore >= 60
-                        ? t.problem.mediumMatchDesc
-                        : t.problem.lowMatchDesc}
-                    </p>
-                  </div>
-                )}
-  
-                {/* 힌트 */}
-                {problem &&
-                  (problem as any).hints &&
-                  Array.isArray((problem as any).hints) &&
-                  (problem as any).hints.length > 0 && (
-                    <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
-                      <h3 className="text-sm sm:text-base font-semibold mb-3 text-yellow-400">
-                        <i className="ri-lightbulb-line mr-2"></i>
-                        {lang === 'ko' ? '힌트' : 'Hints'}
-                      </h3>
-  
-                      <div className="space-y-2">
-                        {((problem as any).hints as string[]).map((hint, index) => (
-                          <div
-                            key={index}
-                            className="bg-slate-800/50 rounded-lg border border-slate-700"
-                          >
-                            <button
-                              onClick={() => {
-                                const newShowHints = [...showHints];
-                                newShowHints[index] = !newShowHints[index];
-                                setShowHints(newShowHints);
-                              }}
-                              className="w-full px-4 py-2.5 flex items-center justify-between text-left hover:bg-slate-700/50 transition-colors rounded-lg"
-                            >
-                              <span className="text-sm sm:text-base text-slate-300">
-                                <i className="ri-lightbulb-flash-line mr-2 text-yellow-400"></i>
-                                {lang === 'ko' ? `힌트 ${index + 1}` : `Hint ${index + 1}`}
-                              </span>
-                              <i
-                                className={`ri-${showHints[index] ? 'eye-off' : 'eye'}-line text-slate-400`}
-                              ></i>
-                            </button>
-  
-                            {showHints[index] && (
-                              <div className="px-4 pb-3 pt-2 border-t border-slate-700">
-                                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                                  {hint}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-  
-                {/* 정답 확인 버튼 */}
-                <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
-                  {!hasSubmittedAnswer ? (
-                    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                      <p className="text-sm text-slate-400 text-center">
-                        <i className="ri-information-line mr-2"></i>
-                        {t.problem.submitFirst}
-                      </p>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setShowAnswer(!showAnswer)}
-                      className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2.5 sm:py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation"
-                    >
-                      {showAnswer ? (
-                        <>
-                          <i className="ri-eye-off-line"></i>
-                          {t.problem.hideAnswer}
-                        </>
-                      ) : (
-                        <>
-                          <i className="ri-eye-line"></i>
-                          {t.problem.showAnswer}
-                        </>
-                      )}
-                    </button>
-                  )}
-  
-                  {showAnswer && problem && (
-                    <div className="mt-3 sm:mt-4 bg-gradient-to-br from-purple-900/30 to-pink-900/30 rounded-lg p-3 sm:p-4 lg:p-6 border border-purple-500/50">
-                      <h3 className="font-semibold mb-2 sm:mb-3 text-purple-400 text-sm sm:text-base">
-                        {t.problem.answer}
-                      </h3>
-                      <p className="text-xs sm:text-sm lg:text-base leading-relaxed whitespace-pre-wrap break-words">
-                        {problem.answer}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+                  }
+                } catch (error) {
+                  console.error('유사도 계산 오류:', error);
+                  showToast(t.problem.similarityCalculationFail, 'error');
+                } finally {
+                  setIsCalculatingSimilarity(false);
+                }
+              }}
+              onShowAnswerToggle={() => setShowAnswer(!showAnswer)}
+              onShowHintsChange={setShowHints}
+              onBugReport={() => {
+                if (userGuess && problem) {
+                  setBugReportType('wrong_similarity');
+                  setBugReportQuestion(null);
+                  setBugReportAnswer(null);
+                  setShowBugReportModal(true);
+                }
+              }}
+              showToast={showToast}
+              t={t}
+            />
+          </>
         )}
   
         {/* DB 질문 목록 (관리자용) */}
-        {isOwner && questions.length > 0 && (
-          <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-3">{t.problem.dbQuestionList}</h3>
-            <div className="space-y-3">
-              {questions.map((q) => {
-                const badge = getAnswerBadge(q.answer);
-                return (
-                  <div
-                    key={q.id}
-                    className={`bg-slate-900 rounded-lg p-4 border transition-all ${
-                      selectedQuestionId === q.id && isOwner
-                        ? 'border-purple-500 bg-purple-500/10'
-                        : 'border-slate-700'
-                    } ${isOwner && !q.answer ? 'cursor-pointer hover:border-purple-500/50' : ''}`}
-                    onClick={() => {
-                      if (isOwner && !q.answer) {
-                        setSelectedQuestionId(q.id === selectedQuestionId ? null : q.id);
-                      }
-                    }}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <span className="text-sm font-semibold text-cyan-400">{q.nickname}</span>
-                      {badge && (
-                        <span className={`px-2 py-1 rounded text-xs font-semibold border ${badge.color}`}>
-                          {badge.text}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-white">{q.text}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        {isOwner && (
+          <AdminQuestionList
+            questions={questions}
+            selectedQuestionId={selectedQuestionId}
+            onSelectQuestion={setSelectedQuestionId}
+            onAnswerQuestion={handleAnswerQuestion}
+            getAnswerBadge={getAnswerBadge}
+            t={t}
+          />
         )}
   
-        {/* 관리자 답변 버튼 */}
-        {isOwner && selectedQuestionId && (
-          <div className="mt-4">
-            <ProblemAdminButtons
-              onAnswer={(answer) => handleAnswerQuestion(selectedQuestionId, answer)}
-            />
-          </div>
-        )}
   
         {/* 댓글 섹션 */}
         <CommentsSection
