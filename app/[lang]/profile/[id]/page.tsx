@@ -28,6 +28,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
   const [isLoading, setIsLoading] = useState(true);
   const [actualSolveCount, setActualSolveCount] = useState<number>(0);
   const [receivedHearts, setReceivedHearts] = useState<number>(0);
+  const [createdProblemsCount, setCreatedProblemsCount] = useState<number>(0);
   const { user: currentUser } = useAuth();
   
   // 신고 관련 state
@@ -124,9 +125,20 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
         setActualSolveCount(solveCount || 0);
       }
 
-      // 받은 하트 수 계산 (작성한 문제들의 like_count 합계)
+      // 받은 하트 수 계산 및 만든 문제 개수 계산
       // game_users의 auth_user_id로 problems 테이블에서 찾기
       if (userData.auth_user_id) {
+        // 만든 문제 개수
+        const { count: problemsCount } = await supabase
+          .from('problems')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userData.auth_user_id);
+
+        if (problemsCount !== null) {
+          setCreatedProblemsCount(problemsCount);
+        }
+
+        // 받은 하트 수 (like_count 합계)
         const { data: userProblems } = await supabase
           .from('problems')
           .select('like_count')
@@ -470,6 +482,10 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-400">{userTitles.length}</div>
               <div className="text-xs text-slate-400">{t.profile.titles}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-400">{createdProblemsCount}</div>
+              <div className="text-xs text-slate-400">{lang === 'ko' ? '만든 문제' : 'Created Problems'}</div>
             </div>
           </div>
         </div>
