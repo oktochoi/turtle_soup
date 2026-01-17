@@ -67,13 +67,24 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
     try {
       const supabase = createClient();
       
-      // 프로덕션에서는 항상 프로덕션 URL 사용, 개발 환경에서는 localhost 사용
-      const isProduction = window.location.hostname.includes('turtle-soup-rust.vercel.app') || 
-                          window.location.hostname.includes('vercel.app');
-      const baseUrl = isProduction 
-        ? 'https://turtle-soup-rust.vercel.app'
-        : window.location.origin;
-      const redirectUrl = `${baseUrl}/${lang}/auth/callback`;
+      // 앱 환경 감지 (User Agent 확인)
+      const isAppEnvironment = typeof window !== 'undefined' && 
+                               navigator.userAgent.includes('TurtleSoupApp');
+      
+      let redirectUrl: string;
+      
+      if (isAppEnvironment) {
+        // 앱 환경: 딥링크 사용
+        redirectUrl = 'turtlesoup://login-callback';
+      } else {
+        // 웹 환경: 웹 콜백 URL 사용
+        const isProduction = window.location.hostname.includes('turtle-soup-rust.vercel.app') || 
+                            window.location.hostname.includes('vercel.app');
+        const baseUrl = isProduction 
+          ? 'https://turtle-soup-rust.vercel.app'
+          : window.location.origin;
+        redirectUrl = `${baseUrl}/${lang}/auth/callback`;
+      }
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
