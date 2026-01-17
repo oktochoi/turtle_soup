@@ -8,7 +8,7 @@ interface AdminQuestionListProps {
   questions: ProblemQuestion[];
   selectedQuestionId: string | null;
   onSelectQuestion: (questionId: string | null) => void;
-  onAnswerQuestion: (questionId: string, answer: 'yes' | 'no' | 'irrelevant') => void;
+  onAnswerQuestion: (questionId: string, answer: 'yes' | 'no' | 'irrelevant' | 'decisive') => void;
   getAnswerBadge: (answer: string | null) => { text: string; color: string } | null;
   t: any;
 }

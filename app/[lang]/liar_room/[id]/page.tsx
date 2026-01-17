@@ -106,6 +106,8 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
   // 방 참여 함수 (중복 방지: 이미 존재하면 무시)
   const joinRoom = async (playerNickname: string, isHostPlayer: boolean) => {
     try {
+      console.log('🚪 방 참여 시도:', { playerNickname, isHostPlayer, roomCode });
+      
       // 먼저 이미 존재하는지 확인
       const { data: existingPlayer } = await supabase
         .from('players')
@@ -116,7 +118,10 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
 
       // 이미 존재하면 무시
       if (existingPlayer) {
+        console.log('✅ 이미 참가자로 등록되어 있음');
         localStorage.setItem(`nickname_${roomCode}`, playerNickname);
+        // 참가자 목록 새로고침
+        setTimeout(() => loadPlayers(), 500);
         return;
       }
 
@@ -132,14 +137,23 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
       if (playerError) {
         // 중복 오류(23505)는 무시 (다른 프로세스에서 이미 추가한 경우)
         if (playerError.code !== '23505') {
-          console.error('플레이어 추가 오류:', playerError);
+          console.error('❌ 플레이어 추가 오류:', playerError);
+        } else {
+          console.log('⚠️ 중복 참가자 오류 (무시됨)');
         }
       } else {
+        console.log('✅ 플레이어 추가 성공');
         // localStorage에 닉네임 저장
         localStorage.setItem(`nickname_${roomCode}`, playerNickname);
       }
+      
+      // 참가자 목록 새로고침 (약간의 지연 후)
+      setTimeout(() => {
+        console.log('🔄 참가자 목록 새로고침');
+        loadPlayers();
+      }, 500);
     } catch (err) {
-      console.error('방 참여 오류:', err);
+      console.error('❌ 방 참여 오류:', err);
     }
   };
 
@@ -338,15 +352,26 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
     }
   }, [nickname, gameStatus, hasSeenRole]);
 
-  // 참가자 목록 로드 및 실시간 구독
-  useEffect(() => {
-    if (!roomCode) return;
+  // 참가자 목록 로드 함수 (외부에서도 호출 가능하도록)
+  const loadPlayers = useCallback(async () => {
+    if (!roomCode) {
+      console.warn('⚠️ roomCode가 없어서 참가자 목록을 로드할 수 없습니다.');
+      return;
+    }
 
-    const loadPlayers = async () => {
-      const { data: playersData } = await supabase
+    try {
+      console.log('📋 참가자 목록 로드 시작, roomCode:', roomCode);
+      const { data: playersData, error: playersError } = await supabase
         .from('players')
         .select('nickname, is_host, role, word, vote_target, eliminated, votes_received')
         .eq('room_code', roomCode);
+      
+      if (playersError) {
+        console.error('❌ 참가자 목록 로드 오류:', playersError);
+        return;
+      }
+      
+      console.log('✅ 참가자 목록 로드 성공:', playersData?.length || 0, '명');
       
       if (playersData) {
         setPlayers(playersData.map(p => ({
@@ -405,8 +430,18 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
             }
           }
         }
+      } else {
+        console.warn('⚠️ 참가자 데이터가 null입니다.');
+        setPlayers([]);
       }
-    };
+    } catch (err) {
+      console.error('❌ loadPlayers 예외:', err);
+    }
+  }, [roomCode, nickname, gameStatus, hasSeenRole, myRole, myWord, myVote, isEliminated]);
+
+  // 참가자 목록 로드 및 실시간 구독
+  useEffect(() => {
+    if (!roomCode) return;
 
     loadPlayers();
 
@@ -422,97 +457,16 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
           filter: `room_code=eq.${roomCode}`,
         },
         async () => {
-          const { data: playersData } = await supabase
-            .from('players')
-            .select('nickname, is_host, role, word, vote_target, eliminated, votes_received')
-            .eq('room_code', roomCode);
-          
-          if (playersData) {
-            setPlayers(playersData.map(p => ({
-              nickname: p.nickname,
-              is_host: p.is_host,
-              is_ready: false,
-              role: (p as any).role || null,
-              word: (p as any).word || null,
-              eliminated: (p as any).eliminated || false,
-              votes_received: (p as any).votes_received || 0,
-            })));
-            
-            // 투표 수 실시간 업데이트
-            const voteCounts: Record<string, number> = {};
-            playersData.forEach(p => {
-              const voteTarget = (p as any).vote_target;
-              if (voteTarget) {
-                voteCounts[voteTarget] = (voteCounts[voteTarget] || 0) + 1;
-              }
-            });
-            setVotes(voteCounts);
-            
-            // 호스트 상태 업데이트 (내가 호스트인지 확인)
-            if (nickname) {
-              const myPlayer = playersData.find(p => p.nickname === nickname);
-              if (myPlayer) {
-                setIsHost(myPlayer.is_host);
-                // 내 투표 상태 업데이트
-                const myVoteTarget = (myPlayer as any).vote_target;
-                if (myVoteTarget && !myVote) {
-                  setMyVote(myVoteTarget);
-                }
-                // 제외 상태 업데이트
-                const eliminated = (myPlayer as any).eliminated || false;
-                if (eliminated !== isEliminated) {
-                  setIsEliminated(eliminated);
-                }
-              }
-            }
-            
-            // 투표 수 업데이트
-            const newVotes: Record<string, number> = {};
-            playersData.forEach(p => {
-              if ((p as any).votes_received) {
-                newVotes[p.nickname] = (p as any).votes_received;
-              }
-            });
-            setVotes(newVotes);
-            
-            // 내가 제외되었는지 확인
-            const myPlayer = playersData.find(p => p.nickname === nickname);
-            if (myPlayer && (myPlayer as any).eliminated) {
-              setIsEliminated(true);
-            }
-            
-            // 내 역할 확인 (게임이 시작되었고 아직 역할을 보지 않았을 때)
-            if (nickname && gameStatus === 'PLAYING' && !hasSeenRole) {
-              const myPlayer = playersData.find(p => p.nickname === nickname);
-              if (myPlayer && (myPlayer as any).role) {
-                const playerRole = (myPlayer as any).role;
-                const playerWord = (myPlayer as any).word || null;
-                console.log('🎭 실시간 구독에서 역할 발견:', { playerRole, playerWord, nickname });
-                if (myRole !== playerRole || myWord !== playerWord) {
-                  setMyRole(playerRole);
-                  setMyWord(playerWord);
-                  if (!hasSeenRole) {
-                    setShowRoleModal(true);
-                    setGamePhase('ROLE_REVEAL');
-                  }
-                }
-              } else if (myPlayer && !(myPlayer as any).role && gameStatus === 'PLAYING') {
-                // 역할이 아직 배정되지 않은 경우, checkMyRole 호출
-                console.log('⏳ 실시간 구독: 역할이 아직 없음, checkMyRole 호출');
-                setTimeout(() => {
-                  checkMyRole();
-                }, 500);
-              }
-            }
-          }
+          console.log('🔄 실시간 구독: 참가자 목록 새로고침');
+          await loadPlayers();
         }
       )
       .subscribe();
 
-    return () => {
-      playersChannel.unsubscribe();
-    };
-  }, [roomCode, nickname, gameStatus, hasSeenRole]);
+      return () => {
+        playersChannel.unsubscribe();
+      };
+    }, [roomCode, nickname, gameStatus, hasSeenRole, loadPlayers]);
 
   // 채팅 시간 업데이트
   useEffect(() => {
