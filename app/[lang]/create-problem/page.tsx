@@ -186,15 +186,47 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         };
       }
       
+      // 게임 유형을 태그로 매핑
+      const getTagsFromQuizType = (type: QuizType): string[] => {
+        const tagMapping: Record<QuizType, string> = {
+          soup: '바다거북 스프',
+          reasoning: '추론 퀴즈',
+          nonsense: '넌센스 퀴즈',
+          mcq: '객관식 퀴즈',
+          ox: 'OX 퀴즈',
+          image: '이미지 퀴즈',
+          poll: '투표 퀴즈',
+          balance: '밸런스 게임',
+          logic: '로직 퀴즈',
+          pattern: '패턴 퀴즈',
+          liar: '라이어 게임',
+          mafia: '마피아',
+          battle: '배틀 게임',
+          fill_blank: '빈칸 퀴즈',
+          order: '순서 퀴즈',
+        };
+        
+        // 기본 태그: 바다거북 스프
+        const baseTags = ['바다거북 스프'];
+        
+        // 게임 유형에 해당하는 태그 추가
+        const typeTag = tagMapping[type];
+        if (typeTag && typeTag !== '바다거북 스프') {
+          baseTags.push(typeTag);
+        }
+        
+        return baseTags;
+      };
+      
       // problems 테이블에 퀴즈 기본 정보 저장
       const insertData: any = {
         title: title.trim(),
-        type: quizType, // 퀴즈 타입 추가
+        type: 'soup', // 항상 'soup'로 설정 (게임 유형은 tags로 구분)
         user_id: user.id,
         author: authorName, // 작성자 이름 추가
         status: 'published',
         difficulty: 'medium', // 중간 난이도 (TEXT 타입: 'easy', 'medium', 'hard')
-        tags: [],
+        tags: getTagsFromQuizType(quizType), // 게임 유형에 맞는 태그 자동 추가
         lang: currentLang,
       };
       

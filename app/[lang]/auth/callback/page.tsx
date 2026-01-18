@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { use } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { isApp } from '@/utils/isApp';
 
 export default function AuthCallbackPage({ params }: { params: Promise<{ lang: string }> }) {
   const resolvedParams = use(params);
@@ -12,7 +11,6 @@ export default function AuthCallbackPage({ params }: { params: Promise<{ lang: s
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<string>('처리 중...');
-  const isAppEnvironment = isApp();
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -24,12 +22,9 @@ export default function AuthCallbackPage({ params }: { params: Promise<{ lang: s
         if (error) {
           console.error('OAuth 에러:', error);
           setStatus('로그인에 실패했습니다.');
-          // 앱 환경에서는 앱이 처리하도록 리디렉션하지 않음
-          if (!isAppEnvironment) {
-            setTimeout(() => {
-              router.push(`/${lang}/auth/login?error=${encodeURIComponent(error)}`);
-            }, 2000);
-          }
+          setTimeout(() => {
+            router.push(`/${lang}/auth/login?error=${encodeURIComponent(error)}`);
+          }, 2000);
           return;
         }
 
@@ -43,23 +38,41 @@ export default function AuthCallbackPage({ params }: { params: Promise<{ lang: s
           if (sessionError) {
             console.error('세션 교환 실패:', sessionError);
             setStatus('세션 교환에 실패했습니다.');
-            if (!isAppEnvironment) {
-              setTimeout(() => {
-                router.push(`/${lang}/auth/login?error=${encodeURIComponent(sessionError.message)}`);
-              }, 2000);
-            }
+            setTimeout(() => {
+              router.push(`/${lang}/auth/login?error=${encodeURIComponent(sessionError.message)}`);
+            }, 2000);
             return;
           }
 
           if (data?.session) {
             setStatus('로그인 성공!');
             
-            // Google 로그인 후 game_users 테이블에 유저 생성/동기화 확인
+            // OAuth 로그인 후 users 테이블 동기화 확인
             try {
               const { data: { user }, error: userError } = await supabase.auth.getUser();
 
               if (user && !userError) {
-                // game_users 테이블에 유저가 있는지 확인
+                // users 테이블에 같은 이메일로 기존 사용자가 있는지 확인
+                const { data: existingUser } = await supabase
+                  .from('users')
+                  .select('*')
+                  .eq('email', user.email)
+                  .maybeSingle();
+
+                if (existingUser && existingUser.id !== user.id) {
+                  // 같은 이메일이지만 다른 ID인 경우, 기존 사용자로 연결
+                  // handle_new_user 트리거가 처리하지만, 명시적으로 확인
+                  console.log('Same email found, user should be linked automatically by trigger');
+                }
+
+                // users 테이블에 현재 사용자가 있는지 확인 (트리거로 자동 생성되어야 함)
+                const { data: currentUser } = await supabase
+                  .from('users')
+                  .select('*')
+                  .eq('id', user.id)
+                  .maybeSingle();
+
+                // game_users 테이블에 유저가 있는지 확인 (있는 경우)
                 const { data: existingGameUser } = await supabase
                   .from('game_users')
                   .select('*')
@@ -78,45 +91,29 @@ export default function AuthCallbackPage({ params }: { params: Promise<{ lang: s
               console.error('유저 동기화 오류:', error);
             }
 
-            // 앱 환경에서는 세션이 이미 주입되므로 바로 메인으로 리디렉션
-            if (isAppEnvironment) {
-              setTimeout(() => {
-                window.location.href = `/${lang}`;
-              }, 1000);
-            } else {
-              // 웹 환경에서는 일반 리디렉션
-              setTimeout(() => {
-                router.push(`/${lang}`);
-              }, 1000);
-            }
+            // 로그인 성공 시 홈으로 리디렉션
+            setTimeout(() => {
+              router.push(`/${lang}`);
+            }, 1000);
           }
         } else {
           // 코드가 없으면 메인으로
           setStatus('인증 코드를 찾을 수 없습니다.');
-          if (!isAppEnvironment) {
-            setTimeout(() => {
-              router.push(`/${lang}`);
-            }, 2000);
-          } else {
-            // 앱 환경에서는 세션 확인 후 리디렉션
-            setTimeout(() => {
-              window.location.href = `/${lang}`;
-            }, 2000);
-          }
-        }
-      } catch (err: any) {
-        console.error('콜백 처리 실패:', err);
-        setStatus('처리 중 오류가 발생했습니다.');
-        if (!isAppEnvironment) {
           setTimeout(() => {
             router.push(`/${lang}`);
           }, 2000);
         }
+      } catch (err: any) {
+        console.error('콜백 처리 실패:', err);
+        setStatus('처리 중 오류가 발생했습니다.');
+        setTimeout(() => {
+          router.push(`/${lang}`);
+        }, 2000);
       }
     };
 
     handleCallback();
-  }, [searchParams, router, lang, isAppEnvironment]);
+  }, [searchParams, router, lang]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">

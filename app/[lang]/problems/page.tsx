@@ -49,7 +49,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
   
   // 필터 상태
   const [difficultyFilter, setDifficultyFilter] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
-  const [quizTypeFilter, setQuizTypeFilter] = useState<QuizType | 'all'>('all');
+  const [quizTypeFilter, setQuizTypeFilter] = useState<string>('all'); // 태그 기반으로 변경
   const [featuredFilter, setFeaturedFilter] = useState<'all' | 'featured'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('latest');
@@ -170,11 +170,12 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
       });
     }
 
-    // 퀴즈 타입 필터
+    // 퀴즈 타입 필터 (tags 기반으로 변경 - 태그값 직접 사용)
     if (quizTypeFilter !== 'all') {
       filtered = filtered.filter(p => {
-        const problemType = (p as any).quiz_type || (p as any).quizType || (p as any).type || 'soup';
-        return problemType === quizTypeFilter;
+        const tags = (p.tags && Array.isArray(p.tags)) ? p.tags : [];
+        // tags 배열에 선택한 태그가 정확히 포함되어 있는지 확인
+        return tags.includes(quizTypeFilter);
       });
     }
 
@@ -355,27 +356,19 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                 >
                   {t.problem.all}
                 </button>
-                {Object.values(QUIZ_TYPE_METADATA)
-                  .filter(metadata => {
-                    // 싱글플레이 또는 둘 다 가능한 것만
-                    if (metadata.playMode !== 'single' && metadata.playMode !== 'both') return false;
-                    // 제거된 타입 필터링
-                    if (['reasoning', 'poll', 'pattern', 'order'].includes(metadata.type)) return false;
-                    return true;
-                  })
-                  .map(metadata => (
-                    <button
-                      key={metadata.type}
-                      onClick={() => setQuizTypeFilter(metadata.type)}
-                      className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
-                        quizTypeFilter === metadata.type
-                          ? 'bg-purple-500 text-white'
-                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                      }`}
-                    >
-                      {lang === 'ko' ? metadata.name : metadata.nameEn}
-                    </button>
-                  ))}
+                {availableTags.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => setQuizTypeFilter(tag)}
+                    className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
+                      quizTypeFilter === tag
+                        ? 'bg-purple-500 text-white'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -570,32 +563,14 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                 imageUrl = null;
               }
               
+              // tags 배열 가져오기
+              const problemTags = problem.tags && Array.isArray(problem.tags) ? problem.tags : [];
+              
               return (
                 <div
                   key={problem.id}
                   className="bg-slate-800/80 backdrop-blur-sm rounded-xl p-4 sm:p-5 lg:p-6 border border-slate-700/60 hover:border-slate-600 transition-all duration-200 shadow-md hover:shadow-lg"
                 >
-                  {/* 게임 유형 뱃지 */}
-                  {quizTypeMetadata ? (
-                    <div className="mb-2">
-                      {(() => {
-                        const colors = getQuizTypeColors(quizType as QuizType);
-                        return (
-                          <span className={`inline-block px-2 py-1 ${colors.bg} ${colors.text} rounded text-xs font-medium border ${colors.border}`}>
-                            {lang === 'ko' ? quizTypeMetadata.name : quizTypeMetadata.nameEn}
-                          </span>
-                        );
-                      })()}
-                    </div>
-                  ) : (
-                    // quiz_type이 없거나 잘못된 경우 디버깅용 표시
-                    <div className="mb-2">
-                      <span className="inline-block px-2 py-1 bg-red-500/20 text-red-300 rounded text-xs font-medium border border-red-500/30">
-                        {lang === 'ko' ? `타입 없음 (${quizType})` : `No Type (${quizType})`}
-                      </span>
-                    </div>
-                  )}
-
                   {/* 이미지 썸네일 (가운데 정렬, 중앙 표시) - 이미지가 있을 때만 표시 */}
                   {imageUrl && (
                     <div className="mb-3 sm:mb-4 rounded-lg overflow-hidden bg-slate-900 flex items-center justify-center" style={{ minHeight: '120px' }}>
@@ -614,6 +589,53 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                           console.log('이미지 로드 성공:', imageUrl, '문제 ID:', problem.id);
                         }}
                       />
+                    </div>
+                  )}
+
+                  {/* Tags 표시 (제목 위) */}
+                  {problemTags.length > 0 && (
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      {problemTags.map((tag, tagIndex) => {
+                        // 태그에 맞는 색상 매핑 (기존 게임 유형 색상 사용)
+                        let tagColor = { bg: 'bg-slate-500/20', text: 'text-slate-300', border: 'border-slate-500/30' };
+                        
+                        // 태그명을 기반으로 색상 결정
+                        const tagLower = tag.toLowerCase();
+                        if (tagLower.includes('바다거북') || tagLower.includes('soup')) {
+                          tagColor = getQuizTypeColors('soup');
+                        } else if (tagLower.includes('객관식') || tagLower.includes('mcq')) {
+                          tagColor = getQuizTypeColors('mcq');
+                        } else if (tagLower.includes('ox')) {
+                          tagColor = getQuizTypeColors('ox');
+                        } else if (tagLower.includes('이미지') || tagLower.includes('image')) {
+                          tagColor = getQuizTypeColors('image');
+                        } else if (tagLower.includes('밸런스') || tagLower.includes('balance')) {
+                          tagColor = getQuizTypeColors('balance');
+                        } else if (tagLower.includes('로직') || tagLower.includes('logic')) {
+                          tagColor = getQuizTypeColors('logic');
+                        } else if (tagLower.includes('패턴') || tagLower.includes('pattern')) {
+                          tagColor = getQuizTypeColors('pattern');
+                        } else if (tagLower.includes('추론') || tagLower.includes('reasoning')) {
+                          tagColor = getQuizTypeColors('reasoning');
+                        } else if (tagLower.includes('넌센스') || tagLower.includes('nonsense')) {
+                          tagColor = getQuizTypeColors('nonsense');
+                        } else if (tagLower.includes('라이어') || tagLower.includes('liar')) {
+                          tagColor = getQuizTypeColors('liar');
+                        } else if (tagLower.includes('마피아') || tagLower.includes('mafia')) {
+                          tagColor = getQuizTypeColors('mafia');
+                        } else if (tagLower.includes('아재') || tagLower.includes('puns')) {
+                          tagColor = { bg: 'bg-orange-500/20', text: 'text-orange-300', border: 'border-orange-500/30' };
+                        }
+                        
+                        return (
+                          <span
+                            key={tagIndex}
+                            className={`inline-block px-2 py-1 ${tagColor.bg} ${tagColor.text} rounded text-xs font-medium border ${tagColor.border}`}
+                          >
+                            {tag}
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
 

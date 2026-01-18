@@ -25,6 +25,7 @@ export default function QuizPlayImage({
   lang = 'ko',
 }: QuizPlayImageProps) {
   const [inputAnswer, setInputAnswer] = useState(userAnswer || '');
+  const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
   const isKo = lang === 'ko';
 
   const handleSubmit = () => {
@@ -33,7 +34,9 @@ export default function QuizPlayImage({
     }
   };
 
-  const isCorrect = showAnswer && userAnswer?.toLowerCase().trim() === answer.toLowerCase().trim();
+  // 정답 확인: userAnswer가 "-"이거나 정확히 일치하지 않으면 오답
+  const isCorrect = showAnswer && userAnswer?.toLowerCase().trim() === answer.toLowerCase().trim() && userAnswer?.trim() !== '-';
+  const isWrongAnswer = showAnswer && (!userAnswer || userAnswer.trim() === '' || userAnswer.trim() === '-' || userAnswer?.toLowerCase().trim() !== answer.toLowerCase().trim());
 
   return (
     <div className="space-y-4">
@@ -75,37 +78,67 @@ export default function QuizPlayImage({
 
       {showAnswer && (
         <div className="space-y-3">
-          <div className={`p-4 rounded-lg ${
-            isCorrect ? 'bg-green-900/50 border border-green-500' : 'bg-red-900/50 border border-red-500'
-          }`}>
-            <div className={`text-lg font-semibold mb-2 ${
-              isCorrect ? 'text-green-400' : 'text-red-400'
-            }`}>
-              {isCorrect 
-                ? (isKo ? '정답입니다!' : 'Correct!')
-                : (isKo ? '틀렸습니다.' : 'Incorrect.')
-              }
-            </div>
-            {userAnswer && (
-              <div className="text-slate-300">
-                {isKo ? '입력한 답: ' : 'Your answer: '}
-                <span className="font-semibold">{userAnswer}</span>
+          {isCorrect ? (
+            <div className="p-4 rounded-lg bg-green-900/50 border border-green-500">
+              <div className="text-lg font-semibold mb-2 text-green-400">
+                {isKo ? '정답입니다!' : 'Correct!'}
               </div>
-            )}
-            <div className="text-slate-300 mt-1">
-              {isKo ? '정답: ' : 'Correct answer: '}
-              <span className="font-semibold text-teal-400">{answer}</span>
+              {userAnswer && (
+                <div className="text-slate-300">
+                  {isKo ? '입력한 답: ' : 'Your answer: '}
+                  <span className="font-semibold">{userAnswer}</span>
+                </div>
+              )}
+              {explanation && (
+                <div className="mt-3 p-3 bg-slate-800 rounded-lg border border-slate-600">
+                  <div className="text-sm font-semibold text-teal-400 mb-2">
+                    {isKo ? '해설' : 'Explanation'}
+                  </div>
+                  <div className="text-sm text-slate-300">{explanation}</div>
+                </div>
+              )}
             </div>
-          </div>
-
-          {explanation && (
-            <div className="p-4 bg-slate-800 rounded-lg border border-slate-600">
-              <div className="text-sm font-semibold text-teal-400 mb-2">
-                {isKo ? '해설' : 'Explanation'}
+          ) : isWrongAnswer ? (
+            <div className="space-y-3">
+              <div className="p-4 rounded-lg bg-red-900/50 border border-red-500">
+                <div className="text-lg font-semibold mb-2 text-red-400">
+                  {isKo ? '오답입니다.' : 'Incorrect.'}
+                </div>
+                {userAnswer && userAnswer.trim() !== '-' && (
+                  <div className="text-slate-300">
+                    {isKo ? '입력한 답: ' : 'Your answer: '}
+                    <span className="font-semibold">{userAnswer}</span>
+                  </div>
+                )}
               </div>
-              <div className="text-sm text-slate-300">{explanation}</div>
+              
+              {!showCorrectAnswer ? (
+                <button
+                  onClick={() => setShowCorrectAnswer(true)}
+                  className="w-full p-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg transition-all"
+                >
+                  {isKo ? '정답을 확인하시겠습니까?' : 'Would you like to see the correct answer?'}
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <div className="p-4 rounded-lg bg-slate-800 border border-slate-600">
+                    <div className="text-slate-300">
+                      {isKo ? '정답: ' : 'Correct answer: '}
+                      <span className="font-semibold text-teal-400">{answer}</span>
+                    </div>
+                  </div>
+                  {explanation && (
+                    <div className="p-4 bg-slate-800 rounded-lg border border-slate-600">
+                      <div className="text-sm font-semibold text-teal-400 mb-2">
+                        {isKo ? '해설' : 'Explanation'}
+                      </div>
+                      <div className="text-sm text-slate-300">{explanation}</div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>

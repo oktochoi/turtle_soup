@@ -261,7 +261,46 @@ async function checkAchievements(
       (completedAchievements || []).map(a => a.achievement_id)
     );
 
-    // 각 업적 조건 체크
+    // game_users에서 auth_user_id 가져오기 (실제 문제 해결 카운트를 위해)
+    const { data: gameUser } = await supabase
+      .from('game_users')
+      .select('auth_user_id')
+      .eq('id', userId)
+      .maybeSingle();
+
+    const authUserId = gameUser?.auth_user_id;
+
+    // 실제 DB에서 문제 해결 카운트 가져오기
+    let actualSolveCount = 0;
+    if (authUserId) {
+      const { count } = await supabase
+        .from('user_problem_solves')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', authUserId);
+      actualSolveCount = count || 0;
+    }
+
+    // 실제 댓글 수 가져오기
+    let actualCommentCount = 0;
+    if (authUserId) {
+      const { count } = await supabase
+        .from('problem_comments')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', authUserId);
+      actualCommentCount = count || 0;
+    }
+
+    // 실제 게시글 수 가져오기
+    let actualPostCount = 0;
+    if (authUserId) {
+      const { count } = await supabase
+        .from('posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', authUserId);
+      actualPostCount = count || 0;
+    }
+
+    // 각 업적 조건 체크 - 실제 DB 값 사용
     for (const achievement of allAchievements) {
       if (completedIds.has(achievement.id)) continue;
 
@@ -277,14 +316,17 @@ async function checkAchievements(
           break;
         
         case 'solve_count_gte':
-          conditionMet = progress.total_solves >= achievement.condition_value;
+          // 실제 DB에서 카운트한 값 사용
+          conditionMet = actualSolveCount >= achievement.condition_value;
           break;
         
         case 'nohint_solve_count_gte':
+          // user_progress의 nohint_solves 사용 (이 값은 정확하게 업데이트되어야 함)
           conditionMet = progress.nohint_solves >= achievement.condition_value;
           break;
         
         case 'under3q_solve_count_gte':
+          // user_progress의 under3q_solves 사용 (이 값은 정확하게 업데이트되어야 함)
           conditionMet = progress.under3q_solves >= achievement.condition_value;
           break;
         
@@ -293,11 +335,13 @@ async function checkAchievements(
           break;
         
         case 'total_comments_gte':
-          conditionMet = progress.total_comments >= achievement.condition_value;
+          // 실제 DB에서 카운트한 값 사용
+          conditionMet = actualCommentCount >= achievement.condition_value;
           break;
         
         case 'total_posts_gte':
-          conditionMet = progress.total_posts >= achievement.condition_value;
+          // 실제 DB에서 카운트한 값 사용
+          conditionMet = actualPostCount >= achievement.condition_value;
           break;
       }
 
@@ -638,14 +682,18 @@ export async function applyEvent(
 
     const unlockedTitles = await checkTitles(userId, finalProgress);
 
+    // 칭호 언락 후 업적도 다시 체크 (칭호 조건 달성으로 업적도 달성될 수 있음)
+    const additionalAchievements = await checkAchievements(userId, finalProgress);
+    const allUnlockedAchievements = [...unlockedAchievements, ...additionalAchievements];
+
     return {
       success: true,
       newLevel: finalProgress.level,
-      gainedXP: gainedXP + unlockedAchievements.reduce((sum, a) => sum + a.reward_xp, 0),
-      gainedPoints: gainedPoints + unlockedAchievements.reduce((sum, a) => sum + a.reward_points, 0),
+      gainedXP: gainedXP + allUnlockedAchievements.reduce((sum, a) => sum + a.reward_xp, 0),
+      gainedPoints: gainedPoints + allUnlockedAchievements.reduce((sum, a) => sum + a.reward_points, 0),
       leveledUp: leveledUp,
       unlockedTitles,
-      unlockedAchievements,
+      unlockedAchievements: allUnlockedAchievements,
     };
   } catch (error: any) {
     console.error('applyEvent 오류:', error);

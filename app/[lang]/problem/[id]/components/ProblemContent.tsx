@@ -207,7 +207,7 @@ export default function ProblemContent({
             <QuizPlayImage
               imageUrl={quizContent.image_url}
               question={problem.title} // 제목을 문제로 사용
-              answer={quizContent.answer || ''}
+              answer={quizContent.answer || problem.answer || ''}
               onAnswer={(userAnswer) => {
                 onQuizAnswer(userAnswer);
               }}
