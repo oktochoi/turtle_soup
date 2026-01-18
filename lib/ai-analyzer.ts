@@ -1993,72 +1993,98 @@ export async function analyzeQuestionV8(
       return invert ? "yes" : "no";
     }
 
-    // 4) decision - "상관없음 우선" 설계
-    // NO가 확실하면 → NO
-    // YES가 확실하면 (핵심 개념이 명확히 매칭) → YES
-    // 둘 다 확실하지 않으면 → IRRELEVANT
+    // 4) decision - 우선순위: NO → YES → IRRELEVANT
+    // 🔴 "상관없음"은 도망처가 아니다 - NO/YES 판단 가능하면 IRRELEVANT 금지
+    // NO가 논리적으로 확실하면 → NO
+    // YES가 명확히 증명될 때만 → YES
+    // 범주 밖일 때만 → IRRELEVANT
     let result: JudgeResult;
 
-    // NO 판정: 명확히 반대되거나 사실이 아닌 경우
-    if (simContentFinal >= CONFIG.THRESHOLD.NO_CONTENT && simAnswerFinal <= CONFIG.THRESHOLD.NO_ANSWER_MAX) {
-      result = "no";
-    } 
-    // YES 판정: 보수적으로 - 정답의 핵심 사실을 정확히 찌른 경우에만
-    // 조건: 1) 유사도 높고 2) 핵심 개념이 명확히 매칭되고 3) 추리 범위가 줄어듦
-    // ❗ YES는 가장 보수적으로 사용: "조금 맞다", "연관 있어 보인다", "답 근처인 것 같다"는 YES가 아님
-    // ❗ "증거 없는 속성 질문"에는 절대 YES 금지: "~인가요?" 같은 질문은 정답에 명시적으로 그 속성이 있어야만 YES
-    else if (simAnswerFinal >= CONFIG.THRESHOLD.YES && conceptExactHitCount > 0) {
-      // 속성 질문 검증: "~인가요?" 같은 질문은 정답에 명시적으로 그 속성이 있어야만 YES
-      const hasExplicitEvidence = hasExplicitEvidenceInAnswer(q, knowledge.answer, qConceptsExact, aConcepts);
+    // 1️⃣ NO 판정 (강화): 명확히 반대되거나 사실이 아닌 경우
+    // - 속성 확인 질문("~인가요?") + 정답에 그 속성이 없음 → NO
+    // - 추리 범주 안의 오답 질문 → NO (IRRELEVANT 아님)
+    const isPropertyQ = isPropertyQuestion(q);
+    const hasExplicitEvidence = isPropertyQ 
+      ? hasExplicitEvidenceInAnswer(q, knowledge.answer, qConceptsExact, aConcepts)
+      : true;
+    
+    // 속성 질문인데 정답에 명시적 근거가 없으면 → NO (범주 안이므로 IRRELEVANT 아님)
+    if (isPropertyQ && !hasExplicitEvidence) {
+      // 대상이 정답에 등장하지만 속성이 없으면 NO
+      // 질문의 핵심 키워드가 정답에 등장하면 범주 안, 아니면 범주 밖
+      const qTokens = [...tokenizeKo(q), ...tokenizeEn(q)].filter(t => t.length >= 2);
+      const aText = normalizeText(knowledge.answer).toLowerCase();
+      const hasTargetInAnswer = qTokens.some(token => {
+        const tokenLower = token.toLowerCase();
+        return aText.includes(tokenLower) || aConcepts.has(toCanonical(token));
+      });
       
-      if (!hasExplicitEvidence) {
-        // 속성 질문인데 정답에 명시적 근거가 없으면 NO 또는 IRRELEVANT
-        // 질문이 정답과 직접 관련이 없으면 NO, 애매하면 IRRELEVANT
-        if (simAnswerFinal >= 0.45 || conceptExactHitCount > 0) {
-          // 어느 정도 관련은 있지만 명시적 근거가 없는 경우 NO
+      if (hasTargetInAnswer) {
+        // 대상이 정답에 등장하는데 속성이 없으면 → NO
+        result = "no";
+      } else {
+        // 대상도 정답에 없으면 범주 밖 → IRRELEVANT 가능성
+        // 하지만 속성 질문 자체가 사실 여부를 묻는 것이므로 우선 NO 검토
+        if (simAnswerFinal >= 0.40 || conceptExactHitCount > 0) {
           result = "no";
         } else {
-          // 관련이 거의 없는 경우 IRRELEVANT
           result = "irrelevant";
         }
-      } else {
-        // YES가 확실한 경우만 허용:
-        // - 핵심 개념(Exact)이 명확히 매칭되어야 함 (qConceptsExact에 aConcepts의 핵심이 포함)
-        // - 높은 유사도 (simAnswerFinal >= 0.60)
-        // - "정답의 핵심 사실을 정확히 찌른 경우"만 YES
-        // - 속성 질문인 경우 정답에 명시적으로 그 속성이 있어야 함
-        result = "yes";
       }
+    }
+    // 기존 NO 판정 조건
+    else if (simContentFinal >= CONFIG.THRESHOLD.NO_CONTENT && simAnswerFinal <= CONFIG.THRESHOLD.NO_ANSWER_MAX) {
+      result = "no";
+    }
+    // 반의어 불일치가 강하고 유사도가 높으면 → NO
+    else if (hasStrongAntonymMismatch && simAnswerFinal >= 0.50) {
+      result = "no";
+    }
+    // 2️⃣ YES 판정: 보수적으로 - 정답의 핵심 사실을 정확히 찌른 경우에만
+    // 조건: 1) 유사도 높고 2) 핵심 개념이 명확히 매칭되고 3) 추리 범위가 줄어듦
+    // ❗ YES는 가장 보수적으로 사용: "조금 맞다", "연관 있어 보인다"는 YES가 아님
+    else if (simAnswerFinal >= CONFIG.THRESHOLD.YES && conceptExactHitCount > 0 && hasExplicitEvidence) {
+      // YES가 확실한 경우만 허용:
+      // - 핵심 개념(Exact)이 명확히 매칭되어야 함
+      // - 높은 유사도 (simAnswerFinal >= 0.65)
+      // - "정답의 핵심 사실을 정확히 찌른 경우"만 YES
+      // - 속성 질문인 경우 정답에 명시적으로 그 속성이 있어야 함
+      result = "yes";
     } 
-    // IRRELEVANT 판정: 명확하지 않으면 상관없음 우선
+    // 3️⃣ IRRELEVANT 판정: 범주 밖일 때만 사용 (도망처 아님)
+    // ❗ YES/NO 판단이 가능한데 IRRELEVANT를 쓰지 말라
+    // ❗ "판단 애매하니까 상관없음" / "확신 없으니까 상관없음" 금지
     else {
-      // bonus 적용 후에도 여전히 낮으면 irrelevant 재확인 (안전장치)
-      const contextMismatchFinal = detectContextualMismatch(q, knowledge, simAnswerFinal, simContentFinal);
-      if (contextMismatchFinal.isIrrelevant || 
-          simAnswerFinal <= CONFIG.THRESHOLD.IRRELEVANT_MAX * 1.1 || 
-          simContentFinal <= CONFIG.THRESHOLD.IRRELEVANT_CONTENT_MAX * 1.1 ||
-          conceptExactHitCount === 0) {
-        // YES/NO 판단을 위해 추가 정보가 필요하거나 핵심 개념이 매칭되지 않으면 IRRELEVANT
-        result = "irrelevant";
-      } else {
-        const inAmbiguous = simAnswerFinal >= CONFIG.AMBIGUOUS_RANGE.min && simAnswerFinal <= CONFIG.AMBIGUOUS_RANGE.max;
-
-        // ✅ fallback only when ambiguous AND contradiction suspected (V9)
-        if (inAmbiguous && fallbackJudge && hasStrongAntonymMismatch) {
-          const fb = await fallbackJudge({
-            question: q,
-            problemContent: knowledge.content,
-            problemAnswer: knowledge.answer,
-          });
-          if (fb) {
-            result = fb;
-          } else {
-            // 명확하지 않으면 IRRELEVANT 우선
-            result = "irrelevant";
-          }
+      // 질문이 정답의 등장 요소와 연결되는지 확인 (범주 안/밖 판단)
+      const qTokens = [...tokenizeKo(q), ...tokenizeEn(q)].filter(t => t.length >= 2);
+      const aText = normalizeText(knowledge.answer).toLowerCase();
+      const hasConnection = qTokens.some(token => {
+        const tokenLower = token.toLowerCase();
+        return aText.includes(tokenLower) || aConcepts.has(toCanonical(token));
+      }) || conceptExactHitCount > 0;
+      
+      // 범주 안 (질문이 정답과 연결됨) → YES/NO 판단 필요
+      if (hasConnection) {
+        // 질문이 사실 여부를 묻고 있으면 YES/NO 중 하나여야 함
+        // 속성 질문이거나 사실 확인 질문이면 NO (YES가 아니므로)
+        if (isPropertyQ || simAnswerFinal >= 0.40) {
+          // 범주 안에서 YES가 아니면 → NO
+          result = "no";
         } else {
-          // YES/NO 중 어느 쪽도 확실하지 않으면 IRRELEVANT
-          // "상관없음은 실패가 아니라 '아직 추리가 진행 중'이라는 정상 상태"
+          // 유사도가 매우 낮으면 범주 안이지만 관련이 거의 없음 → NO (IRRELEVANT 아님)
+          result = "no";
+        }
+      } 
+      // 범주 밖 (질문이 정답과 전혀 연결되지 않음) → IRRELEVANT
+      else {
+        const contextMismatchFinal = detectContextualMismatch(q, knowledge, simAnswerFinal, simContentFinal);
+        if (contextMismatchFinal.isIrrelevant || 
+            simAnswerFinal <= CONFIG.THRESHOLD.IRRELEVANT_MAX * 1.1 || 
+            simContentFinal <= CONFIG.THRESHOLD.IRRELEVANT_CONTENT_MAX * 1.1) {
+          // 범주 밖이고 유사도도 낮으면 → IRRELEVANT
+          result = "irrelevant";
+        } else {
+          // 유사도가 있는데 연결이 없으면 메타 질문일 수 있음 → IRRELEVANT
           result = "irrelevant";
         }
       }
@@ -2145,7 +2171,32 @@ export function clearCache(): void {
 }
 
 // -------------------------
-// Answer Similarity V9
+/**
+ * 핵심 단어 추출: 조사, 문미어미, 일반 조사 제외한 명사/형용사 중심
+ */
+function extractKeyWords(text: string): string[] {
+  const tokens = [...tokenizeKo(text), ...tokenizeEn(text)];
+  const stopWords = new Set([
+    // 조사
+    '이', '가', '은', '는', '을', '를', '의', '와', '과', '에게', '께', '한테', '에서', '로', '으로',
+    // 문미어미
+    '인가', '인가요', '입니까', '맞나', '맞나요', '맞습니까', '한가', '한가요', '이다', '이다', '였다',
+    // 일반 조사/접속사
+    '그', '그것', '이것', '저것', '그런', '이런', '저런', '그리고', '그래서', '하지만', '그러나',
+    // 영어 stop words
+    'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
+    'will', 'would', 'should', 'could', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those',
+    'and', 'or', 'but', 'if', 'then', 'when', 'where', 'what', 'who', 'which', 'why', 'how',
+  ]);
+  
+  return tokens
+    .filter(t => t.length >= 2) // 최소 2자 이상
+    .filter(t => !stopWords.has(t.toLowerCase())) // stop words 제외
+    .filter(t => !/^\d+$/.test(t)) // 숫자만 있는 토큰 제외
+    .map(toCanonical);
+}
+
+// Answer Similarity V9 - 핵심 단어 기반 개선
 // -------------------------
 export async function calculateAnswerSimilarityV9(args: {
   userAnswer: string;
@@ -2158,10 +2209,122 @@ export async function calculateAnswerSimilarityV9(args: {
   if (!ua || !ca) return 0;
 
   try {
+    // 1. 핵심 단어 추출
+    const correctKeyWords = extractKeyWords(ca);
+    const userKeyWords = extractKeyWords(ua);
+    
+    if (correctKeyWords.length === 0) {
+      // 핵심 단어가 없으면 embedding 기반으로만 계산
+      const userEmbedding = await getEmbedding(ua);
+      const correctEmbedding = await getEmbedding(ca);
+      const sim = cosineSimilarity(userEmbedding, correctEmbedding);
+      return Math.max(0, Math.min(100, sim * 100));
+    }
+
+    // 2. 핵심 단어 매칭 (직접 매칭 + 유의어 매칭)
+    const correctKeyWordSet = new Set(correctKeyWords);
+    let matchedKeyWords = 0;
+    let matchedWithSynonym = 0;
+    const matchedSet = new Set<string>(); // 이미 매칭된 정답 키워드 추적
+
+    if (args.knowledge) {
+      const k = args.knowledge;
+      
+      for (const userWord of userKeyWords) {
+        // 직접 매칭
+        if (correctKeyWordSet.has(userWord)) {
+          matchedKeyWords++;
+          matchedSet.add(userWord);
+          continue;
+        }
+        
+        // 유의어 매칭
+        let foundSynonym = false;
+        const userSyns = GLOBAL_SYNONYMS.get(userWord) ?? (await getOrBuildSynonymsForToken(userWord, k));
+        for (const syn of userSyns) {
+          const synCanon = toCanonical(syn);
+          if (correctKeyWordSet.has(synCanon) && !matchedSet.has(synCanon)) {
+            matchedKeyWords++;
+            matchedWithSynonym++;
+            matchedSet.add(synCanon);
+            foundSynonym = true;
+            break;
+          }
+        }
+        
+        // 부분 매칭 (키워드가 다른 키워드에 포함되는 경우)
+        if (!foundSynonym) {
+          for (const correctWord of correctKeyWords) {
+            if (matchedSet.has(correctWord)) continue;
+            if (userWord.includes(correctWord) || correctWord.includes(userWord)) {
+              matchedKeyWords++;
+              matchedSet.add(correctWord);
+              break;
+            }
+          }
+        }
+      }
+    } else {
+      // knowledge가 없으면 직접 매칭만
+      for (const userWord of userKeyWords) {
+        if (correctKeyWordSet.has(userWord)) {
+          matchedKeyWords++;
+          matchedSet.add(userWord);
+        } else {
+          // 부분 매칭
+          for (const correctWord of correctKeyWords) {
+            if (matchedSet.has(correctWord)) continue;
+            if (userWord.includes(correctWord) || correctWord.includes(userWord)) {
+              matchedKeyWords++;
+              matchedSet.add(correctWord);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // 3. 핵심 단어 매칭률 계산 (정답의 핵심 단어 중 몇 개가 매칭되는지)
+    const keyWordMatchRatio = correctKeyWords.length > 0 
+      ? matchedKeyWords / correctKeyWords.length 
+      : 0;
+
+    // 4. Embedding 유사도 (보조 지표)
     const userEmbedding = await getEmbedding(ua);
     const correctEmbedding = await getEmbedding(ca);
-    let sim = cosineSimilarity(userEmbedding, correctEmbedding);
+    let embeddingSim = cosineSimilarity(userEmbedding, correctEmbedding);
 
+    // 5. 긴 답변 페널티: 사용자 답변이 정답보다 훨씬 길면 감점
+    const lengthRatio = ua.length / Math.max(ca.length, 1);
+    let lengthPenalty = 0;
+    if (lengthRatio > 2.0) {
+      // 정답보다 2배 이상 길면 페널티
+      lengthPenalty = Math.min(0.2, (lengthRatio - 2.0) * 0.1);
+    }
+
+    // 6. 핵심 단어 비율이 낮으면 추가 감점 (핵심 단어가 적은 긴 답변)
+    const keyWordDensity = correctKeyWords.length > 0 
+      ? userKeyWords.length / Math.max(ua.split(/\s+/).length, 1)
+      : 0;
+    let densityPenalty = 0;
+    if (keyWordDensity < 0.3 && ua.length > ca.length * 1.5) {
+      // 핵심 단어 비율이 낮고 답변이 길면 감점
+      densityPenalty = 0.15;
+    }
+
+    // 7. 최종 점수 계산: 핵심 단어 매칭률을 주요 지표로 사용
+    // 핵심 단어 매칭률 70% + Embedding 유사도 30%
+    let finalScore = keyWordMatchRatio * 0.7 + embeddingSim * 0.3;
+    
+    // 페널티 적용
+    finalScore = finalScore - lengthPenalty - densityPenalty;
+    
+    // 유의어 매칭 보너스 (소량)
+    if (matchedWithSynonym > 0 && args.knowledge) {
+      finalScore = Math.min(1.0, finalScore + 0.05);
+    }
+
+    // 8. Context bonus (문제 내용과의 유사도)
     if (args.problemContent) {
       const contentNormalized = normalizeText(args.problemContent);
       if (contentNormalized) {
@@ -2169,76 +2332,30 @@ export async function calculateAnswerSimilarityV9(args: {
         const contentUserSim = cosineSimilarity(contentEmbedding, userEmbedding);
         const contentCorrectSim = cosineSimilarity(contentEmbedding, correctEmbedding);
         if (contentUserSim > 0.5 && contentCorrectSim > 0.5) {
-          const contextBonus = Math.min(0.15, (contentUserSim + contentCorrectSim) / 2 * 0.2);
-          sim = Math.min(1.0, sim + contextBonus);
+          const contextBonus = Math.min(0.1, (contentUserSim + contentCorrectSim) / 2 * 0.15);
+          finalScore = Math.min(1.0, finalScore + contextBonus);
         }
       }
     }
 
+    // 9. Antonym penalty
     if (args.knowledge) {
       const k = args.knowledge;
-      const uTokens = tokenizeUniversal(ua).map(x => x.token);
-      const cTokens = tokenizeUniversal(ca).map(x => x.token);
-      const uCanon = uTokens.map(toCanonical);
-      const cCanon = cTokens.map(toCanonical);
-
-      // synonym bonus
-      let synHit = 0;
-      for (const ut of uTokens) {
-        const syns = GLOBAL_SYNONYMS.get(ut) ?? (await getOrBuildSynonymsForToken(ut, k));
-        const synCanon = syns.map(toCanonical);
-        if (synCanon.some(s => cCanon.includes(s))) synHit++;
-      }
-      if (synHit > 0) sim = Math.min(1.0, sim + CONFIG.V9.ANSWER_SYNONYM_BONUS);
-
-      // taxonomy bonus
-      const hyper = k.hypernymMap;
-      let taxHit = 0;
-      for (const uc of uCanon) {
-        for (const cc of cCanon) {
-          if (uc === cc) continue;
-          if (isHypernymOf(uc, cc, hyper, CONFIG.V9.TAXONOMY_MAX_DEPTH) || isHyponymOf(uc, cc, hyper, CONFIG.V9.TAXONOMY_MAX_DEPTH)) {
-            taxHit++;
-            break;
-          }
-        }
-        if (taxHit >= 1) break;
-      }
-      if (taxHit > 0) sim = Math.min(1.0, sim + CONFIG.V9.ANSWER_TAXONOMY_BONUS);
-
-      // antonym penalty
+      const uCanon = userKeyWords.map(toCanonical);
+      const cCanon = correctKeyWords.map(toCanonical);
+      
       const aText = detectAntonymMismatchByTextV9(ua, ca, k.antonymAxes);
       const aConcept = detectAntonymMismatchByConceptsV9(new Set(uCanon), new Set(cCanon), k.antonymAxes, ua, ca);
       const aLex = detectAntonymMismatchByLexiconV9(ua, ca, k.antonymLexicon);
       const sig = antonymSignalCount({ antiText: aText, antiConcept: aConcept, antiLex: aLex });
       if (sig >= CONFIG.V9.ANTONYM_REQUIRE_SIGNALS) {
-        sim = Math.max(-1, sim - CONFIG.V9.ANSWER_ANTONYM_PENALTY);
+        finalScore = Math.max(0, finalScore - CONFIG.V9.ANSWER_ANTONYM_PENALTY);
       }
     }
 
-    const uWords = [...tokenizeKo(ua), ...tokenizeEn(ua)].map(toCanonical);
-    const cWords = [...tokenizeKo(ca), ...tokenizeEn(ca)].map(toCanonical);
-    const cSet = new Set(cWords);
-    let match = 0;
-    for (const w of uWords) {
-      if (cSet.has(w)) match++;
-      else {
-        const c = cWords.find(x => x.includes(w) || w.includes(x));
-        if (c) match += 0.5;
-      }
-    }
-    const keywordRatio = match / Math.max(cWords.length, uWords.length, 1);
-    if (keywordRatio > 0.3) {
-      const keywordBonus = Math.min(0.1, keywordRatio * 0.15);
-      sim = Math.min(1.0, sim + keywordBonus);
-    }
-
-    let adjusted = sim;
-    if (sim > 0.7) adjusted = 0.7 + (sim - 0.7) * 1.5;
-    else if (sim > 0.5) adjusted = 0.5 + (sim - 0.5) * 1.2;
-    else if (sim <= 0.3) adjusted = sim * 0.85;
-
-    const pct = Math.max(0, Math.min(100, adjusted * 100));
+    // 10. 최종 점수 조정 및 반환
+    finalScore = Math.max(0, Math.min(1, finalScore));
+    const pct = finalScore * 100;
     return Math.round(pct * 10) / 10;
   } catch (e) {
     console.error("calculateAnswerSimilarityV9 error:", e);
