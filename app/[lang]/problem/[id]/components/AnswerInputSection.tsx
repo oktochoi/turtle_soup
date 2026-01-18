@@ -219,33 +219,24 @@ export default function AnswerInputSection({
             </div>
           )}
 
-        {/* 정답 확인 버튼 */}
+        {/* 정답 확인 버튼 (제출 없이도 볼 수 있게) */}
         <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
-          {!hasSubmittedAnswer ? (
-            <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-              <p className="text-sm text-slate-400 text-center">
-                <i className="ri-information-line mr-2"></i>
-                {t.problem.submitFirst}
-              </p>
-            </div>
-          ) : (
-            <button
-              onClick={onShowAnswerToggle}
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2.5 sm:py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation"
-            >
-              {showAnswer ? (
-                <>
-                  <i className="ri-eye-off-line"></i>
-                  {t.problem.hideAnswer}
-                </>
-              ) : (
-                <>
-                  <i className="ri-eye-line"></i>
-                  {t.problem.showAnswer}
-                </>
-              )}
-            </button>
-          )}
+          <button
+            onClick={onShowAnswerToggle}
+            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2.5 sm:py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation"
+          >
+            {showAnswer ? (
+              <>
+                <i className="ri-eye-off-line"></i>
+                {t.problem.hideAnswer}
+              </>
+            ) : (
+              <>
+                <i className="ri-eye-line"></i>
+                {t.problem.showAnswer}
+              </>
+            )}
+          </button>
 
           {showAnswer && problem && (
             <div className="mt-3 sm:mt-4 bg-gradient-to-br from-purple-900/30 to-pink-900/30 rounded-lg p-3 sm:p-4 lg:p-6 border border-purple-500/50">

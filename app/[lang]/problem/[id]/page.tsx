@@ -221,6 +221,16 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       return;
     }
 
+    // 정답 확인 칸이 보이지 않으면 정답 표시 요청
+    if (!showAnswer) {
+      if (typeof window !== 'undefined' && (window as any).toastInfo) {
+        (window as any).toastInfo(lang === 'ko' ? '정답을 확인한 후 방을 만들 수 있습니다.' : 'Please check the answer before creating a room.');
+      } else {
+        alert(lang === 'ko' ? '정답을 확인한 후 방을 만들 수 있습니다.' : 'Please check the answer before creating a room.');
+      }
+      return;
+    }
+
     setIsCreatingRoom(true);
     try {
       // 닉네임 가져오기
@@ -307,7 +317,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
             console.log('problem_cta_create_room_click', { problemId, roomCode });
           }
 
-          router.push(`/${lang}/room/${roomCode}?host=true&nickname=${encodeURIComponent(nickname)}`);
+          router.push(`/${lang}/turtle_room/${roomCode}?host=true&nickname=${encodeURIComponent(nickname)}`);
           return;
         }
         throw roomError;
@@ -327,7 +337,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
         console.log('problem_cta_create_room_click', { problemId, roomCode });
       }
 
-      router.push(`/${lang}/room/${roomCode}?host=true&nickname=${encodeURIComponent(nickname)}`);
+      router.push(`/${lang}/turtle_room/${roomCode}?host=true&nickname=${encodeURIComponent(nickname)}`);
     } catch (error: any) {
       console.error('방 생성 오류:', error);
       if (typeof window !== 'undefined' && (window as any).toastError) {
@@ -1962,8 +1972,23 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
         onInviteClick={handleCopyInviteLink}
         hasPrevious={!!previousProblem}
         hasNext={!!nextProblem}
+        showAnswer={showAnswer}
       />
   
+      {/* 정답 표시 버튼 (항상 볼 수 있게, 정답이 안 보일 때만) */}
+      {problem && !showAnswer && (
+        <div className="fixed bottom-32 sm:bottom-36 right-4 z-40">
+          <button
+            onClick={() => setShowAnswer(true)}
+            className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2.5 px-4 rounded-lg shadow-lg transition-all duration-200 flex items-center gap-2 text-sm"
+            title={lang === 'ko' ? '정답 보기' : 'Show Answer'}
+          >
+            <i className="ri-eye-line"></i>
+            <span className="hidden sm:inline">{lang === 'ko' ? '정답 보기' : 'Show Answer'}</span>
+          </button>
+        </div>
+      )}
+
       {/* CTA 바 공간 확보 */}
       <div className="h-24 sm:h-28"></div>
     </div>
