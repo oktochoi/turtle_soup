@@ -28,6 +28,7 @@ const getQuizTypeColors = (quizType: QuizType) => {
     pattern: { bg: 'bg-sky-500/20', text: 'text-sky-300', border: 'border-sky-500/30' },
     liar: { bg: 'bg-amber-500/20', text: 'text-amber-300', border: 'border-amber-500/30' },
     mafia: { bg: 'bg-red-500/20', text: 'text-red-300', border: 'border-red-500/30' },
+    chat: { bg: 'bg-slate-500/20', text: 'text-slate-300', border: 'border-slate-500/30' },
     battle: { bg: 'bg-orange-500/20', text: 'text-orange-300', border: 'border-orange-500/30' },
     fill_blank: { bg: 'bg-emerald-500/20', text: 'text-emerald-300', border: 'border-emerald-500/30' },
     order: { bg: 'bg-teal-500/20', text: 'text-teal-300', border: 'border-teal-500/30' },

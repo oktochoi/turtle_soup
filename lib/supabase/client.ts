@@ -38,5 +38,23 @@ export const createClient = () =>
   createBrowserClient(
     supabaseUrl,
     supabaseKey,
+    {
+      cookies: {
+        getAll() {
+          if (typeof document === 'undefined') return [];
+          return document.cookie.split(';').map(cookie => {
+            const [name, ...rest] = cookie.trim().split('=');
+            return { name, value: rest.join('=') };
+          });
+        },
+        setAll(cookiesToSet) {
+          if (typeof document === 'undefined') return;
+          cookiesToSet.forEach(({ name, value, options }) => {
+            const cookieString = `${name}=${value}; path=/; ${options?.maxAge ? `max-age=${options.maxAge};` : ''} ${options?.sameSite ? `SameSite=${options.sameSite};` : 'SameSite=Lax;'} ${options?.secure ? 'Secure;' : ''}`;
+            document.cookie = cookieString;
+          });
+        },
+      },
+    }
   );
 
