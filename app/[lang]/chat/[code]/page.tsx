@@ -18,6 +18,7 @@ type RoomMember = {
   id: string;
   nickname: string;
   joined_at: string;
+  user_id?: string;
 };
 
 export default function ChatRoomPage({ params }: { params: Promise<{ lang: string; code: string }> }) {
@@ -31,6 +32,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
   const [nickname, setNickname] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [members, setMembers] = useState<RoomMember[]>([]);
+  const [hostUserId, setHostUserId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -112,6 +114,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
 
         setRoomName(room.name);
         setRoomPassword(room.password);
+        setHostUserId(room.host_user_id || null);
 
         // 비밀번호가 있으면 입력 요청
         if (room.password) {
@@ -130,7 +133,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
         const userNickname = userData?.nickname || user.email?.split('@')[0] || 'User';
         setNickname(userNickname);
 
-        // 멤버 확인 및 추가
+        // 멤버 확인 및 추가 (upsert 사용하여 중복 방지)
         const { data: existingMember } = await supabase
           .from('chat_room_members')
           .select('*')
@@ -139,7 +142,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
           .maybeSingle();
 
         if (!existingMember) {
-          // 멤버 추가
+          // 멤버 추가 (중복 키 오류는 무시)
           const { error: memberError } = await supabase
             .from('chat_room_members')
             .insert({
@@ -148,7 +151,10 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
               nickname: userNickname,
             });
 
-          if (memberError) throw memberError;
+          // UNIQUE 제약 조건 위반은 무시 (이미 멤버인 경우)
+          if (memberError && !memberError.message?.includes('duplicate key') && !memberError.message?.includes('unique constraint')) {
+            throw memberError;
+          }
         } else {
           setNickname(existingMember.nickname);
         }
@@ -185,6 +191,19 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
                   },
                 ].sort((a, b) => a.timestamp - b.timestamp);
               });
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'chat_room_members',
+              filter: `room_id=eq.${room.id}`,
+            },
+            () => {
+              // 멤버 목록 새로고침
+              loadMembers(room.id);
             }
           )
           .subscribe();
@@ -244,10 +263,11 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
 
       if (data) {
         setMembers(
-          data.map((m) => ({
+          data.map((m: any) => ({
             id: m.id,
             nickname: m.nickname,
             joined_at: m.joined_at,
+            user_id: m.user_id,
           }))
         );
       }
@@ -286,15 +306,30 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
         const userNickname = userData?.nickname || user?.email?.split('@')[0] || 'User';
         setNickname(userNickname);
 
-        const { error: memberError } = await supabase
+        // 멤버 확인 후 추가 (중복 키 오류는 무시)
+        const { data: existingMember } = await supabase
           .from('chat_room_members')
-          .insert({
-            room_id: room.id,
-            user_id: user?.id,
-            nickname: userNickname,
-          });
+          .select('*')
+          .eq('room_id', room.id)
+          .eq('user_id', user?.id)
+          .maybeSingle();
 
-        if (memberError) throw memberError;
+        if (!existingMember) {
+          const { error: memberError } = await supabase
+            .from('chat_room_members')
+            .insert({
+              room_id: room.id,
+              user_id: user?.id,
+              nickname: userNickname,
+            });
+
+          // UNIQUE 제약 조건 위반은 무시 (이미 멤버인 경우)
+          if (memberError && !memberError.message?.includes('duplicate key') && !memberError.message?.includes('unique constraint')) {
+            throw memberError;
+          }
+        } else {
+          setNickname(existingMember.nickname);
+        }
 
         loadMembers(room.id);
         loadMessages(room.id);
@@ -365,6 +400,16 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       alert(lang === 'ko' ? '메시지 전송에 실패했습니다.' : 'Failed to send message.');
       setMessageText(messageToSend);
+    }
+  };
+
+  const handleCopyRoomCode = async () => {
+    try {
+      const roomUrl = `${window.location.origin}/${lang}/chat/${roomCode}`;
+      await navigator.clipboard.writeText(roomUrl);
+      alert(lang === 'ko' ? '방 링크가 복사되었습니다.' : 'Room link copied.');
+    } catch (err) {
+      alert(lang === 'ko' ? '복사에 실패했습니다.' : 'Failed to copy.');
     }
   };
 
@@ -443,6 +488,14 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
           </div>
           <div className="flex gap-2">
             <button
+              onClick={handleCopyRoomCode}
+              className="px-3 py-2 bg-teal-500/20 hover:bg-teal-500/30 text-teal-400 rounded-lg transition-colors text-sm flex items-center gap-1"
+              title={lang === 'ko' ? '방 링크 복사' : 'Copy room link'}
+            >
+              <i className="ri-link text-base"></i>
+              {lang === 'ko' ? '링크 복사' : 'Copy Link'}
+            </button>
+            <button
               onClick={handleLeaveRoom}
               className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors text-sm"
             >
@@ -464,11 +517,49 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
       </div>
 
       {/* 채팅 영역 */}
-      <div className="flex-1 container mx-auto max-w-4xl p-4 flex flex-col">
-        <div
-          ref={chatContainerRef}
-          className="flex-1 overflow-y-auto space-y-3 mb-4"
-        >
+      <div className="flex-1 container mx-auto max-w-6xl p-4 flex gap-4">
+        {/* 참가자 목록 */}
+        <div className="hidden md:block w-64 flex-shrink-0">
+          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 sticky top-4">
+            <h3 className="text-sm font-semibold mb-3 text-teal-400 flex items-center gap-2">
+              <i className="ri-group-line"></i>
+              {lang === 'ko' ? '참가자' : 'Participants'} ({members.length})
+            </h3>
+            <div className="space-y-2 max-h-[calc(100vh-200px)] overflow-y-auto">
+              {members.map((member) => {
+                const isHost = user && hostUserId === user.id && member.user_id === user.id;
+                return (
+                  <div
+                    key={member.id}
+                    className={`flex items-center justify-between p-2 rounded-lg ${
+                      isHost
+                        ? 'bg-gradient-to-r from-teal-500/20 to-cyan-500/20 border border-teal-500/30'
+                        : 'bg-slate-700/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {isHost && (
+                        <i className="ri-vip-crown-line text-yellow-400"></i>
+                      )}
+                      <span className={`text-sm ${
+                        isHost ? 'text-teal-400 font-semibold' : 'text-slate-300'
+                      }`}>
+                        {member.nickname}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* 채팅 메시지 영역 */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <div
+            ref={chatContainerRef}
+            className="flex-1 overflow-y-auto space-y-3 mb-4"
+          >
           {messages.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-slate-400">{lang === 'ko' ? '아직 메시지가 없습니다.' : 'No messages yet.'}</p>
@@ -538,6 +629,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
             <i className="ri-send-plane-line"></i>
           </button>
         </form>
+        </div>
       </div>
 
       {/* 비밀번호 모달 */}
