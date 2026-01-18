@@ -41,6 +41,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const lastScrollTop = useRef(0);
 
@@ -52,6 +53,10 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
 
   // 스크롤 처리
   const scrollToBottom = () => {
+    // 입력 필드에 포커스가 있으면 자동 스크롤하지 않음
+    if (document.activeElement === messageInputRef.current) {
+      return;
+    }
     if (!isUserScrolling) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
@@ -517,6 +522,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
         {/* 메시지 입력 */}
         <form onSubmit={handleSendMessage} className="flex gap-2">
           <input
+            ref={messageInputRef}
             type="text"
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}

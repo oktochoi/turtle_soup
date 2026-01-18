@@ -26,11 +26,16 @@ export default function ChatPanel({ roomCode, nickname, lang, title, gamePhase }
   const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const lastScrollTop = useRef(0);
 
   // 스크롤을 맨 아래로 (사용자가 스크롤을 올리지 않았을 때만)
   const scrollToBottom = () => {
+    // 입력 필드에 포커스가 있으면 자동 스크롤하지 않음
+    if (document.activeElement === messageInputRef.current) {
+      return;
+    }
     if (!isUserScrolling) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
@@ -423,6 +428,7 @@ export default function ChatPanel({ roomCode, nickname, lang, title, gamePhase }
       <form onSubmit={handleSubmitMessage} className="p-3 sm:p-4 border-t border-slate-700">
         <div className="flex gap-2">
           <input
+            ref={messageInputRef}
             type="text"
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
