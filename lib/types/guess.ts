@@ -22,8 +22,10 @@ export interface GuessSet {
 export interface GuessCard {
   id: string;
   set_id: string;
+  card_type: 'text' | 'ox' | 'media'; // 카드 타입
   question: string; // 질문 (필수)
   images: string[]; // image urls (선택사항)
+  media_url?: string; // YouTube 링크 (media 타입용)
   answers: string[]; // 정답 및 동의어
   hint?: string; // deprecated
   time_limit_sec?: number; // deprecated
