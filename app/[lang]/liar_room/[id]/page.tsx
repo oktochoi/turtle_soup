@@ -671,6 +671,30 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
     }
   };
 
+  // 관리자 방 삭제 함수
+  const handleDeleteRoom = async () => {
+    if (!isAdmin) return;
+    
+    if (!confirm(lang === 'ko' ? '정말 이 방을 삭제하시겠습니까? 모든 참가자가 나가게 됩니다.' : 'Are you sure you want to delete this room? All participants will be removed.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('rooms')
+        .delete()
+        .eq('code', roomCode);
+
+      if (error) throw error;
+
+      alert(lang === 'ko' ? '방이 삭제되었습니다.' : 'Room deleted successfully.');
+      router.push(`/${lang}/rooms`);
+    } catch (err: any) {
+      console.error('방 삭제 오류:', err);
+      alert(lang === 'ko' ? '방 삭제에 실패했습니다.' : 'Failed to delete room.');
+    }
+  };
+
   const handleLeaveRoom = async () => {
     if (!nickname) return;
 
