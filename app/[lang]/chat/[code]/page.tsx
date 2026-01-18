@@ -363,6 +363,35 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
     }
   };
 
+  const handleLeaveRoom = async () => {
+    if (!user || !confirm(lang === 'ko' ? '정말 나가시겠습니까?' : 'Are you sure you want to leave?')) {
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      const { data: room } = await supabase
+        .from('chat_rooms')
+        .select('id')
+        .eq('code', roomCode)
+        .single();
+
+      if (room) {
+        // 멤버 삭제 (트리거가 자동으로 퇴장 메시지 생성)
+        await supabase
+          .from('chat_room_members')
+          .delete()
+          .eq('room_id', room.id)
+          .eq('user_id', user.id);
+      }
+
+      router.push(`/${lang}`);
+    } catch (err: any) {
+      console.error('나가기 오류:', err);
+      alert(lang === 'ko' ? '나가기에 실패했습니다.' : 'Failed to leave room.');
+    }
+  };
+
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp);
     const hours = date.getHours().toString().padStart(2, '0');
@@ -408,6 +437,12 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
             </p>
           </div>
           <div className="flex gap-2">
+            <button
+              onClick={handleLeaveRoom}
+              className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors text-sm"
+            >
+              {lang === 'ko' ? '나가기' : 'Leave'}
+            </button>
             <Link href={`/${lang}`}>
               <button className="text-slate-400 hover:text-white transition-colors">
                 <i className="ri-home-line text-xl"></i>
@@ -436,6 +471,22 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
           ) : (
             messages.map((msg) => {
               const isOwn = msg.nickname === nickname;
+              const isSystem = msg.nickname === 'SYSTEM';
+              
+              // 시스템 메시지 스타일
+              if (isSystem) {
+                return (
+                  <div
+                    key={msg.id}
+                    className="flex justify-center my-2"
+                  >
+                    <div className="bg-slate-700/50 text-slate-400 text-xs px-3 py-1.5 rounded-full border border-slate-600/50">
+                      {msg.message}
+                    </div>
+                  </div>
+                );
+              }
+              
               return (
                 <div
                   key={msg.id}

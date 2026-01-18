@@ -290,6 +290,9 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
               </svg>
               <span>{t.auth.loginWithGoogle}</span>
             </button>
+            <p className="text-xs text-slate-400 text-center">
+              {lang === 'ko' ? '※ 앱은 구글로 로그인이 불가능합니다' : '※ Google login is not available in the app'}
+            </p>
           </div>
         </div>
 

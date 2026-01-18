@@ -104,3 +104,46 @@ CREATE TRIGGER update_chat_rooms_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_chat_rooms_updated_at();
 
+-- 멤버 입장/퇴장 시 시스템 메시지 자동 생성 트리거 함수
+CREATE OR REPLACE FUNCTION create_chat_room_system_message()
+RETURNS TRIGGER AS $$
+DECLARE
+  system_nickname TEXT := 'SYSTEM';
+  system_message TEXT;
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    -- 입장 메시지
+    system_message := NEW.nickname || '님이 입장했습니다.';
+    
+    INSERT INTO chat_room_messages (room_id, user_id, nickname, message)
+    VALUES (NEW.room_id, NULL, system_nickname, system_message);
+    
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    -- 퇴장 메시지
+    system_message := OLD.nickname || '님이 퇴장했습니다.';
+    
+    INSERT INTO chat_room_messages (room_id, user_id, nickname, message)
+    VALUES (OLD.room_id, NULL, system_nickname, system_message);
+    
+    RETURN OLD;
+  END IF;
+  
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 멤버 입장 시 트리거
+DROP TRIGGER IF EXISTS trg_chat_room_member_joined ON chat_room_members;
+CREATE TRIGGER trg_chat_room_member_joined
+  AFTER INSERT ON chat_room_members
+  FOR EACH ROW
+  EXECUTE FUNCTION create_chat_room_system_message();
+
+-- 멤버 퇴장 시 트리거
+DROP TRIGGER IF EXISTS trg_chat_room_member_left ON chat_room_members;
+CREATE TRIGGER trg_chat_room_member_left
+  AFTER DELETE ON chat_room_members
+  FOR EACH ROW
+  EXECUTE FUNCTION create_chat_room_system_message();
+

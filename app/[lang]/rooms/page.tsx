@@ -28,6 +28,9 @@ type Room = {
   player_count: number;
   last_activity_at?: string | null;
   last_chat_at?: string | null;
+  room_type?: 'game' | 'chat'; // 'game' = rooms 테이블, 'chat' = chat_rooms 테이블
+  name?: string; // chat_rooms의 name 필드
+  member_count?: number; // chat_rooms의 멤버 수
 };
 
 export default function RoomsPage({ params }: { params: Promise<{ lang: string }> }) {
@@ -80,6 +83,28 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
           event: '*',
           schema: 'public',
           table: 'players',
+        },
+        () => {
+          loadRooms();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_rooms',
+        },
+        () => {
+          loadRooms();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_room_members',
         },
         () => {
           loadRooms();
@@ -144,8 +169,62 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
           })
         );
 
-        setRooms(roomsWithPlayerCount);
-        setFilteredRooms(roomsWithPlayerCount);
+        const gameRooms = roomsWithPlayerCount.map(r => ({ ...r, room_type: 'game' as const }));
+        
+        // chat_rooms도 함께 조회
+        const { data: chatRoomsData, error: chatRoomsError } = await supabase
+          .from('chat_rooms')
+          .select('id, code, name, host_nickname, password, max_members, is_public, created_at, updated_at')
+          .eq('is_public', true)
+          .order('created_at', { ascending: false });
+        
+        if (!chatRoomsError && chatRoomsData) {
+          const chatRoomsWithMemberCount = await Promise.all(
+            chatRoomsData.map(async (chatRoom) => {
+              const roomId = (chatRoom as any).id;
+              const { count } = await supabase
+                .from('chat_room_members')
+                .select('*', { count: 'exact', head: true })
+                .eq('room_id', roomId || '');
+
+              // 최근 메시지 시간 가져오기
+              const { data: lastMessage } = await supabase
+                .from('chat_room_messages')
+                .select('created_at')
+                .eq('room_id', roomId || '')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              return {
+                code: chatRoom.code,
+                story: '', // 수다방은 story 없음
+                name: chatRoom.name,
+                host_nickname: chatRoom.host_nickname,
+                password: chatRoom.password,
+                max_questions: 0,
+                created_at: chatRoom.created_at,
+                player_count: count || 0,
+                member_count: count || 0,
+                last_chat_at: lastMessage?.created_at || null,
+                room_type: 'chat' as const,
+                max_players: chatRoom.max_members || 50,
+              } as Room;
+            })
+          );
+          
+          // 게임방과 수다방 합치기
+          const allRooms = [...gameRooms, ...chatRoomsWithMemberCount].sort((a, b) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+          
+          setRooms(allRooms);
+          setFilteredRooms(allRooms);
+        } else {
+          setRooms(gameRooms);
+          setFilteredRooms(gameRooms);
+        }
+        
         return;
       }
       
@@ -174,12 +253,65 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
             ...room,
             player_count: count || 0,
             last_chat_at: lastChat?.created_at || null,
+            room_type: 'game' as const,
           };
         })
       );
+      
+        // chat_rooms도 함께 조회
+        const { data: chatRoomsData, error: chatRoomsError } = await supabase
+          .from('chat_rooms')
+          .select('id, code, name, host_nickname, password, max_members, is_public, created_at, updated_at')
+          .eq('is_public', true)
+          .order('created_at', { ascending: false });
+        
+        if (!chatRoomsError && chatRoomsData) {
+          const chatRoomsWithMemberCount = await Promise.all(
+            chatRoomsData.map(async (chatRoom) => {
+              const roomId = (chatRoom as any).id;
+            
+            const { count } = await supabase
+              .from('chat_room_members')
+              .select('*', { count: 'exact', head: true })
+              .eq('room_id', roomId || '');
 
-      setRooms(roomsWithPlayerCount);
-      setFilteredRooms(roomsWithPlayerCount);
+            // 최근 메시지 시간 가져오기
+            const { data: lastMessage } = await supabase
+              .from('chat_room_messages')
+              .select('created_at')
+              .eq('room_id', roomId || '')
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            return {
+              code: chatRoom.code,
+              story: '', // 수다방은 story 없음
+              name: chatRoom.name,
+              host_nickname: chatRoom.host_nickname,
+              password: chatRoom.password,
+              max_questions: 0,
+              created_at: chatRoom.created_at,
+              player_count: count || 0,
+              member_count: count || 0,
+              last_chat_at: lastMessage?.created_at || null,
+              room_type: 'chat' as const,
+              max_players: chatRoom.max_members || 50,
+            } as Room;
+          })
+        );
+        
+        // 게임방과 수다방 합치기
+        const allRooms = [...roomsWithPlayerCount, ...chatRoomsWithMemberCount].sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        
+        setRooms(allRooms);
+        setFilteredRooms(allRooms);
+      } else {
+        setRooms(roomsWithPlayerCount);
+        setFilteredRooms(roomsWithPlayerCount);
+      }
     } catch (error: any) {
       // AbortError는 무해한 에러이므로 무시 (컴포넌트 언마운트 시 발생 가능)
       if (error?.name !== 'AbortError' && error?.message?.includes('aborted') === false) {
@@ -245,7 +377,19 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
     setFilteredRooms(filtered);
   }, [searchQuery, privacyFilter, minPlayers, sortOption, rooms]);
 
-  const handleJoinRoom = (roomCode: string, hasPassword: boolean, quizType?: string) => {
+  const handleJoinRoom = (roomCode: string, hasPassword: boolean, quizType?: string, roomType?: 'game' | 'chat') => {
+    // 수다방인 경우
+    if (roomType === 'chat') {
+      if (hasPassword) {
+        setSelectedRoom(roomCode);
+        setShowPasswordModal(true);
+      } else {
+        router.push(`/${lang}/chat/${roomCode}`);
+      }
+      return;
+    }
+    
+    // 게임방인 경우
     if (hasPassword) {
       setSelectedRoom(roomCode);
       setShowPasswordModal(true);
@@ -506,27 +650,32 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                 key={room.code}
                 className="bg-slate-800/50 rounded-xl p-4 sm:p-5 border border-slate-700 hover:border-teal-500/50 transition-all"
               >
-                <div className="mb-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-lg font-bold text-teal-400">{room.code}</span>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* 게임 타입 배지 */}
-                      {room.quiz_type && (
-                        <span className={`px-2 py-1 rounded text-xs border font-semibold ${
-                          room.quiz_type === 'liar' 
-                            ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
-                            : room.quiz_type === 'mafia'
-                            ? 'bg-purple-500/20 text-purple-400 border-purple-500/50'
-                            : 'bg-teal-500/20 text-teal-400 border-teal-500/50'
-                        }`}>
-                          {room.quiz_type === 'liar' 
-                            ? (lang === 'ko' ? '라이어 게임' : 'Liar Game')
-                            : room.quiz_type === 'mafia'
-                            ? (lang === 'ko' ? '마피아' : 'Mafia')
-                            : (lang === 'ko' ? '바다거북스프' : 'Turtle Soup')
-                          }
-                        </span>
-                      )}
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-lg font-bold text-teal-400">{room.code}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* 방 타입 배지 */}
+                        {room.room_type === 'chat' ? (
+                          <span className="px-2 py-1 rounded text-xs border font-semibold bg-purple-500/20 text-purple-400 border-purple-500/50">
+                            <i className="ri-chat-3-line mr-1"></i>
+                            {lang === 'ko' ? '수다방' : 'Chat Room'}
+                          </span>
+                        ) : room.quiz_type && (
+                          <span className={`px-2 py-1 rounded text-xs border font-semibold ${
+                            room.quiz_type === 'liar' 
+                              ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
+                              : room.quiz_type === 'mafia'
+                              ? 'bg-purple-500/20 text-purple-400 border-purple-500/50'
+                              : 'bg-teal-500/20 text-teal-400 border-teal-500/50'
+                          }`}>
+                            {room.quiz_type === 'liar' 
+                              ? (lang === 'ko' ? '라이어 게임' : 'Liar Game')
+                              : room.quiz_type === 'mafia'
+                              ? (lang === 'ko' ? '마피아' : 'Mafia')
+                              : (lang === 'ko' ? '바다거북스프' : 'Turtle Soup')
+                            }
+                          </span>
+                        )}
                       {(room.game_ended || room.status === 'done' || room.status === 'FINISHED') && (
                         <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs border border-red-500/50">
                           <i className="ri-stop-circle-line mr-1"></i>
@@ -546,8 +695,10 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                       )}
                     </div>
                   </div>
-                  {/* 라이어 게임인 경우 room_name 표시, 그 외에는 story 표시 */}
-                  {room.quiz_type === 'liar' ? (
+                  {/* 수다방인 경우 name 표시, 라이어 게임인 경우 room_name 표시, 그 외에는 story 표시 */}
+                  {room.room_type === 'chat' ? (
+                    <p className="text-sm font-semibold text-slate-200 mb-3">{room.name || room.code}</p>
+                  ) : room.quiz_type === 'liar' ? (
                     <div className="mb-3">
                       <p className="text-sm font-semibold text-slate-200 mb-1">{room.room_name || (lang === 'ko' ? '라이어 게임 방' : 'Liar Game Room')}</p>
                       {room.theme && (
@@ -567,7 +718,10 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                       </span>
                       <span>
                         <i className="ri-group-line mr-1"></i>
-                        {room.player_count}{room.quiz_type === 'liar' && room.max_players ? ` / ${room.max_players}` : ''}{lang === 'ko' ? t.room.playersCount : ''}
+                        {room.room_type === 'chat' 
+                          ? `${room.member_count || 0}${room.max_players ? ` / ${room.max_players}` : ''}${lang === 'ko' ? '명' : ''}`
+                          : `${room.player_count}${room.quiz_type === 'liar' && room.max_players ? ` / ${room.max_players}` : ''}${lang === 'ko' ? t.room.playersCount : ''}`
+                        }
                       </span>
                     </div>
                     <div className="flex items-center gap-4 flex-wrap pt-2 border-t border-slate-700/50">
@@ -612,7 +766,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                 <div className="flex gap-2">
                   {!(room.game_ended || room.status === 'done' || room.status === 'FINISHED') && (
                     <button
-                      onClick={() => handleJoinRoom(room.code, !!room.password, room.quiz_type)}
+                      onClick={() => handleJoinRoom(room.code, !!room.password, room.quiz_type, room.room_type)}
                       className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-2.5 rounded-lg transition-all text-sm"
                     >
                       <i className="ri-login-box-line mr-2"></i>
