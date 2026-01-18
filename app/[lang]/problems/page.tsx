@@ -283,9 +283,17 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
         {/* 헤더 */}
         <div className="mb-4 sm:mb-6 lg:mb-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
-              {t.problem.problemList}
-            </h1>
+            <div className="flex items-center gap-3">
+              <Link href={`/${lang}/play`}>
+                <button className="text-slate-400 hover:text-white transition-colors text-xs sm:text-sm">
+                  <i className="ri-arrow-left-line mr-2"></i>
+                  {lang === 'ko' ? '게임 선택' : 'Select Game'}
+                </button>
+              </Link>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+                {t.problem.problemList}
+              </h1>
+            </div>
             <Link href={`/${lang}/create-problem`}>
               <button className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold px-3 sm:px-4 py-2 rounded-xl transition-all duration-200 text-sm sm:text-base touch-manipulation">
                 <i className="ri-add-circle-line mr-2"></i>
@@ -340,37 +348,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
               </div>
             </div>
 
-            {/* 퀴즈 타입 필터 */}
-            <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-                {lang === 'ko' ? '게임 유형' : 'Game Type'}:
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setQuizTypeFilter('all')}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
-                    quizTypeFilter === 'all'
-                      ? 'bg-teal-500 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                  }`}
-                >
-                  {t.problem.all}
-                </button>
-                {availableTags.map(tag => (
-                  <button
-                    key={tag}
-                    onClick={() => setQuizTypeFilter(tag)}
-                    className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
-                      quizTypeFilter === tag
-                        ? 'bg-purple-500 text-white'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* 게임 유형 필터 - 바다거북 스프만 표시 (필터 숨김) */}
 
             {/* 난이도 필터 */}
             <div>

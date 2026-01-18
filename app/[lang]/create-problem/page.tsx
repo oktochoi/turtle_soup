@@ -27,7 +27,7 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
   const router = useRouter();
   const t = useTranslations();
   const { user, isLoading: authLoading } = useAuth();
-  const [quizType, setQuizType] = useState<QuizType | null>('soup'); // 기본값: soup
+  const [quizType, setQuizType] = useState<QuizType | null>('soup'); // 항상 soup
   
   // Soup 타입용
   const [content, setContent] = useState(''); // story
@@ -59,6 +59,7 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
   const [title, setTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showSoupForm, setShowSoupForm] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -186,36 +187,9 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         };
       }
       
-      // 게임 유형을 태그로 매핑
+      // 태그는 항상 "바다거북 스프"만
       const getTagsFromQuizType = (type: QuizType): string[] => {
-        const tagMapping: Record<QuizType, string> = {
-          soup: '바다거북 스프',
-          reasoning: '추론 퀴즈',
-          nonsense: '넌센스 퀴즈',
-          mcq: '객관식 퀴즈',
-          ox: 'OX 퀴즈',
-          image: '이미지 퀴즈',
-          poll: '투표 퀴즈',
-          balance: '밸런스 게임',
-          logic: '로직 퀴즈',
-          pattern: '패턴 퀴즈',
-          liar: '라이어 게임',
-          mafia: '마피아',
-          battle: '배틀 게임',
-          fill_blank: '빈칸 퀴즈',
-          order: '순서 퀴즈',
-        };
-        
-        // 기본 태그: 바다거북 스프
-        const baseTags = ['바다거북 스프'];
-        
-        // 게임 유형에 해당하는 태그 추가
-        const typeTag = tagMapping[type];
-        if (typeTag && typeTag !== '바다거북 스프') {
-          baseTags.push(typeTag);
-        }
-        
-        return baseTags;
+        return ['바다거북 스프'];
       };
       
       // problems 테이블에 퀴즈 기본 정보 저장
@@ -503,163 +477,91 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         </div>
 
         <div className="space-y-4 sm:space-y-5 lg:space-y-6">
-          {/* 퀴즈 유형 선택 */}
-          <div>
-            <QuizTypeSelector
-              selectedType={quizType}
-              onSelect={setQuizType}
-              lang={currentLang}
-              disabled={isSubmitting}
-            />
+          {/* 맞추기 게임 바로가기 */}
+          <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm sm:text-base font-semibold text-white mb-1">
+                  {lang === 'ko' ? '🎯 맞추기 게임 만들기' : '🎯 Create Guess Game'}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300">
+                  {lang === 'ko' 
+                    ? '이미지를 보고 정답을 맞히는 카드 게임을 만들어보세요'
+                    : 'Create a card game where players guess answers from images'}
+                </p>
+              </div>
+              <Link href={`/${lang}/guess/create`}>
+                <button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all duration-200 touch-manipulation whitespace-nowrap">
+                  {lang === 'ko' ? '만들기' : 'Create'}
+                </button>
+              </Link>
+            </div>
           </div>
 
-          {/* 제목 (모든 유형 공통, 밸런스 게임과 질문 없는 타입들은 "문제") */}
-          <div>
-            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-              {lang === 'ko' 
-                ? (['balance', 'nonsense', 'mcq', 'ox', 'image', 'logic', 'pattern', 'fill_blank', 'order'].includes(quizType || '')) 
-                  ? '문제' 
-                  : '제목'
-                : (['balance', 'nonsense', 'mcq', 'ox', 'image', 'logic', 'pattern', 'fill_blank', 'order'].includes(quizType || '')) 
-                  ? 'Question' 
-                  : 'Title'}
-              <span className="text-red-400 ml-1">*</span>
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={lang === 'ko' 
-                ? (['balance', 'nonsense', 'mcq', 'ox', 'image', 'logic', 'pattern', 'fill_blank', 'order'].includes(quizType || '')) 
-                  ? '문제를 입력하세요' 
-                  : '문제 제목을 입력하세요'
-                : (['balance', 'nonsense', 'mcq', 'ox', 'image', 'logic', 'pattern', 'fill_blank', 'order'].includes(quizType || '')) 
-                  ? 'Enter question' 
-                  : 'Enter problem title'}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm sm:text-base"
-              maxLength={100}
-            />
-          </div>
-
-          {/* 유형별 폼 */}
-          {quizType === 'soup' && (
-            <QuizFormSoup
-              story={content}
-              truth={answer}
-              hints={hints}
-              onStoryChange={setContent}
-              onTruthChange={setAnswer}
-              onHintsChange={setHints}
-              lang={currentLang}
-            />
+          {/* 바다거북 스프 만들기 버튼 */}
+          {!showSoupForm && (
+            <div className="bg-gradient-to-r from-teal-500/20 to-cyan-500/20 border border-teal-500/30 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm sm:text-base font-semibold text-white mb-1">
+                    {lang === 'ko' ? '🥣 바다거북 스프 게임 만들기' : '🥣 Create Turtle Soup Game'}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-300">
+                    {lang === 'ko' 
+                      ? 'Yes/No 질문으로 진실을 추리하는 게임을 만들어보세요'
+                      : 'Create a game where players guess the truth with Yes/No questions'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowSoupForm(true)}
+                  className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all duration-200 touch-manipulation whitespace-nowrap"
+                >
+                  {lang === 'ko' ? '만들기' : 'Create'}
+                </button>
+              </div>
+            </div>
           )}
 
-          {quizType === 'nonsense' && (
-            <QuizFormNonsense
-              question={''}
-              answer={answer}
-              explanation={explanation}
-              onQuestionChange={() => {}}
-              onAnswerChange={setAnswer}
-              onExplanationChange={setExplanation}
-              lang={currentLang}
-            />
+          {/* 바다거북 스프 폼 */}
+          {showSoupForm && (
+            <>
+              {/* 제목 */}
+              <div>
+                <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+                  {lang === 'ko' ? '제목' : 'Title'}
+                  <span className="text-red-400 ml-1">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder={lang === 'ko' ? '문제 제목을 입력하세요' : 'Enter problem title'}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm sm:text-base"
+                  maxLength={100}
+                />
+              </div>
+
+              {/* 바다거북 스프 폼 */}
+              <QuizFormSoup
+                story={content}
+                truth={answer}
+                hints={hints}
+                onStoryChange={setContent}
+                onTruthChange={setAnswer}
+                onHintsChange={setHints}
+                lang={currentLang}
+              />
+
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-teal-500/50 mt-4 sm:mt-6 lg:mt-8 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base touch-manipulation"
+              >
+                <i className="ri-add-circle-line mr-2"></i>
+                {isSubmitting ? (lang === 'ko' ? '문제 생성 중...' : 'Creating...') : (lang === 'ko' ? '문제 만들기' : 'Create Problem')}
+              </button>
+            </>
           )}
-
-          {quizType === 'mcq' && (
-            <QuizFormMCQ
-              question={''}
-              options={options}
-              correct={correctOption}
-              explanation={explanation}
-              onQuestionChange={() => {}}
-              onOptionsChange={setOptions}
-              onCorrectChange={setCorrectOption}
-              onExplanationChange={setExplanation}
-              lang={currentLang}
-            />
-          )}
-
-          {quizType === 'ox' && (
-            <QuizFormOX
-              question={''}
-              correct={correctOX}
-              explanation={explanation}
-              onQuestionChange={() => {}}
-              onCorrectChange={setCorrectOX}
-              onExplanationChange={setExplanation}
-              lang={currentLang}
-            />
-          )}
-
-          {quizType === 'image' && (
-            <QuizFormImage
-              question={''}
-              answer={answer}
-              explanation={explanation}
-              imageUrl={imageUrl}
-              onQuestionChange={() => {}}
-              onAnswerChange={setAnswer}
-              onExplanationChange={setExplanation}
-              onImageChange={setImageFile}
-              onImageUrlChange={setImageUrl}
-              lang={currentLang}
-            />
-          )}
-
-          {quizType === 'balance' && (
-            <QuizFormBalance
-              question={question}
-              options={balanceOptions}
-              imageUrl={imageUrl}
-              onQuestionChange={setQuestion}
-              onOptionsChange={setBalanceOptions}
-              onImageChange={setImageFile}
-              onImageUrlChange={setImageUrl}
-              lang={currentLang}
-            />
-          )}
-
-          {quizType === 'logic' && (
-            <QuizFormLogic
-              question={''}
-              content={logicContent}
-              answer={answer}
-              explanation={explanation}
-              imageUrl={imageUrl}
-              onQuestionChange={() => {}}
-              onContentChange={setLogicContent}
-              onAnswerChange={setAnswer}
-              onExplanationChange={setExplanation}
-              onImageChange={setImageFile}
-              onImageUrlChange={setImageUrl}
-              lang={currentLang}
-            />
-          )}
-
-          {quizType === 'fill_blank' && (
-            <QuizFormFillBlank
-              question={''}
-              answer={fillBlankAnswer}
-              explanation={explanation}
-              imageUrl={imageUrl}
-              onQuestionChange={() => {}}
-              onAnswerChange={setFillBlankAnswer}
-              onExplanationChange={setExplanation}
-              onImageChange={setImageFile}
-              lang={currentLang}
-            />
-          )}
-
-
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-teal-500/50 mt-4 sm:mt-6 lg:mt-8 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base touch-manipulation"
-          >
-            <i className="ri-add-circle-line mr-2"></i>
-            {isSubmitting ? (lang === 'ko' ? '문제 생성 중...' : 'Creating...') : (lang === 'ko' ? '문제 만들기' : 'Create Problem')}
-          </button>
         </div>
       </div>
     </div>

@@ -133,7 +133,7 @@ export default function Header() {
 
   const navLinks = [
     { href: '/rooms', label: t.nav.multiplayer, activeColor: 'bg-teal-500' },
-    { href: '/problems', label: t.nav.problems, activeColor: 'bg-purple-500' },
+    { href: '/play', label: t.nav.problems, activeColor: 'bg-purple-500' },
     { href: '/create-problem', label: t.nav.playGame, activeColor: 'bg-pink-500' },
     { href: '/community', label: t.nav.community, activeColor: 'bg-blue-500' },
     { href: '/ranking', label: t.nav.ranking, activeColor: 'bg-yellow-500' },

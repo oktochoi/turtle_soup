@@ -378,7 +378,7 @@ export default function Home() {
                 <h2 className="text-lg sm:text-xl font-bold text-purple-400">{t.home.offline}</h2>
               </div>
               <p className="text-sm sm:text-base text-slate-300 mb-5 leading-relaxed">{t.home.offlineDesc}</p>
-              <Link href={getLocalizedPath('/problems')}>
+              <Link href={getLocalizedPath('/play')}>
                 <button className="w-full group/btn relative overflow-hidden bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-4 sm:py-5 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-purple-500/50 text-base sm:text-lg transform hover:scale-[1.02]">
                   <span className="relative z-10 flex items-center justify-center">
                     <i className="ri-question-answer-line mr-2 text-lg"></i>
