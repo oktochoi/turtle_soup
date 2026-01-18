@@ -96,6 +96,42 @@ export default function GuessSetDetailPage() {
     }
   };
 
+  // 조회수 증가 (세트 로드 후 한 번만 실행)
+  useEffect(() => {
+    if (guessSet?.id && !isLoading) {
+      const updateViewCount = async () => {
+        try {
+          const supabase = createClient();
+          const { data: currentSet } = await supabase
+            .from('guess_sets')
+            .select('view_count')
+            .eq('id', guessSet.id)
+            .single();
+          
+          if (currentSet) {
+            const { data: updatedSet, error } = await supabase
+              .from('guess_sets')
+              .update({ view_count: (currentSet.view_count || 0) + 1 })
+              .eq('id', guessSet.id)
+              .select()
+              .single();
+            
+            if (error) throw error;
+            
+            // 조회수 업데이트 후 세트 데이터 갱신
+            if (updatedSet) {
+              setGuessSet(updatedSet);
+            }
+          }
+        } catch (error) {
+          // 에러는 무시 (조회수 증가 실패는 치명적이지 않음)
+          console.warn('조회수 증가 실패:', error);
+        }
+      };
+      updateViewCount();
+    }
+  }, [guessSet?.id, isLoading]); // 세트 ID가 로드될 때 한 번만 실행
+
   const loadRatingAndLikes = async () => {
     if (!setId || !user) return;
     
