@@ -29,7 +29,7 @@ const CONFIG = {
   MAX_QUESTION_LEN: 420,
 
   THRESHOLD: {
-    YES: 0.60, // 보수적: 정답의 핵심 사실을 정확히 찌른 경우에만 YES
+    YES: 0.65, // 매우 보수적: 정답의 핵심 사실을 정확히 찌른 경우에만 YES (속성 질문은 더 엄격)
     NO_CONTENT: 0.44,
     NO_ANSWER_MAX: 0.32,
     IRRELEVANT_MAX: 0.35, // 상향 조정: 문맥에 따라 완전히 바뀔 수 있으므로 더 관대하게
@@ -473,7 +473,9 @@ function isPropertyQuestion(question: string): boolean {
 
 /**
  * 정답에 해당 속성이 명시적으로 있는지 확인
- * 속성 질문의 경우 정답에 명확히 그 내용이 있어야 YES 가능
+ * 속성 질문의 경우 정답에 명확히 그 관계/속성이 직접 서술되어 있어야 YES 가능
+ * ❗ 단순 키워드 매칭이 아니라 질문이 묻는 관계가 정답에 직접적으로 서술되어야 함
+ * 예: "엄마가 납치범인가요?" -> 정답에 "납치범은 엄마" 또는 "엄마는 납치범" 같은 직접 서술 필요
  */
 function hasExplicitEvidenceInAnswer(
   question: string, 
@@ -484,34 +486,91 @@ function hasExplicitEvidenceInAnswer(
   // 속성 질문이 아니면 true (일반 질문은 기존 로직 사용)
   if (!isPropertyQuestion(question)) return true;
 
-  // 속성 질문인 경우:
+  // 속성 질문인 경우 엄격하게 검증:
   // 1. 개념 매칭이 있어야 함
   if (qConceptsExact.size === 0 || aConcepts.size === 0) return false;
   
-  // 2. 질문의 핵심 키워드가 정답에 명시적으로 등장해야 함
-  const qTokens = [...tokenizeKo(question), ...tokenizeEn(question)];
-  const aText = normalizeText(answer).toLowerCase();
   const qText = normalizeText(question).toLowerCase();
+  const aText = normalizeText(answer).toLowerCase();
+  const qTokens = [...tokenizeKo(question), ...tokenizeEn(question)];
   
-  // 질문의 핵심 명사/형용사가 정답에 직접 등장하는지 확인
+  // 2. 질문의 핵심 키워드 추출 (조사, 문미어미 제외)
   const keyTokens = qTokens.filter(t => {
-    // 조사, 문미어미 제외
     if (t.length < 2) return false;
-    if (['인가', '인가요', '입니까', '맞나', '맞나요', '맞습니까', '한가', '한가요'].includes(t)) return false;
+    if (['인가', '인가요', '입니까', '맞나', '맞나요', '맞습니까', '한가', '한가요', 
+         '이', '가', '은', '는', '을', '를', '의', '에게', '께', '한테'].includes(t)) return false;
     return true;
   });
   
-  // 핵심 키워드 중 하나라도 정답에 명시적으로 포함되어야 함
-  const hasExplicitKeyword = keyTokens.some(token => {
-    const tokenLower = token.toLowerCase();
-    // 정답에 키워드가 직접 포함되어 있거나 유의어가 매칭되어야 함
-    if (aText.includes(tokenLower)) return true;
-    // 개념 매칭 확인
-    const tokenCanon = toCanonical(token);
-    return aConcepts.has(tokenCanon);
-  });
+  if (keyTokens.length < 2) {
+    // 핵심 키워드가 2개 미만이면 관계 질문이 아님
+    // 단일 키워드는 존재 여부만 확인
+    const hasKeyword = keyTokens.some(token => {
+      const tokenLower = token.toLowerCase();
+      return aText.includes(tokenLower) || aConcepts.has(toCanonical(token));
+    });
+    return hasKeyword;
+  }
   
-  return hasExplicitKeyword;
+  // 3. 질문의 주어-서술어 관계 추출
+  // 예: "엄마가 납치범인가요?" -> 주어: "엄마", 서술어: "납치범"
+  // 한국어 패턴: "~가 ~인가요", "~은 ~인가요", "~가 ~입니까"
+  // 영어 패턴: "is ~", "was ~", "are ~"
+  
+  // 정답 문장들을 분리하여 각 문장에서 관계 확인
+  const answerSentences = answer.split(/[.!?。！？]\s*/).filter(s => s.trim().length > 0);
+  
+  // 4. 질문의 핵심 키워드들이 정답의 같은 문장에 함께 등장하고, 관계가 명시되어 있는지 확인
+  let hasExplicitRelation = false;
+  
+  for (const sentence of answerSentences) {
+    const sText = normalizeText(sentence).toLowerCase();
+    
+    // 질문의 모든 핵심 키워드가 이 문장에 포함되어야 함
+    const allKeywordsInSentence = keyTokens.every(token => {
+      const tokenLower = token.toLowerCase();
+      const tokenCanon = toCanonical(token);
+      // 키워드가 직접 포함되거나 개념 매칭
+      return sText.includes(tokenLower) || 
+             [...aConcepts].some(ac => {
+               const acTokens = [...tokenizeKo(ac), ...tokenizeEn(ac)];
+               return acTokens.includes(tokenLower) || acTokens.some(act => act.includes(tokenLower) || tokenLower.includes(act));
+             });
+    });
+    
+    if (!allKeywordsInSentence) continue;
+    
+    // 키워드들이 같은 문장에 있고, 관계를 나타내는 연결어가 있는지 확인
+    // 한국어: "~는 ~이다", "~은 ~이다", "~가 ~이다", "~는 ~였다", "~의 ~"
+    // 영어: "~ is ~", "~ was ~", "~ are ~", "~ of ~"
+    const relationPatterns = [
+      /[\w가-힣]+(?:은|는|가|이)\s+[\w가-힣]+(?:이다|이다|였다|였다|이다|인|된|할|한)/,
+      /[\w가-힣]+\s+(?:is|was|are|were|of|the)\s+[\w가-힣]+/i,
+    ];
+    
+    const hasRelationPattern = relationPatterns.some(pattern => pattern.test(sText));
+    
+    if (hasRelationPattern || keyTokens.length === 1) {
+      // 관계 패턴이 있거나 단일 키워드 질문이면 OK
+      // 추가로 키워드들이 가까이 있는지 확인 (10자 이내)
+      const keywordPositions = keyTokens.map(token => {
+        const tokenLower = token.toLowerCase();
+        return sText.indexOf(tokenLower);
+      }).filter(pos => pos >= 0);
+      
+      if (keywordPositions.length === keyTokens.length) {
+        const minPos = Math.min(...keywordPositions);
+        const maxPos = Math.max(...keywordPositions);
+        if (maxPos - minPos < 50) { // 키워드들이 50자 이내에 있으면 관계가 있을 가능성
+          hasExplicitRelation = true;
+          break;
+        }
+      }
+    }
+  }
+  
+  // 5. 정답에 키워드들이 함께 등장하고 관계가 명시되어 있으면 true
+  return hasExplicitRelation;
 }
 
 // (B) Negation 처리 안정화: 의미 변조 금지, invert flag만 추출
