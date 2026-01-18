@@ -55,13 +55,15 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
   }, [authLoading, user, lang, router]);
 
   // 스크롤 처리
-  const scrollToBottom = () => {
-    // 입력 필드에 포커스가 있으면 자동 스크롤하지 않음
-    if (document.activeElement === messageInputRef.current) {
+  const scrollToBottom = (force = false) => {
+    // force가 true이면 입력 필드 포커스 여부와 관계없이 스크롤
+    if (!force && document.activeElement === messageInputRef.current) {
       return;
     }
-    if (!isUserScrolling) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (force || !isUserScrolling) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     }
   };
 
@@ -168,7 +170,11 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
 
         // Realtime 구독
         const chatChannel = supabase
-          .channel(`chat-room:${room.id}`)
+          .channel(`chat-room:${room.id}`, {
+            config: {
+              broadcast: { self: true },
+            },
+          })
           .on(
             'postgres_changes',
             {
@@ -182,7 +188,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
               setMessages((prev) => {
                 const exists = prev.some((m) => m.id === newMessage.id);
                 if (exists) return prev;
-                return [
+                const updated = [
                   ...prev,
                   {
                     id: newMessage.id,
@@ -191,6 +197,9 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
                     timestamp: new Date(newMessage.created_at).getTime(),
                   },
                 ].sort((a, b) => a.timestamp - b.timestamp);
+                // 새 메시지 수신 후 하단으로 스크롤
+                setTimeout(() => scrollToBottom(true), 100);
+                return updated;
               });
             }
           )
@@ -416,6 +425,9 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
       timestamp: Date.now(),
     };
     setMessages((prev) => [...prev, tempMessage].sort((a, b) => a.timestamp - b.timestamp));
+    
+    // Optimistic UI 업데이트 후 즉시 스크롤
+    scrollToBottom(true);
 
     try {
       const supabase = createClient();
@@ -453,6 +465,9 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
           },
         ].sort((a, b) => a.timestamp - b.timestamp);
       });
+
+      // 메시지 전송 후 하단으로 스크롤
+      scrollToBottom(true);
     } catch (err: any) {
       console.error('메시지 전송 오류:', err);
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
@@ -677,7 +692,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             placeholder={lang === 'ko' ? '메시지 입력...' : 'Type a message...'}
-            className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
             maxLength={200}
           />
           <button
