@@ -1134,7 +1134,23 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
     if (!confirm(confirmMessage)) return;
 
     try {
-      // 호스트인 경우 방 종료
+      // 1. players 테이블에서 플레이어 정보 삭제 (먼저 처리)
+      const { error: leaveError } = await supabase
+        .from('players')
+        .delete()
+        .eq('room_code', roomCode)
+        .eq('nickname', nickname);
+
+      if (leaveError) {
+        console.error('플레이어 삭제 오류:', leaveError);
+        // 에러가 발생해도 계속 진행 (이미 나간 상태일 수 있음)
+      } else {
+        console.log('✅ 플레이어 삭제 성공:', nickname);
+        // 성공적으로 나간 경우, 참가자 목록에서도 즉시 제거 (Optimistic UI)
+        setPlayers(prev => prev.filter(p => p.nickname !== nickname));
+      }
+
+      // 2. 호스트인 경우 방 종료
       if (isHost) {
         const { error: endGameError } = await supabase
           .from('rooms')
@@ -1146,25 +1162,12 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
 
         if (endGameError) {
           console.error('방 종료 오류:', endGameError);
+        } else {
+          console.log('✅ 방 종료 처리 완료');
         }
       }
 
-      // players 테이블에서 제거 (실시간으로 다른 사용자들에게 반영됨)
-      const { error: leaveError } = await supabase
-        .from('players')
-        .delete()
-        .eq('room_code', roomCode)
-        .eq('nickname', nickname);
-
-      if (leaveError) {
-        console.error('방 나가기 오류:', leaveError);
-        // 에러가 발생해도 계속 진행 (이미 나간 상태일 수 있음)
-      } else {
-        // 성공적으로 나간 경우, 참가자 목록에서도 즉시 제거 (Optimistic UI)
-        setPlayers(prev => prev.filter(p => p.nickname !== nickname));
-      }
-
-      // 호스트가 나간 경우 다른 플레이어에게 호스트 권한 위임 시도
+      // 3. 호스트가 나간 경우 다른 플레이어에게 호스트 권한 위임 시도
       if (isHost && !leaveError) {
         // 남은 플레이어 중 첫 번째를 호스트로 지정
         const { data: remainingPlayers } = await supabase
@@ -1175,25 +1178,41 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
           .limit(1);
 
         if (remainingPlayers && remainingPlayers.length > 0) {
-          await supabase
+          const { error: updateHostError } = await supabase
             .from('players')
             .update({ is_host: true })
             .eq('room_code', roomCode)
             .eq('nickname', remainingPlayers[0].nickname);
+
+          if (updateHostError) {
+            console.error('호스트 위임 오류:', updateHostError);
+          } else {
+            console.log('✅ 호스트 위임 완료:', remainingPlayers[0].nickname);
+          }
         }
       }
 
-      // localStorage에서 닉네임 제거
+      // 4. localStorage에서 닉네임 및 관련 정보 삭제
       if (typeof window !== 'undefined') {
         localStorage.removeItem(`nickname_${roomCode}`);
         localStorage.removeItem(`roomCode_${roomCode}`);
+        localStorage.removeItem(`ready_${roomCode}_${nickname}`);
+        console.log('✅ localStorage 정리 완료');
       }
 
-      // 방 목록으로 리다이렉트
+      // 5. 방 목록으로 리다이렉트 (에러가 있어도 리다이렉트)
+      console.log('✅ 방 나가기 처리 완료, 리다이렉트 중...');
       router.push(`/${lang}/rooms`);
     } catch (error) {
       console.error('방 나가기 오류:', error);
-      alert(lang === 'ko' ? '방 나가기에 실패했습니다.' : 'Failed to leave room.');
+      // 에러가 발생해도 localStorage 정리 및 리다이렉트는 수행
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(`nickname_${roomCode}`);
+        localStorage.removeItem(`roomCode_${roomCode}`);
+        localStorage.removeItem(`ready_${roomCode}_${nickname}`);
+      }
+      // 에러가 있어도 리다이렉트 (이미 나간 상태일 수 있음)
+      router.push(`/${lang}/rooms`);
     }
   };
 
