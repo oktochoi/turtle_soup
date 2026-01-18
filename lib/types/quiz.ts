@@ -20,6 +20,7 @@ export type QuizType =
   | 'order'          // 순서 맞추기 퀴즈 (싱글플레이 문제)
   | 'liar'           // 라이어 게임 (멀티플레이)
   | 'mafia'          // 마피아 (멀티플레이)
+  | 'chat'           // 수다방/잡담방 (멀티플레이)
   | 'battle';        // 퀴즈 배틀 (싱글플레이 문제)
 
 /**
@@ -344,6 +345,20 @@ export const QUIZ_TYPE_METADATA: Record<QuizType, QuizTypeMetadata> = {
     shareSuitability: 'high',
     engagementLevel: 'high',
   },
+  chat: {
+    type: 'chat',
+    name: '수다방',
+    nameEn: 'Chat Room',
+    icon: 'chat',
+    description: '채팅만 있는 편안한 대화방',
+    playMode: 'multi',
+    avgTime: '무제한',
+    inputType: ['text'],
+    answerType: 'poll',
+    adSuitability: 'low',
+    shareSuitability: 'medium',
+    engagementLevel: 'medium',
+  },
   battle: {
     type: 'battle',
     name: '퀴즈 배틀',
@@ -410,7 +425,7 @@ export const QUIZ_TYPES_BY_PRIORITY: QuizType[] = [
 /**
  * 멀티플레이 퀴즈 타입
  */
-export const MULTIPLAYER_QUIZ_TYPES: QuizType[] = ['soup', 'liar', 'mafia'];
+export const MULTIPLAYER_QUIZ_TYPES: QuizType[] = ['soup', 'liar', 'mafia', 'chat'];
 
 /**
  * 싱글플레이 문제 생성 타입

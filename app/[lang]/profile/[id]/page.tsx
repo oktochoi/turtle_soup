@@ -42,6 +42,11 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [newNickname, setNewNickname] = useState('');
   const [isSavingNickname, setIsSavingNickname] = useState(false);
+  
+  // 계정 삭제 관련 state
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [confirmDeleteText, setConfirmDeleteText] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -197,6 +202,47 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
     setNewNickname('');
   };
   
+  // 계정 삭제 함수
+  const handleDeleteAccount = async () => {
+    if (confirmDeleteText !== '삭제') {
+      showToast(lang === 'ko' ? '"삭제"를 정확히 입력해주세요.' : 'Please type "삭제" exactly.', 'error');
+      return;
+    }
+    
+    setIsDeletingAccount(true);
+    try {
+      const response = await fetch('/api/user/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || '계정 삭제에 실패했습니다.');
+      }
+      
+      showToast(lang === 'ko' ? '계정이 삭제되었습니다.' : 'Account has been deleted.', 'success');
+      
+      // 로그아웃 처리
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      
+      // 홈으로 리다이렉트
+      setTimeout(() => {
+        router.push(`/${lang}`);
+        router.refresh();
+      }, 1000);
+    } catch (error: any) {
+      handleError(error, '계정 삭제', true);
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
   const handleSaveNickname = async () => {
     if (!user || !newNickname.trim()) {
       showToast(lang === 'ko' ? '닉네임을 입력해주세요.' : 'Please enter a nickname.', 'error');
@@ -571,6 +617,28 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
             <p className="text-slate-400 text-center py-4">{t.profile.noAchievements}</p>
           )}
         </div>
+
+        {/* 계정 삭제 섹션 (자기 자신의 프로필일 때만 표시) */}
+        {((user.auth_user_id && currentUser?.id === user.auth_user_id) || (!user.auth_user_id && !currentUser)) && (
+          <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-red-700/50 mt-6">
+            <h2 className="text-xl font-bold mb-4 text-red-400">
+              <i className="ri-error-warning-line mr-2"></i>
+              {lang === 'ko' ? '계정 삭제' : 'Delete Account'}
+            </h2>
+            <p className="text-sm text-slate-400 mb-4">
+              {lang === 'ko' 
+                ? '계정을 삭제하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.' 
+                : 'Deleting your account will permanently delete all your data and cannot be recovered.'}
+            </p>
+            <button
+              onClick={() => setShowDeleteAccountModal(true)}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all font-semibold"
+            >
+              <i className="ri-delete-bin-line mr-2"></i>
+              {lang === 'ko' ? '계정 삭제하기' : 'Delete Account'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 신고 모달 */}
@@ -678,6 +746,77 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                   {isSubmittingReport 
                     ? (lang === 'ko' ? '제출 중...' : 'Submitting...')
                     : (lang === 'ko' ? '신고하기' : 'Submit Report')
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 계정 삭제 확인 모달 */}
+      {showDeleteAccountModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-xl p-6 sm:p-8 border border-red-700 max-w-md w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-red-400">
+                <i className="ri-error-warning-line mr-2"></i>
+                {lang === 'ko' ? '계정 삭제 확인' : 'Confirm Account Deletion'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowDeleteAccountModal(false);
+                  setConfirmDeleteText('');
+                }}
+                className="text-slate-400 hover:text-white transition-colors text-2xl"
+              >
+                <i className="ri-close-line"></i>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4">
+                <p className="text-sm text-red-300 font-semibold mb-2">
+                  {lang === 'ko' ? '⚠️ 경고' : '⚠️ Warning'}
+                </p>
+                <ul className="text-xs text-red-200 space-y-1 list-disc list-inside">
+                  <li>{lang === 'ko' ? '계정이 영구적으로 삭제됩니다.' : 'Your account will be permanently deleted.'}</li>
+                  <li>{lang === 'ko' ? '모든 데이터(문제, 댓글, 기록 등)가 삭제됩니다.' : 'All data (problems, comments, records, etc.) will be deleted.'}</li>
+                  <li>{lang === 'ko' ? '이 작업은 되돌릴 수 없습니다.' : 'This action cannot be undone.'}</li>
+                </ul>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  {lang === 'ko' ? '확인을 위해 "삭제"를 입력하세요' : 'Type "삭제" to confirm'}
+                </label>
+                <input
+                  type="text"
+                  value={confirmDeleteText}
+                  onChange={(e) => setConfirmDeleteText(e.target.value)}
+                  placeholder="삭제"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowDeleteAccountModal(false);
+                    setConfirmDeleteText('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all font-semibold"
+                >
+                  {t.common.cancel}
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={confirmDeleteText !== '삭제' || isDeletingAccount}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all font-semibold"
+                >
+                  {isDeletingAccount 
+                    ? (lang === 'ko' ? '삭제 중...' : 'Deleting...')
+                    : (lang === 'ko' ? '계정 삭제' : 'Delete Account')
                   }
                 </button>
               </div>

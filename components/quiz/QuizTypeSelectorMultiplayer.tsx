@@ -46,6 +46,7 @@ export default function QuizTypeSelectorMultiplayer({
                   {type === 'soup' && <i className="ri-bowl-line"></i>}
                   {type === 'liar' && <i className="ri-user-unfollow-line"></i>}
                   {type === 'mafia' && <i className="ri-sword-line"></i>}
+                  {type === 'chat' && <i className="ri-chat-3-line"></i>}
                 </div>
                 <div className={`text-xs sm:text-sm font-semibold ${isSelected ? 'text-teal-300' : 'text-slate-300'}`}>
                   {lang === 'ko' ? metadata.name : metadata.nameEn}

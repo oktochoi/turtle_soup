@@ -47,6 +47,10 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
   const [password, setPassword] = useState('');
   const [usePassword, setUsePassword] = useState(false);
   
+  // 수다방(잡담방)용 필드
+  const [chatRoomName, setChatRoomName] = useState('');
+  const [chatMaxMembers, setChatMaxMembers] = useState(50);
+  
   // 상태
   const [isCreating, setIsCreating] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -160,6 +164,21 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
       }
       
       // 라이어 수는 자동 계산되므로 검증 불필요
+    } else if (quizType === 'chat') {
+      // 수다방 검증
+      if (!chatRoomName.trim()) {
+        newErrors.chatRoomName = lang === 'ko' ? '방 이름을 입력해주세요' : 'Please enter room name';
+      } else if (chatRoomName.trim().length < 2) {
+        newErrors.chatRoomName = lang === 'ko' ? '방 이름은 2자 이상이어야 합니다' : 'Room name must be at least 2 characters';
+      } else if (chatRoomName.trim().length > 30) {
+        newErrors.chatRoomName = lang === 'ko' ? '방 이름은 30자 이하여야 합니다' : 'Room name must be 30 characters or less';
+      }
+      
+      if (usePassword && !password.trim()) {
+        newErrors.password = lang === 'ko' ? '비밀번호를 입력해주세요' : 'Please enter a password';
+      } else if (usePassword && password.trim().length < 4) {
+        newErrors.password = lang === 'ko' ? '비밀번호는 4자 이상이어야 합니다' : 'Password must be at least 4 characters';
+      }
     } else {
       // 바다거북스프/마피아 검증
       if (!story.trim()) {
@@ -255,6 +274,72 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
       }
 
       const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
+      
+      // 수다방은 별도 처리
+      if (quizType === 'chat') {
+        const { data: userData } = await supabaseClient
+          .from('users')
+          .select('nickname')
+          .eq('id', user.id)
+          .maybeSingle();
+        const finalHostNickname = userData?.nickname || user.email?.split('@')[0] || 'User';
+
+        // 방 코드 생성 (중복 체크)
+        const generateChatRoomCode = (): string => {
+          const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+          let code = '';
+          for (let i = 0; i < 6; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+          }
+          return code;
+        };
+
+        let chatCode = generateChatRoomCode();
+        let retries = 10;
+        while (retries > 0) {
+          const { data: existing } = await supabaseClient
+            .from('chat_rooms')
+            .select('code')
+            .eq('code', chatCode)
+            .maybeSingle();
+          
+          if (!existing) break;
+          chatCode = generateChatRoomCode();
+          retries--;
+        }
+
+        // 수다방 생성
+        const { data: chatRoom, error: chatRoomError } = await supabaseClient
+          .from('chat_rooms')
+          .insert({
+            code: chatCode,
+            name: chatRoomName.trim(),
+            host_user_id: user.id,
+            host_nickname: finalHostNickname,
+            max_members: chatMaxMembers,
+            is_public: !usePassword,
+            password: usePassword ? password.trim() : null,
+          })
+          .select()
+          .single();
+
+        if (chatRoomError) throw chatRoomError;
+
+        // 호스트를 멤버로 추가
+        const { error: memberError } = await supabaseClient
+          .from('chat_room_members')
+          .insert({
+            room_id: chatRoom.id,
+            user_id: user.id,
+            nickname: finalHostNickname,
+          });
+
+        if (memberError) throw memberError;
+
+        // 채팅방으로 이동
+        router.push(`/${lang}/chat/${chatCode}`);
+        return;
+      }
       
       let insertData: any = {};
 
@@ -431,6 +516,9 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
     }
     if (quizType === 'mafia') {
       return lang === 'ko' ? '마피아 게임 방 만들기' : 'Create Mafia Game Room';
+    }
+    if (quizType === 'chat') {
+      return lang === 'ko' ? '수다방 만들기' : 'Create Chat Room';
     }
     return lang === 'ko' ? '바다거북스프 방 만들기' : 'Create Turtle Soup Room';
   };
@@ -764,6 +852,115 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
             </>
           )}
 
+          {quizType === 'chat' && (
+            <>
+              {/* 수다방 생성 폼 */}
+              <div>
+                <label className="block text-xs sm:text-sm font-medium mb-2" style={{ color: themeColors.textSecondary }}>
+                  <i className="ri-chat-3-line mr-1"></i>
+                  {lang === 'ko' ? '방 이름' : 'Room Name'} <span style={{ color: themeColors.accentColor }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={chatRoomName}
+                  onChange={(e) => {
+                    setChatRoomName(e.target.value);
+                    if (errors.chatRoomName) {
+                      setErrors({ ...errors, chatRoomName: '' });
+                    }
+                  }}
+                  placeholder={lang === 'ko' ? '예: 친구들과 수다방' : 'e.g., Chat with Friends'}
+                  className="w-full rounded-xl px-4 py-3 text-sm border focus:outline-none focus:ring-2 transition-all"
+                  style={{
+                    backgroundColor: themeColors.surfaceColor,
+                    borderColor: errors.chatRoomName ? '#F87171' : themeColors.borderColor,
+                    color: themeColors.textPrimary,
+                  }}
+                  maxLength={30}
+                />
+                {errors.chatRoomName && (
+                  <p className="text-xs mt-1" style={{ color: '#F87171' }}>
+                    {errors.chatRoomName}
+                  </p>
+                )}
+              </div>
+
+              {/* 최대 인원 */}
+              <div>
+                <label className="block text-xs sm:text-sm font-medium mb-2" style={{ color: themeColors.textSecondary }}>
+                  <i className="ri-group-line mr-1"></i>
+                  {lang === 'ko' ? '최대 인원' : 'Max Members'}
+                </label>
+                <select
+                  value={chatMaxMembers}
+                  onChange={(e) => setChatMaxMembers(Number(e.target.value))}
+                  className="w-full rounded-xl px-4 py-3 text-sm border focus:outline-none focus:ring-2 transition-all"
+                  style={{
+                    backgroundColor: themeColors.surfaceColor,
+                    borderColor: themeColors.borderColor,
+                    color: themeColors.textPrimary,
+                  }}
+                >
+                  <option value={10}>10명</option>
+                  <option value={20}>20명</option>
+                  <option value={50}>50명</option>
+                  <option value={100}>100명</option>
+                </select>
+              </div>
+
+              {/* 비밀번호 (선택) */}
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                  <input
+                    type="checkbox"
+                    checked={usePassword}
+                    onChange={(e) => {
+                      setUsePassword(e.target.checked);
+                      if (!e.target.checked) {
+                        setPassword('');
+                        setErrors({ ...errors, password: '' });
+                      }
+                    }}
+                    className="w-4 h-4 rounded"
+                    style={{ 
+                      accentColor: themeColors.accentColor,
+                      backgroundColor: themeColors.surfaceColor,
+                      borderColor: themeColors.borderColor,
+                    }}
+                  />
+                  <span className="text-xs sm:text-sm" style={{ color: themeColors.textSecondary }}>
+                    {lang === 'ko' ? '비밀번호 설정' : 'Set Password'}
+                  </span>
+                </label>
+                {usePassword && (
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (errors.password) {
+                        setErrors({ ...errors, password: '' });
+                      }
+                    }}
+                    placeholder={lang === 'ko' ? '4자 이상' : 'At least 4 characters'}
+                    className="w-full rounded-xl px-4 py-3 text-sm border focus:outline-none focus:ring-2 transition-all mt-2"
+                    style={{
+                      backgroundColor: themeColors.surfaceColor,
+                      borderColor: errors.password ? '#F87171' : themeColors.borderColor,
+                      color: themeColors.textPrimary,
+                    }}
+                    minLength={4}
+                  />
+                )}
+                {errors.password && (
+                  <p className="text-xs mt-1" style={{ color: '#F87171' }}>
+                    {errors.password}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+
           {(quizType === 'soup' || quizType === 'mafia') && (
             <>
               {/* 이야기 (필수) */}
@@ -952,7 +1149,8 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                 isCreating || 
                 !user || 
                 (quizType === 'liar' && (!roomName.trim() || !theme)) ||
-                ((quizType === 'soup' || quizType === 'mafia') && (!story.trim() || !truth.trim()))
+                ((quizType === 'soup' || quizType === 'mafia') && (!story.trim() || !truth.trim())) ||
+                (quizType === 'chat' && !chatRoomName.trim())
               }
               className="w-full font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg mt-6 sm:mt-8 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
               style={{
@@ -960,7 +1158,8 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                   isCreating || 
                   !user || 
                   (quizType === 'liar' && (!roomName.trim() || !theme)) ||
-                  ((quizType === 'soup' || quizType === 'mafia') && (!story.trim() || !truth.trim()))
+                  ((quizType === 'soup' || quizType === 'mafia') && (!story.trim() || !truth.trim())) ||
+                  (quizType === 'chat' && !chatRoomName.trim())
                 )
                   ? `${themeColors.accentColor}50`
                   : `linear-gradient(to right, ${themeColors.accentColor}, ${themeColors.accentHover})`,
