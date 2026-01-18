@@ -47,7 +47,7 @@ export const createClient = () =>
             return { name, value: rest.join('=') };
           });
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: { name: string; value: string; options?: { maxAge?: number; sameSite?: 'Lax' | 'Strict' | 'None'; secure?: boolean } }[]) {
           if (typeof document === 'undefined') return;
           cookiesToSet.forEach(({ name, value, options }) => {
             const cookieString = `${name}=${value}; path=/; ${options?.maxAge ? `max-age=${options.maxAge};` : ''} ${options?.sameSite ? `SameSite=${options.sameSite};` : 'SameSite=Lax;'} ${options?.secure ? 'Secure;' : ''}`;
