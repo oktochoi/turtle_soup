@@ -47,6 +47,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const lastScrollTop = useRef(0);
   const chatChannelRef = useRef<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false); // 관리자 여부
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -118,6 +119,17 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
         setRoomName(room.name);
         setRoomPassword(room.password);
         setHostUserId(room.host_user_id || null);
+
+        // 관리자 권한 확인
+        if (user) {
+          const { data: gameUser } = await supabase
+            .from('game_users')
+            .select('is_admin')
+            .eq('id', user.id)
+            .maybeSingle();
+          
+          setIsAdmin(gameUser?.is_admin || false);
+        }
 
         // 비밀번호가 있으면 입력 요청
         if (room.password) {
@@ -486,6 +498,39 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
     }
   };
 
+  // 관리자 방 삭제 함수
+  const handleDeleteRoom = async () => {
+    if (!isAdmin) return;
+    
+    if (!confirm(lang === 'ko' ? '정말 이 방을 삭제하시겠습니까? 모든 참가자가 나가게 됩니다.' : 'Are you sure you want to delete this room? All participants will be removed.')) {
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      const { data: room } = await supabase
+        .from('chat_rooms')
+        .select('id')
+        .eq('code', roomCode)
+        .single();
+
+      if (!room) throw new Error('Room not found');
+
+      const { error } = await supabase
+        .from('chat_rooms')
+        .delete()
+        .eq('code', roomCode);
+
+      if (error) throw error;
+
+      alert(lang === 'ko' ? '방이 삭제되었습니다.' : 'Room deleted successfully.');
+      router.push(`/${lang}/rooms`);
+    } catch (err: any) {
+      console.error('방 삭제 오류:', err);
+      alert(lang === 'ko' ? '방 삭제에 실패했습니다.' : 'Failed to delete room.');
+    }
+  };
+
   const handleLeaveRoom = async () => {
     if (!user || !confirm(lang === 'ko' ? '정말 나가시겠습니까?' : 'Are you sure you want to leave?')) {
       return;
@@ -560,6 +605,16 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
             </p>
           </div>
           <div className="flex gap-2">
+            {isAdmin && (
+              <button
+                onClick={handleDeleteRoom}
+                className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm flex items-center gap-1"
+                title={lang === 'ko' ? '방 삭제 (관리자 전용)' : 'Delete Room (Admin Only)'}
+              >
+                <i className="ri-delete-bin-line"></i>
+                {lang === 'ko' ? '방 삭제' : 'Delete'}
+              </button>
+            )}
             <button
               onClick={handleCopyRoomCode}
               className="px-3 py-2 bg-teal-500/20 hover:bg-teal-500/30 text-teal-400 rounded-lg transition-colors text-sm flex items-center gap-1"

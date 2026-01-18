@@ -44,6 +44,7 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
   const [currentSpeakerIndex, setCurrentSpeakerIndex] = useState(0);
   const [timerStarted, setTimerStarted] = useState(false); // 타이머가 시작되었는지 여부
   const [votingTimeLeft, setVotingTimeLeft] = useState<number | null>(null); // 투표 시간 (초, 15초)
+  const [isAdmin, setIsAdmin] = useState(false); // 관리자 여부
 
   // 로그인한 유저는 닉네임 자동 설정, 비로그인은 닉네임 입력 모달
   useEffect(() => {
@@ -61,6 +62,15 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
         }
 
         if (user) {
+          // 관리자 권한 확인
+          const { data: gameUser } = await supabase
+            .from('game_users')
+            .select('is_admin')
+            .eq('id', user.id)
+            .maybeSingle();
+          
+          setIsAdmin(gameUser?.is_admin || false);
+
           // 로그인한 유저: rooms 테이블에서 호스트 확인
           const { data: roomData } = await supabase
             .from('rooms')
@@ -928,6 +938,16 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
             </button>
           </Link>
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                onClick={handleDeleteRoom}
+                className="px-3 sm:px-4 py-1.5 sm:py-2 bg-red-600 hover:bg-red-700 text-white border border-red-700 rounded-lg transition-all text-xs sm:text-sm font-semibold flex items-center gap-1.5"
+                title={lang === 'ko' ? '방 삭제 (관리자 전용)' : 'Delete Room (Admin Only)'}
+              >
+                <i className="ri-delete-bin-line"></i>
+                <span className="hidden sm:inline">{lang === 'ko' ? '방 삭제' : 'Delete'}</span>
+              </button>
+            )}
             <button
               onClick={handleLeaveRoom}
               className="px-3 sm:px-4 py-1.5 sm:py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/50 rounded-lg transition-all text-xs sm:text-sm font-semibold flex items-center gap-1.5"
