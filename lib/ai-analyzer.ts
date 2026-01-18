@@ -15,7 +15,7 @@
 
 type Pipeline = any;
 
-export type JudgeResult = "yes" | "no" | "irrelevant" | "decisive";
+export type JudgeResult = "yes" | "no" | "irrelevant";
 
 const CONFIG = {
   TOP_K_CONTENT: 16,
@@ -29,9 +29,7 @@ const CONFIG = {
   MAX_QUESTION_LEN: 420,
 
   THRESHOLD: {
-    DECISIVE_ANSWER: 0.70,
-    DECISIVE_CONTENT: 0.38,
-    YES: 0.60,
+    YES: 0.60, // 보수적: 정답의 핵심 사실을 정확히 찌른 경우에만 YES
     NO_CONTENT: 0.44,
     NO_ANSWER_MAX: 0.32,
     IRRELEVANT_MAX: 0.35, // 상향 조정: 문맥에 따라 완전히 바뀔 수 있으므로 더 관대하게
@@ -1867,22 +1865,36 @@ export async function analyzeQuestionV8(
       return invert ? "yes" : "no";
     }
 
-    // 4) decision
+    // 4) decision - "상관없음 우선" 설계
+    // NO가 확실하면 → NO
+    // YES가 확실하면 (핵심 개념이 명확히 매칭) → YES
+    // 둘 다 확실하지 않으면 → IRRELEVANT
     let result: JudgeResult;
 
-    if (simAnswerFinal >= CONFIG.THRESHOLD.DECISIVE_ANSWER && simContentFinal >= CONFIG.THRESHOLD.DECISIVE_CONTENT) {
-      result = "decisive";
-    } else if (simAnswerFinal >= CONFIG.THRESHOLD.YES) {
-      result = "yes";
-    } else if (simContentFinal >= CONFIG.THRESHOLD.NO_CONTENT && simAnswerFinal <= CONFIG.THRESHOLD.NO_ANSWER_MAX) {
+    // NO 판정: 명확히 반대되거나 사실이 아닌 경우
+    if (simContentFinal >= CONFIG.THRESHOLD.NO_CONTENT && simAnswerFinal <= CONFIG.THRESHOLD.NO_ANSWER_MAX) {
       result = "no";
-    } else {
-      // (D) irrelevant는 이미 위에서 판정했으므로 여기서는 제외
+    } 
+    // YES 판정: 보수적으로 - 정답의 핵심 사실을 정확히 찌른 경우에만
+    // 조건: 1) 유사도 높고 2) 핵심 개념이 명확히 매칭되고 3) 추리 범위가 줄어듦
+    // ❗ YES는 가장 보수적으로 사용: "조금 맞다", "연관 있어 보인다", "답 근처인 것 같다"는 YES가 아님
+    else if (simAnswerFinal >= CONFIG.THRESHOLD.YES && conceptExactHitCount > 0) {
+      // YES가 확실한 경우만 허용:
+      // - 핵심 개념(Exact)이 명확히 매칭되어야 함 (qConceptsExact에 aConcepts의 핵심이 포함)
+      // - 높은 유사도 (simAnswerFinal >= 0.60)
+      // - "정답의 핵심 사실을 정확히 찌른 경우"만 YES
+      // - conceptExactHitCount > 0 조건으로 "조금 맞다"는 차단
+      result = "yes";
+    } 
+    // IRRELEVANT 판정: 명확하지 않으면 상관없음 우선
+    else {
       // bonus 적용 후에도 여전히 낮으면 irrelevant 재확인 (안전장치)
       const contextMismatchFinal = detectContextualMismatch(q, knowledge, simAnswerFinal, simContentFinal);
-      if (contextMismatchFinal.isIrrelevant && 
-          simAnswerFinal <= CONFIG.THRESHOLD.IRRELEVANT_MAX * 1.1 && 
-          simContentFinal <= CONFIG.THRESHOLD.IRRELEVANT_CONTENT_MAX * 1.1) {
+      if (contextMismatchFinal.isIrrelevant || 
+          simAnswerFinal <= CONFIG.THRESHOLD.IRRELEVANT_MAX * 1.1 || 
+          simContentFinal <= CONFIG.THRESHOLD.IRRELEVANT_CONTENT_MAX * 1.1 ||
+          conceptExactHitCount === 0) {
+        // YES/NO 판단을 위해 추가 정보가 필요하거나 핵심 개념이 매칭되지 않으면 IRRELEVANT
         result = "irrelevant";
       } else {
         const inAmbiguous = simAnswerFinal >= CONFIG.AMBIGUOUS_RANGE.min && simAnswerFinal <= CONFIG.AMBIGUOUS_RANGE.max;
@@ -1894,25 +1906,30 @@ export async function analyzeQuestionV8(
             problemContent: knowledge.content,
             problemAnswer: knowledge.answer,
           });
-          if (fb) result = fb;
-          else result = simAnswerFinal >= simContentFinal ? "yes" : "no";
+          if (fb) {
+            result = fb;
+          } else {
+            // 명확하지 않으면 IRRELEVANT 우선
+            result = "irrelevant";
+          }
         } else {
-          result = simAnswerFinal >= simContentFinal ? "yes" : "no";
+          // YES/NO 중 어느 쪽도 확실하지 않으면 IRRELEVANT
+          // "상관없음은 실패가 아니라 '아직 추리가 진행 중'이라는 정상 상태"
+          result = "irrelevant";
         }
       }
     }
 
-    // 5) invert apply (decisive/irrelevant keep) - (B) yes/no일 때만 적용
+    // 5) invert apply (irrelevant keep) - yes/no일 때만 적용
     if (invert && (result === "yes" || result === "no")) result = result === "yes" ? "no" : "yes";
 
     // (F) Debug explain 로그
     const synonymUsed = qConceptsExpanded.size > qConceptsExact.size;
     const taxonomyHit = force.taxonomyHit;
     let decisionPath = '';
-    if (result === "decisive") decisionPath = 'decisive_threshold';
-    else if (result === "yes") decisionPath = 'yes_threshold';
+    if (result === "yes") decisionPath = 'yes_threshold';
     else if (result === "no") decisionPath = 'no_threshold';
-    else if (result === "irrelevant") decisionPath = 'irrelevant_final';
+    else if (result === "irrelevant") decisionPath = 'irrelevant_priority';
     else decisionPath = 'fallback';
 
     if (process.env.NODE_ENV === 'development') {
