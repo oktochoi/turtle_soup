@@ -46,6 +46,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
   const messageInputRef = useRef<HTMLInputElement>(null);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const lastScrollTop = useRef(0);
+  const chatChannelRef = useRef<any>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -333,6 +334,63 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
 
         loadMembers(room.id);
         loadMessages(room.id);
+
+        // Realtime 구독 설정
+        if (chatChannelRef.current) {
+          chatChannelRef.current.unsubscribe();
+        }
+
+        const chatChannel = supabase
+          .channel(`chat-room:${room.id}`, {
+            config: {
+              broadcast: { self: true },
+            },
+          })
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'chat_room_messages',
+              filter: `room_id=eq.${room.id}`,
+            },
+            (payload) => {
+              const newMessage = payload.new as any;
+              setMessages((prev) => {
+                const exists = prev.some((m) => m.id === newMessage.id);
+                if (exists) return prev;
+                return [
+                  ...prev,
+                  {
+                    id: newMessage.id,
+                    nickname: newMessage.nickname,
+                    message: newMessage.message,
+                    timestamp: new Date(newMessage.created_at).getTime(),
+                  },
+                ].sort((a, b) => a.timestamp - b.timestamp);
+              });
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'chat_room_members',
+              filter: `room_id=eq.${room.id}`,
+            },
+            () => {
+              loadMembers(room.id);
+            }
+          )
+          .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ Realtime 구독 성공 (비밀번호 입력 후):', `chat-room:${room.id}`);
+            }
+          });
+
+        chatChannelRef.current = chatChannel;
+        setHostUserId(room.host_user_id || null);
       }
     } catch (err: any) {
       console.error('참가 오류:', err);
@@ -517,7 +575,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
       </div>
 
       {/* 채팅 영역 */}
-      <div className="flex-1 container mx-auto max-w-6xl p-4 flex gap-4">
+      <div className="flex-1 container mx-auto max-w-6xl p-4 flex gap-4 overflow-hidden">
         {/* 참가자 목록 */}
         <div className="hidden md:block w-64 flex-shrink-0">
           <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 sticky top-4">
@@ -555,10 +613,11 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
         </div>
 
         {/* 채팅 메시지 영역 */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 bg-slate-800/30 rounded-xl border border-slate-700 p-4 h-full max-h-[calc(100vh-180px)]">
           <div
             ref={chatContainerRef}
-            className="flex-1 overflow-y-auto space-y-3 mb-4"
+            className="flex-1 overflow-y-auto space-y-3 mb-4 min-h-0"
+            style={{ maxHeight: 'calc(100vh - 280px)' }}
           >
           {messages.length === 0 ? (
             <div className="text-center py-12">
