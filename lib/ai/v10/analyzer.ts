@@ -401,7 +401,7 @@ function createIrrelevantResult(
   return {
     labelV10: 'irrelevant',
     confidence: 1.0,
-    probs: { yes: 0, no: 0, irrelevant: 1, decisive: 0 },
+    probs: { yes: 0, no: 0, irrelevant: 1 },
     hardGuardsTriggered: [],
     features: createEmptyFeatures(),
     embeddings: { simAnswerRaw: 0, simContentRaw: 0, simQA: 0, simQC: 0 },
@@ -428,7 +428,6 @@ function createHardGuardResult(
       yes: forceResult === 'yes' ? 1 : 0,
       no: forceResult === 'no' ? 1 : 0,
       irrelevant: forceResult === 'irrelevant' ? 1 : 0,
-      decisive: forceResult === 'decisive' ? 1 : 0,
     },
     hardGuardsTriggered: triggered,
     features,

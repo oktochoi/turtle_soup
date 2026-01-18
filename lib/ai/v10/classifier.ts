@@ -55,20 +55,18 @@ export async function loadModelWeights(): Promise<LogisticRegressionWeights> {
  */
 function getDefaultWeights(): LogisticRegressionWeights {
   const featureCount = FEATURE_NAMES.length;
-  const labels: JudgeResult[] = ['yes', 'no', 'irrelevant', 'decisive'];
+  const labels: JudgeResult[] = ['yes', 'no', 'irrelevant'];
 
   return {
     bias: {
       yes: 0,
       no: 0,
       irrelevant: 0,
-      decisive: 0,
     },
     weights: {
       yes: new Array(featureCount).fill(0),
       no: new Array(featureCount).fill(0),
       irrelevant: new Array(featureCount).fill(0),
-      decisive: new Array(featureCount).fill(0),
     },
     featureNames: [...FEATURE_NAMES],
     version: '1.0.0',
@@ -91,7 +89,7 @@ export async function classifyV10(
   }
 
   // Calculate logits for each class
-  const labels: JudgeResult[] = ['yes', 'no', 'irrelevant', 'decisive'];
+  const labels: JudgeResult[] = ['yes', 'no', 'irrelevant'];
   const logits = labels.map(label => {
     const bias = weights.bias[label];
     const classWeights = weights.weights[label];
@@ -117,7 +115,6 @@ export async function classifyV10(
       yes: probs[0],
       no: probs[1],
       irrelevant: probs[2],
-      decisive: probs[3],
     },
   };
 }

@@ -49,7 +49,6 @@ export interface V10ClassifierOutput {
     yes: number;
     no: number;
     irrelevant: number;
-    decisive: number;
   };
 }
 
@@ -63,7 +62,6 @@ export interface V10AnalysisResult {
     yes: number;
     no: number;
     irrelevant: number;
-    decisive: number;
   };
   hardGuardsTriggered: string[];
   features: V10Features;
@@ -89,14 +87,12 @@ export interface LogisticRegressionWeights {
     yes: number;
     no: number;
     irrelevant: number;
-    decisive: number;
   };
   // Feature weights for each class
   weights: {
     yes: number[];
     no: number[];
     irrelevant: number[];
-    decisive: number[];
   };
   // Feature names (for debugging)
   featureNames: string[];

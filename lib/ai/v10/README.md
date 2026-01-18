@@ -57,7 +57,7 @@ import { buildProblemKnowledge } from '@/lib/ai-analyzer';
 const knowledge = await buildProblemKnowledge(content, answer);
 const result = await analyzeQuestionV10(question, knowledge);
 
-console.log(result.labelV10);      // 'yes' | 'no' | 'irrelevant' | 'decisive'
+console.log(result.labelV10);      // 'yes' | 'no' | 'irrelevant'
 console.log(result.confidence);    // 0~1
 console.log(result.probs);         // 각 라벨의 확률
 console.log(result.v9Baseline);    // V9 결과 비교

@@ -16,9 +16,9 @@ const knowledge = await buildProblemKnowledge(
 const result = await analyzeQuestionV10("질문...", knowledge);
 
 // 3. 결과 확인
-console.log(result.labelV10);      // 'yes' | 'no' | 'irrelevant' | 'decisive'
+console.log(result.labelV10);      // 'yes' | 'no' | 'irrelevant'
 console.log(result.confidence);    // 0~1
-console.log(result.probs);         // { yes: 0.3, no: 0.5, irrelevant: 0.1, decisive: 0.1 }
+console.log(result.probs);         // { yes: 0.3, no: 0.5, irrelevant: 0.2 }
 console.log(result.v9Baseline);   // V9 결과와 비교
 ```
 
