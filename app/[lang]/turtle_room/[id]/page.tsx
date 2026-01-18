@@ -265,6 +265,46 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
   // 방 참여 함수
   const joinRoom = async (playerNickname: string, isHostPlayer: boolean) => {
     try {
+      // 관전자는 max_players 체크 제외
+      if (!isSpectator) {
+        // 1. 방 정보 조회 (max_players 확인)
+        const { data: roomData, error: roomFetchError } = await supabase
+          .from('rooms')
+          .select('max_players, user_nicknames')
+          .eq('code', roomCode)
+          .single();
+
+        if (roomFetchError) {
+          console.error('방 정보 조회 오류:', roomFetchError);
+          return;
+        }
+
+        // 2. 현재 플레이어 수 확인 (관전자 제외)
+        const { data: playersData, error: playersCountError } = await supabase
+          .from('players')
+          .select('nickname')
+          .eq('room_code', roomCode);
+
+        if (playersCountError) {
+          console.error('플레이어 수 조회 오류:', playersCountError);
+          return;
+        }
+
+        const currentPlayerCount = playersData?.length || 0;
+        const maxPlayers = roomData?.max_players;
+
+        // 3. max_players 체크 (NULL이면 무제한)
+        if (maxPlayers !== null && maxPlayers !== undefined && currentPlayerCount >= maxPlayers) {
+          // 최대 인원 초과
+          alert(lang === 'ko' 
+            ? `방이 가득 찼습니다. (${currentPlayerCount}/${maxPlayers}명)` 
+            : `Room is full. (${currentPlayerCount}/${maxPlayers} players)`);
+          router.push(`/${lang}/rooms`);
+          return;
+        }
+      }
+
+      // 4. players 테이블에 플레이어 추가
       const { error: playerError } = await supabase
         .from('players')
         .insert({
@@ -275,6 +315,30 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
 
       if (playerError && playerError.code !== '23505') { // 23505는 중복 키 오류
         console.error('플레이어 추가 오류:', playerError);
+        return;
+      }
+
+      // 5. rooms 테이블의 user_nicknames 배열에 닉네임 추가
+      // 기존 배열에 없으면 추가
+      const { data: currentRoom, error: roomGetError } = await supabase
+        .from('rooms')
+        .select('user_nicknames')
+        .eq('code', roomCode)
+        .single();
+
+      if (!roomGetError && currentRoom) {
+        const currentNicknames = (currentRoom.user_nicknames as string[]) || [];
+        if (!currentNicknames.includes(playerNickname)) {
+          const updatedNicknames = [...currentNicknames, playerNickname];
+          const { error: updateError } = await supabase
+            .from('rooms')
+            .update({ user_nicknames: updatedNicknames })
+            .eq('code', roomCode);
+
+          if (updateError) {
+            console.error('user_nicknames 업데이트 오류:', updateError);
+          }
+        }
       }
     } catch (err) {
       console.error('방 참여 오류:', err);
@@ -1148,6 +1212,26 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
         console.log('✅ 플레이어 삭제 성공:', nickname);
         // 성공적으로 나간 경우, 참가자 목록에서도 즉시 제거 (Optimistic UI)
         setPlayers(prev => prev.filter(p => p.nickname !== nickname));
+
+        // 1-1. rooms 테이블의 user_nicknames 배열에서 닉네임 제거
+        const { data: currentRoom, error: roomGetError } = await supabase
+          .from('rooms')
+          .select('user_nicknames')
+          .eq('code', roomCode)
+          .single();
+
+        if (!roomGetError && currentRoom) {
+          const currentNicknames = (currentRoom.user_nicknames as string[]) || [];
+          const updatedNicknames = currentNicknames.filter(n => n !== nickname);
+          const { error: updateError } = await supabase
+            .from('rooms')
+            .update({ user_nicknames: updatedNicknames })
+            .eq('code', roomCode);
+
+          if (updateError) {
+            console.error('user_nicknames 업데이트 오류:', updateError);
+          }
+        }
       }
 
       // 2. 호스트인 경우 방 종료
