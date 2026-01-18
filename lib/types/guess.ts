@@ -10,6 +10,7 @@ export interface GuessSet {
   creator_id: string;
   title: string;
   description?: string;
+  cover_image_url?: string; // 세트 소개 이미지
   default_time_per_card: number;
   is_public: boolean;
   created_at: string;
