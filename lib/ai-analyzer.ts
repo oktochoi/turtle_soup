@@ -433,6 +433,22 @@ const NEGATION_PATTERNS = [
 ];
 const MODALITY_PATTERNS = ["가능", "일 수도", "아마", "추정", "확실", "반드시", "모르", "불확실", "어쩌면", "maybe", "perhaps", "possibly", "likely", "uncertain"];
 
+// 속성 질문 패턴: "~인가요?", "~입니까?", "~맞나요?" 등
+const PROPERTY_QUESTION_PATTERNS = [
+  /인가요\?*$/i,
+  /인가\?*$/i,
+  /입니까\?*$/i,
+  /맞나요\?*$/i,
+  /맞습니까\?*$/i,
+  /한가요\?*$/i,
+  /한가\?*$/i,
+  /인가요\s*$/i,
+  /인가\s*$/i,
+  /입니까\s*$/i,
+  /맞나요\s*$/i,
+  /맞습니까\s*$/i,
+];
+
 function hasAny(text: string, patterns: string[]) {
   const t = normalizeText(text);
   if (!t) return false;
@@ -443,6 +459,59 @@ function hasNegation(text: string) {
 }
 function hasModality(text: string) {
   return hasAny(text, MODALITY_PATTERNS);
+}
+
+/**
+ * 속성 질문 감지: "~인가요?", "~입니까?" 같은 형태
+ * 이런 질문들은 정답에 명시적으로 그 속성이 있어야만 YES
+ */
+function isPropertyQuestion(question: string): boolean {
+  const q = normalizeText(question);
+  if (!q) return false;
+  return PROPERTY_QUESTION_PATTERNS.some(pattern => pattern.test(q));
+}
+
+/**
+ * 정답에 해당 속성이 명시적으로 있는지 확인
+ * 속성 질문의 경우 정답에 명확히 그 내용이 있어야 YES 가능
+ */
+function hasExplicitEvidenceInAnswer(
+  question: string, 
+  answer: string, 
+  qConceptsExact: Set<string>, 
+  aConcepts: Set<string>
+): boolean {
+  // 속성 질문이 아니면 true (일반 질문은 기존 로직 사용)
+  if (!isPropertyQuestion(question)) return true;
+
+  // 속성 질문인 경우:
+  // 1. 개념 매칭이 있어야 함
+  if (qConceptsExact.size === 0 || aConcepts.size === 0) return false;
+  
+  // 2. 질문의 핵심 키워드가 정답에 명시적으로 등장해야 함
+  const qTokens = [...tokenizeKo(question), ...tokenizeEn(question)];
+  const aText = normalizeText(answer).toLowerCase();
+  const qText = normalizeText(question).toLowerCase();
+  
+  // 질문의 핵심 명사/형용사가 정답에 직접 등장하는지 확인
+  const keyTokens = qTokens.filter(t => {
+    // 조사, 문미어미 제외
+    if (t.length < 2) return false;
+    if (['인가', '인가요', '입니까', '맞나', '맞나요', '맞습니까', '한가', '한가요'].includes(t)) return false;
+    return true;
+  });
+  
+  // 핵심 키워드 중 하나라도 정답에 명시적으로 포함되어야 함
+  const hasExplicitKeyword = keyTokens.some(token => {
+    const tokenLower = token.toLowerCase();
+    // 정답에 키워드가 직접 포함되어 있거나 유의어가 매칭되어야 함
+    if (aText.includes(tokenLower)) return true;
+    // 개념 매칭 확인
+    const tokenCanon = toCanonical(token);
+    return aConcepts.has(tokenCanon);
+  });
+  
+  return hasExplicitKeyword;
 }
 
 // (B) Negation 처리 안정화: 의미 변조 금지, invert flag만 추출
@@ -1878,13 +1947,29 @@ export async function analyzeQuestionV8(
     // YES 판정: 보수적으로 - 정답의 핵심 사실을 정확히 찌른 경우에만
     // 조건: 1) 유사도 높고 2) 핵심 개념이 명확히 매칭되고 3) 추리 범위가 줄어듦
     // ❗ YES는 가장 보수적으로 사용: "조금 맞다", "연관 있어 보인다", "답 근처인 것 같다"는 YES가 아님
+    // ❗ "증거 없는 속성 질문"에는 절대 YES 금지: "~인가요?" 같은 질문은 정답에 명시적으로 그 속성이 있어야만 YES
     else if (simAnswerFinal >= CONFIG.THRESHOLD.YES && conceptExactHitCount > 0) {
-      // YES가 확실한 경우만 허용:
-      // - 핵심 개념(Exact)이 명확히 매칭되어야 함 (qConceptsExact에 aConcepts의 핵심이 포함)
-      // - 높은 유사도 (simAnswerFinal >= 0.60)
-      // - "정답의 핵심 사실을 정확히 찌른 경우"만 YES
-      // - conceptExactHitCount > 0 조건으로 "조금 맞다"는 차단
-      result = "yes";
+      // 속성 질문 검증: "~인가요?" 같은 질문은 정답에 명시적으로 그 속성이 있어야만 YES
+      const hasExplicitEvidence = hasExplicitEvidenceInAnswer(q, knowledge.answer, qConceptsExact, aConcepts);
+      
+      if (!hasExplicitEvidence) {
+        // 속성 질문인데 정답에 명시적 근거가 없으면 NO 또는 IRRELEVANT
+        // 질문이 정답과 직접 관련이 없으면 NO, 애매하면 IRRELEVANT
+        if (simAnswerFinal >= 0.45 || conceptExactHitCount > 0) {
+          // 어느 정도 관련은 있지만 명시적 근거가 없는 경우 NO
+          result = "no";
+        } else {
+          // 관련이 거의 없는 경우 IRRELEVANT
+          result = "irrelevant";
+        }
+      } else {
+        // YES가 확실한 경우만 허용:
+        // - 핵심 개념(Exact)이 명확히 매칭되어야 함 (qConceptsExact에 aConcepts의 핵심이 포함)
+        // - 높은 유사도 (simAnswerFinal >= 0.60)
+        // - "정답의 핵심 사실을 정확히 찌른 경우"만 YES
+        // - 속성 질문인 경우 정답에 명시적으로 그 속성이 있어야 함
+        result = "yes";
+      }
     } 
     // IRRELEVANT 판정: 명확하지 않으면 상관없음 우선
     else {

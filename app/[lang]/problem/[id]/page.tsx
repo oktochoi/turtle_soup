@@ -606,10 +606,19 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       const updateViewCount = async () => {
         try {
           // 직접 업데이트 (RPC 함수 없이)
-          await supabase
+          const { data: updatedProblem, error } = await supabase
             .from('problems')
             .update({ view_count: (problem.view_count || 0) + 1 })
-            .eq('id', problemId);
+            .eq('id', problemId)
+            .select()
+            .single();
+
+          if (error) throw error;
+          
+          // 조회수 업데이트 후 문제 데이터 갱신
+          if (updatedProblem) {
+            setProblem(updatedProblem);
+          }
         } catch (error) {
           // 에러는 무시 (조회수 증가 실패는 치명적이지 않음)
           console.warn('조회수 증가 실패:', error);
