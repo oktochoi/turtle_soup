@@ -113,29 +113,41 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
 
               if (gameUser) {
                 // 코인 지급 (user_progress에 coins 추가)
-                const { error: coinError } = await supabase.rpc('increment_coins', {
-                  user_id: gameUser.id,
-                  amount: 20
-                }).catch(async () => {
-                  // RPC 함수가 없으면 직접 업데이트
-                  const { data: progress } = await supabase
-                    .from('user_progress')
-                    .select('coins')
-                    .eq('user_id', gameUser.id)
-                    .single();
-                  
-                  if (progress) {
-                    await supabase
-                      .from('user_progress')
-                      .update({ coins: (progress.coins || 0) + 20 })
-                      .eq('user_id', gameUser.id);
-                  } else {
-                    // user_progress가 없으면 생성
-                    await supabase
-                      .from('user_progress')
-                      .insert({ user_id: gameUser.id, coins: 20 });
+                try {
+                  const { error: coinError } = await supabase.rpc('increment_coins', {
+                    user_id: gameUser.id,
+                    amount: 20
+                  });
+
+                  // RPC 함수가 실패하면 직접 업데이트
+                  if (coinError) {
+                    throw coinError;
                   }
-                });
+                } catch (rpcError) {
+                  // RPC 함수가 없으면 직접 업데이트
+                  try {
+                    const { data: progress } = await supabase
+                      .from('user_progress')
+                      .select('coins')
+                      .eq('user_id', gameUser.id)
+                      .single();
+                    
+                    if (progress) {
+                      await supabase
+                        .from('user_progress')
+                        .update({ coins: (progress.coins || 0) + 20 })
+                        .eq('user_id', gameUser.id);
+                    } else {
+                      // user_progress가 없으면 생성
+                      await supabase
+                        .from('user_progress')
+                        .insert({ user_id: gameUser.id, coins: 20 });
+                    }
+                  } catch (updateError) {
+                    // 코인 지급 실패는 무시 (회원가입은 성공)
+                    console.warn('코인 지급 오류:', updateError);
+                  }
+                }
 
                 // 프로필 이미지 업로드 (있는 경우)
                 if (profileImage) {
