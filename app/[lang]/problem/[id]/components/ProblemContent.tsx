@@ -20,6 +20,7 @@ interface ProblemContentProps {
   quizType: QuizType;
   quizContent: any;
   authorGameUserId: string | null;
+  authorProfileImage?: string | null;
   isEditing: boolean;
   editTitle: string;
   editContent: string;
@@ -44,6 +45,7 @@ export default function ProblemContent({
   quizType,
   quizContent,
   authorGameUserId,
+  authorProfileImage,
   isEditing,
   editTitle,
   editContent,
@@ -135,6 +137,8 @@ export default function ProblemContent({
                       userId={authorGameUserId}
                       nickname={problem.author}
                       size="sm"
+                      showProfileImage={true}
+                      profileImageUrl={authorProfileImage || null}
                     />
                   </Link>
                 ) : (
@@ -160,6 +164,8 @@ export default function ProblemContent({
                       userId={authorGameUserId}
                       nickname={problem.author}
                       size="sm"
+                      showProfileImage={true}
+                      profileImageUrl={authorProfileImage || null}
                     />
                   </Link>
                 ) : (

@@ -389,6 +389,29 @@ export default function Home() {
               </Link>
             </div>
           </div>
+
+          {/* 문제 만들기 섹션 */}
+          <div className="group relative bg-slate-800/40 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 hover:border-orange-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-orange-500/20 hover:-translate-y-1 flex-1">
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                  <i className="ri-add-circle-line text-orange-400 text-xl sm:text-2xl"></i>
+                </div>
+                <h2 className="text-lg sm:text-xl font-bold text-orange-400">{t.problem.createProblem}</h2>
+              </div>
+              <p className="text-sm sm:text-base text-slate-300 mb-5 leading-relaxed">{lang === 'ko' ? '나만의 문제를 만들어서 공유하세요' : 'Create and share your own problems'}</p>
+              <Link href={getLocalizedPath('/create-problem')}>
+                <button className="w-full group/btn relative overflow-hidden bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold py-4 sm:py-5 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-orange-500/50 text-base sm:text-lg transform hover:scale-[1.02]">
+                  <span className="relative z-10 flex items-center justify-center">
+                    <i className="ri-add-circle-line mr-2 text-lg"></i>
+                    {t.problem.createProblem}
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
+                </button>
+              </Link>
+            </div>
+          </div>
         </div>
 
         <section className="mt-8 sm:mt-12 lg:mt-16 space-y-6">

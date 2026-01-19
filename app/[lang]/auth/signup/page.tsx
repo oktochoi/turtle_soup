@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useRef } from 'react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -18,9 +18,14 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [nickname, setNickname] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [showResendEmail, setShowResendEmail] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +79,101 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
       }
 
       if (data.user) {
+        // 추천인 코드 처리 (있을 경우)
+        if (referralCode.trim()) {
+          try {
+            // 추천인 코드로 유저 찾기
+            const { data: referrerData, error: referrerError } = await supabase
+              .from('game_users')
+              .select('id')
+              .eq('referral_code', referralCode.trim().toUpperCase())
+              .single();
+
+            if (!referrerError && referrerData) {
+              // game_users 레코드가 생성된 후 코인 지급
+              // game_users는 auth callback이나 다른 곳에서 생성될 수 있으므로,
+              // 여기서는 추천인 코드를 저장만 하고 나중에 처리하거나
+              // 직접 game_users를 확인하고 처리
+              
+              // 사용자 인증 후 game_users 레코드 생성 대기 (최대 3초)
+              let gameUser = null;
+              for (let i = 0; i < 30; i++) {
+                const { data: gameUserData } = await supabase
+                  .from('game_users')
+                  .select('id')
+                  .eq('auth_user_id', data.user.id)
+                  .single();
+                
+                if (gameUserData) {
+                  gameUser = gameUserData;
+                  break;
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+              }
+
+              if (gameUser) {
+                // 코인 지급 (user_progress에 coins 추가)
+                const { error: coinError } = await supabase.rpc('increment_coins', {
+                  user_id: gameUser.id,
+                  amount: 20
+                }).catch(async () => {
+                  // RPC 함수가 없으면 직접 업데이트
+                  const { data: progress } = await supabase
+                    .from('user_progress')
+                    .select('coins')
+                    .eq('user_id', gameUser.id)
+                    .single();
+                  
+                  if (progress) {
+                    await supabase
+                      .from('user_progress')
+                      .update({ coins: (progress.coins || 0) + 20 })
+                      .eq('user_id', gameUser.id);
+                  } else {
+                    // user_progress가 없으면 생성
+                    await supabase
+                      .from('user_progress')
+                      .insert({ user_id: gameUser.id, coins: 20 });
+                  }
+                });
+
+                // 프로필 이미지 업로드 (있는 경우)
+                if (profileImage) {
+                  try {
+                    const fileExt = profileImage.name.split('.').pop();
+                    const fileName = `${gameUser.id}_${Date.now()}.${fileExt}`;
+                    const filePath = `profile-images/${fileName}`;
+
+                    const { error: uploadError } = await supabase.storage
+                      .from('avatars')
+                      .upload(filePath, profileImage, {
+                        cacheControl: '3600',
+                        upsert: false
+                      });
+
+                    if (!uploadError) {
+                      const { data: { publicUrl } } = supabase.storage
+                        .from('avatars')
+                        .getPublicUrl(filePath);
+
+                      await supabase
+                        .from('game_users')
+                        .update({ profile_image_url: publicUrl })
+                        .eq('id', gameUser.id);
+                    }
+                  } catch (imageError) {
+                    // 프로필 이미지 업로드 실패는 무시 (회원가입은 성공)
+                    console.warn('프로필 이미지 업로드 오류:', imageError);
+                  }
+                }
+              }
+            }
+          } catch (refError) {
+            // 추천인 코드 오류는 무시 (회원가입은 성공)
+            console.warn('추천인 코드 처리 오류:', refError);
+          }
+        }
+
         // 회원가입 성공 시 이메일 인증 안내 또는 홈으로 리디렉션
         if (data.user.email_confirmed_at) {
           // 이미 인증된 경우 바로 홈으로
@@ -297,6 +397,116 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
                 disabled={isLoading}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               />
+            </div>
+
+            {/* 프로필 이미지 업로드 (선택 사항) */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                {lang === 'ko' ? '프로필 이미지 (선택)' : 'Profile Image (Optional)'}
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    // 이미지 파일만 허용
+                    if (!file.type.startsWith('image/')) {
+                      setError(lang === 'ko' ? '이미지 파일만 업로드 가능합니다.' : 'Only image files are allowed.');
+                      return;
+                    }
+                    // 파일 크기 제한 (5MB)
+                    if (file.size > 5 * 1024 * 1024) {
+                      setError(lang === 'ko' ? '파일 크기는 5MB 이하여야 합니다.' : 'File size must be less than 5MB.');
+                      return;
+                    }
+                    setProfileImage(file);
+                    // 미리보기 생성
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      setProfileImagePreview(reader.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+                className="hidden"
+                disabled={isLoading}
+              />
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading}
+                  className="flex-shrink-0 w-20 h-20 rounded-full border-2 border-slate-700 bg-slate-900 hover:bg-slate-800 transition-colors flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed relative group overflow-hidden"
+                >
+                  {profileImagePreview ? (
+                    <>
+                      <img
+                        src={profileImagePreview}
+                        alt="프로필 미리보기"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <i className="ri-camera-line text-white text-xl"></i>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-2xl">
+                      {nickname ? nickname.charAt(0).toUpperCase() : '+'}
+                    </div>
+                  )}
+                </button>
+                <div className="flex-1">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isLoading}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {profileImage ? (lang === 'ko' ? '이미지 변경' : 'Change Image') : (lang === 'ko' ? '이미지 선택' : 'Select Image')}
+                  </button>
+                  {profileImage && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileImage(null);
+                        setProfileImagePreview(null);
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = '';
+                        }
+                      }}
+                      className="mt-2 text-xs text-red-400 hover:text-red-300 transition-colors"
+                    >
+                      {lang === 'ko' ? '제거' : 'Remove'}
+                    </button>
+                  )}
+                  <p className="text-xs text-slate-500 mt-1">
+                    {lang === 'ko' ? '5MB 이하의 이미지 파일만 가능합니다.' : 'Image files under 5MB only.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="referralCode" className="block text-sm font-medium text-slate-300 mb-2">
+                {lang === 'ko' ? '추천인 코드 (선택사항)' : 'Referral Code (Optional)'}
+              </label>
+              <input
+                id="referralCode"
+                type="text"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                placeholder={lang === 'ko' ? '7자리 추천인 코드를 입력하세요' : 'Enter 7-character referral code'}
+                maxLength={7}
+                disabled={isLoading}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              {referralCode.trim() && (
+                <p className="mt-1 text-xs text-slate-400">
+                  {lang === 'ko' ? '💰 추천인 코드를 입력하면 20코인을 지급받습니다!' : '💰 Enter a referral code to receive 20 coins!'}
+                </p>
+              )}
             </div>
 
             <button

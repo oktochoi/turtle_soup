@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { use, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -31,6 +31,27 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
   const [createdProblemsCount, setCreatedProblemsCount] = useState<number>(0);
   const { user: currentUser } = useAuth();
   
+  // 문제 목록 및 정렬
+  const [problems, setProblems] = useState<any[]>([]);
+  const [filteredProblems, setFilteredProblems] = useState<any[]>([]);
+  const [sortOption, setSortOption] = useState<'latest' | 'popular' | 'difficulty'>('latest');
+  
+  // 팔로우/팔로잉
+  const [followersCount, setFollowersCount] = useState<number>(0);
+  const [followingCount, setFollowingCount] = useState<number>(0);
+  const [isFollowing, setIsFollowing] = useState<boolean>(false);
+  const [isOwnProfile, setIsOwnProfile] = useState<boolean>(false);
+  const [showFollowersModal, setShowFollowersModal] = useState<boolean>(false);
+  const [showFollowingModal, setShowFollowingModal] = useState<boolean>(false);
+  const [followersList, setFollowersList] = useState<any[]>([]);
+  const [followingList, setFollowingList] = useState<any[]>([]);
+  const [isLoadingFollowers, setIsLoadingFollowers] = useState<boolean>(false);
+  const [isLoadingFollowing, setIsLoadingFollowing] = useState<boolean>(false);
+  
+  // 프로필 사진 업로드
+  const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   // 신고 관련 state
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportType, setReportType] = useState<'spam' | 'harassment' | 'inappropriate_content' | 'fake_account' | 'other'>('spam');
@@ -51,6 +72,15 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
   useEffect(() => {
     loadProfile();
   }, [userId]);
+
+  // currentUser가 변경될 때마다 isOwnProfile 재확인
+  useEffect(() => {
+    if (user) {
+      const ownProfile = (user.auth_user_id && currentUser?.id === user.auth_user_id) || 
+                         (!user.auth_user_id && !currentUser);
+      setIsOwnProfile(ownProfile);
+    }
+  }, [currentUser, user]);
 
   const loadProfile = async () => {
     try {
@@ -154,10 +184,299 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
           setReceivedHearts(totalHearts);
         }
       }
+
+      // 자기 자신의 프로필인지 확인
+      // currentUser가 로드될 때까지 기다려야 할 수 있으므로, useEffect로 업데이트
+      const checkOwnProfile = () => {
+        const ownProfile = (userData.auth_user_id && currentUser?.id === userData.auth_user_id) || 
+                           (!userData.auth_user_id && !currentUser);
+        console.log('Checking own profile:', { 
+          auth_user_id: userData.auth_user_id, 
+          currentUser_id: currentUser?.id, 
+          ownProfile 
+        });
+        setIsOwnProfile(ownProfile);
+      };
+      checkOwnProfile();
+
+      // 문제 목록 로드
+      if (userData.auth_user_id) {
+        await loadProblems(userData.auth_user_id);
+      }
+
+      // 팔로우/팔로잉 수 로드
+      await loadFollowStats();
+
+      // 현재 사용자가 이 프로필을 팔로우하는지 확인
+      if (currentUser) {
+        const currentGameUser = await supabase
+          .from('game_users')
+          .select('id')
+          .eq('auth_user_id', currentUser.id)
+          .single();
+        
+        if (currentGameUser.data) {
+          const { data: followData } = await supabase
+            .from('game_user_follows')
+            .select('id')
+            .eq('follower_id', currentGameUser.data.id)
+            .eq('following_id', userId)
+            .single();
+          
+          setIsFollowing(!!followData);
+        }
+      }
     } catch (error) {
       console.error('프로필 로드 오류:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadProblems = async (authUserId: string) => {
+    try {
+      const { data: problemsData, error } = await supabase
+        .from('problems')
+        .select('*')
+        .eq('user_id', authUserId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // 각 문제에 평균 별점 추가
+      const problemsWithRatings = await Promise.all(
+        (problemsData || []).map(async (problem) => {
+          const { data: ratings } = await supabase
+            .from('problem_difficulty_ratings')
+            .select('rating')
+            .eq('problem_id', problem.id);
+
+          let averageRating = 0;
+          let ratingCount = 0;
+          
+          if (ratings && ratings.length > 0) {
+            const sum = ratings.reduce((acc, r) => acc + r.rating, 0);
+            averageRating = Number((sum / ratings.length).toFixed(2));
+            ratingCount = ratings.length;
+          }
+
+          return {
+            ...problem,
+            average_rating: averageRating,
+            rating_count: ratingCount,
+          };
+        })
+      );
+
+      setProblems(problemsWithRatings);
+      filterAndSortProblems(problemsWithRatings, sortOption);
+    } catch (error) {
+      console.error('문제 로드 오류:', error);
+    }
+  };
+
+  const loadFollowStats = async () => {
+    try {
+      // 팔로워 수
+      const { count: followersCount } = await supabase
+        .from('game_user_follows')
+        .select('id', { count: 'exact', head: true })
+        .eq('following_id', userId);
+      
+      setFollowersCount(followersCount || 0);
+
+      // 팔로잉 수
+      const { count: followingCount } = await supabase
+        .from('game_user_follows')
+        .select('id', { count: 'exact', head: true })
+        .eq('follower_id', userId);
+      
+      setFollowingCount(followingCount || 0);
+    } catch (error) {
+      console.error('팔로우 통계 로드 오류:', error);
+    }
+  };
+
+  const filterAndSortProblems = (problemsList: any[], sort: 'latest' | 'popular' | 'difficulty') => {
+    // 최신순만 사용 (생성일 기준 내림차순)
+    let sorted = [...problemsList];
+    sorted.sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    setFilteredProblems(sorted);
+  };
+
+  useEffect(() => {
+    if (problems.length > 0) {
+      filterAndSortProblems(problems, 'latest');
+    }
+  }, [problems]);
+
+  const loadFollowers = async () => {
+    if (isLoadingFollowers) return;
+    setIsLoadingFollowers(true);
+    try {
+      // 팔로워 목록 가져오기 (이 사용자를 팔로우하는 사람들)
+      // 1단계: follower_id 목록 가져오기
+      const { data: followsData, error: followsError } = await supabase
+        .from('game_user_follows')
+        .select('follower_id')
+        .eq('following_id', userId);
+
+      if (followsError) throw followsError;
+
+      if (!followsData || followsData.length === 0) {
+        setFollowersList([]);
+        return;
+      }
+
+      // 2단계: 각 follower_id에 해당하는 사용자 정보 가져오기
+      const followerIds = followsData.map(f => f.follower_id);
+      const { data: usersData, error: usersError } = await supabase
+        .from('game_users')
+        .select('id, nickname, profile_image_url, referral_code')
+        .in('id', followerIds);
+
+      if (usersError) throw usersError;
+
+      if (usersData) {
+        setFollowersList(usersData);
+      }
+    } catch (error) {
+      console.error('팔로워 목록 로드 오류:', error);
+    } finally {
+      setIsLoadingFollowers(false);
+    }
+  };
+
+  const loadFollowing = async () => {
+    if (isLoadingFollowing) return;
+    setIsLoadingFollowing(true);
+    try {
+      // 팔로잉 목록 가져오기 (이 사용자가 팔로우하는 사람들)
+      // 1단계: following_id 목록 가져오기
+      const { data: followsData, error: followsError } = await supabase
+        .from('game_user_follows')
+        .select('following_id')
+        .eq('follower_id', userId);
+
+      if (followsError) throw followsError;
+
+      if (!followsData || followsData.length === 0) {
+        setFollowingList([]);
+        return;
+      }
+
+      // 2단계: 각 following_id에 해당하는 사용자 정보 가져오기
+      const followingIds = followsData.map(f => f.following_id);
+      const { data: usersData, error: usersError } = await supabase
+        .from('game_users')
+        .select('id, nickname, profile_image_url, referral_code')
+        .in('id', followingIds);
+
+      if (usersError) throw usersError;
+
+      if (usersData) {
+        setFollowingList(usersData);
+      }
+    } catch (error) {
+      console.error('팔로잉 목록 로드 오류:', error);
+    } finally {
+      setIsLoadingFollowing(false);
+    }
+  };
+
+  const handleShowFollowers = async () => {
+    setShowFollowersModal(true);
+    if (followersList.length === 0) {
+      await loadFollowers();
+    }
+  };
+
+  const handleShowFollowing = async () => {
+    setShowFollowingModal(true);
+    if (followingList.length === 0) {
+      await loadFollowing();
+    }
+  };
+
+  const handleFollow = async () => {
+    if (!currentUser) {
+      router.push(`/${lang}/auth/login`);
+      return;
+    }
+
+    try {
+      // 현재 사용자의 game_user_id 가져오기
+      const { data: currentGameUser } = await supabase
+        .from('game_users')
+        .select('id')
+        .eq('auth_user_id', currentUser.id)
+        .single();
+
+      if (!currentGameUser) {
+        showToast(lang === 'ko' ? '사용자 정보를 찾을 수 없습니다.' : 'User not found.', 'error');
+        return;
+      }
+
+      if (isFollowing) {
+        // 언팔로우
+        const { error } = await supabase
+          .from('game_user_follows')
+          .delete()
+          .eq('follower_id', currentGameUser.id)
+          .eq('following_id', userId);
+
+        if (error) throw error;
+        setIsFollowing(false);
+        setFollowersCount(prev => Math.max(0, prev - 1));
+        showToast(lang === 'ko' ? '언팔로우했습니다.' : 'Unfollowed.', 'success');
+      } else {
+        // 팔로우
+        const { error } = await supabase
+          .from('game_user_follows')
+          .insert({
+            follower_id: currentGameUser.id,
+            following_id: userId,
+          });
+
+        if (error) throw error;
+        setIsFollowing(true);
+        setFollowersCount(prev => prev + 1);
+        showToast(lang === 'ko' ? '팔로우했습니다.' : 'Followed.', 'success');
+
+        // 팔로우 알림 생성 (팔로우당한 사람에게)
+        try {
+          // 현재 사용자의 닉네임 가져오기
+          const { data: followerUser } = await supabase
+            .from('game_users')
+            .select('nickname')
+            .eq('id', currentGameUser.id)
+            .single();
+
+          if (followerUser) {
+            // 알림 생성
+            await supabase
+              .from('notifications')
+              .insert({
+                user_id: userId, // 팔로우당한 사람의 ID
+                type: 'follow',
+                title: lang === 'ko' ? '새 팔로워' : 'New Follower',
+                message: lang === 'ko' 
+                  ? `${followerUser.nickname}님이 팔로우했습니다.`
+                  : `${followerUser.nickname} started following you.`,
+                related_user_id: currentGameUser.id, // 팔로우한 사람의 ID
+                is_read: false,
+              });
+          }
+        } catch (notificationError) {
+          // 알림 생성 실패는 무시 (중요한 기능이 아니므로)
+          console.error('팔로우 알림 생성 오류:', notificationError);
+        }
+      }
+    } catch (error) {
+      console.error('팔로우 오류:', error);
+      showToast(lang === 'ko' ? '팔로우 처리에 실패했습니다.' : 'Follow action failed.', 'error');
     }
   };
 
@@ -167,6 +486,86 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
       (window as any)[`toast${type.charAt(0).toUpperCase() + type.slice(1)}`](message);
     } else {
       alert(message);
+    }
+  };
+
+  const handleProfileImageClick = () => {
+    if (isOwnProfile && fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleProfileImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !isOwnProfile || !user) return;
+
+    // 이미지 파일만 허용
+    if (!file.type.startsWith('image/')) {
+      showToast(lang === 'ko' ? '이미지 파일만 업로드 가능합니다.' : 'Only image files are allowed.', 'error');
+      return;
+    }
+
+    // 파일 크기 제한 (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showToast(lang === 'ko' ? '파일 크기는 5MB 이하여야 합니다.' : 'File size must be less than 5MB.', 'error');
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}_${Date.now()}.${fileExt}`;
+      const filePath = `profile-images/${fileName}`;
+
+      // Supabase Storage에 업로드 (avatars bucket 사용)
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        // 버킷이 없는 경우 명확한 오류 메시지 제공
+        if (uploadError.message?.includes('Bucket') || uploadError.message?.includes('bucket') || uploadError.message?.includes('not found')) {
+          showToast(
+            lang === 'ko' 
+              ? 'Storage 버킷이 설정되지 않았습니다. Supabase 대시보드에서 "avatars" 버킷을 생성해주세요.' 
+              : 'Storage bucket not configured. Please create "avatars" bucket in Supabase dashboard.',
+            'error'
+          );
+          console.error('Storage 버킷 오류:', uploadError);
+          console.log('버킷 생성 방법: Supabase 대시보드 > Storage > New bucket > 이름: avatars, Public: 체크');
+          return;
+        }
+        throw uploadError;
+      }
+
+      // Public URL 가져오기
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // game_users 테이블 업데이트
+      const { error: updateError } = await supabase
+        .from('game_users')
+        .update({ profile_image_url: publicUrl })
+        .eq('id', userId);
+
+      if (updateError) throw updateError;
+
+      // 로컬 상태 업데이트
+      setUser({ ...user, profile_image_url: publicUrl });
+      showToast(lang === 'ko' ? '프로필 사진이 업데이트되었습니다.' : 'Profile image updated.', 'success');
+    } catch (error: any) {
+      console.error('프로필 사진 업로드 오류:', error);
+      showToast(lang === 'ko' ? '프로필 사진 업로드에 실패했습니다.' : 'Profile image upload failed.', 'error');
+    } finally {
+      setIsUploadingImage(false);
+      // 파일 입력 초기화
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -192,7 +591,11 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
 
   // 닉네임 수정 함수
   const handleEditNickname = () => {
-    if (!user) return;
+    if (!user) {
+      console.error('handleEditNickname: user is null');
+      return;
+    }
+    console.log('handleEditNickname called, current nickname:', user.nickname);
     setNewNickname(user.nickname);
     setIsEditingNickname(true);
   };
@@ -421,202 +824,358 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
           </Link>
         </div>
 
-        {/* 프로필 헤더 */}
-        <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 sm:p-8 border border-slate-700/50 mb-6">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-2xl sm:text-3xl font-bold">
-              {(isEditingNickname ? newNickname : user.nickname).charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1">
-              {isEditingNickname ? (
-                <div className="flex items-center gap-2 mb-2">
+        {/* 프로필 헤더 - Instagram 스타일 */}
+        <div className="bg-slate-900 border-b border-slate-800 mb-6">
+          <div className="container mx-auto px-4 py-6 sm:py-8 max-w-4xl">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
+              {/* 프로필 사진 */}
+              <div className="flex-shrink-0 flex justify-center sm:justify-start">
+                <div className="relative">
                   <input
-                    type="text"
-                    value={newNickname}
-                    onChange={(e) => setNewNickname(e.target.value)}
-                    className="text-2xl sm:text-3xl font-bold bg-slate-700 border border-slate-600 rounded-lg px-3 py-1 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    maxLength={20}
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSaveNickname();
-                      } else if (e.key === 'Escape') {
-                        handleCancelEditNickname();
-                      }
-                    }}
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfileImageUpload}
+                    className="hidden"
+                    disabled={!isOwnProfile || isUploadingImage}
                   />
-                  <button
-                    onClick={handleSaveNickname}
-                    disabled={isSavingNickname}
-                    className="px-3 py-1 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-all text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSavingNickname ? (lang === 'ko' ? '저장 중...' : 'Saving...') : (lang === 'ko' ? '저장' : 'Save')}
-                  </button>
-                  <button
-                    onClick={handleCancelEditNickname}
-                    className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all text-sm font-semibold"
-                  >
-                    {lang === 'ko' ? '취소' : 'Cancel'}
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 mb-2">
-                  <h1 className="text-2xl sm:text-3xl font-bold">{user.nickname}</h1>
-                  {/* 자기 자신의 프로필일 때만 수정 버튼 표시 */}
-                  {((user.auth_user_id && currentUser?.id === user.auth_user_id) || (!user.auth_user_id && !currentUser)) && (
-                    <button
-                      onClick={handleEditNickname}
-                      className="p-1.5 text-slate-400 hover:text-teal-400 transition-colors"
-                      title={lang === 'ko' ? '닉네임 수정' : 'Edit nickname'}
+                  {user.profile_image_url ? (
+                    <div
+                      onClick={handleProfileImageClick}
+                      className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-2 border-slate-700 ${
+                        isOwnProfile ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''
+                      } relative group`}
                     >
-                      <i className="ri-edit-line text-lg"></i>
-                    </button>
+                      <img
+                        src={user.profile_image_url}
+                        alt={user.nickname}
+                        className="w-full h-full object-cover"
+                      />
+                      {isOwnProfile && (
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <i className="ri-camera-line text-white text-xl"></i>
+                        </div>
+                      )}
+                      {isUploadingImage && (
+                        <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div
+                      onClick={handleProfileImageClick}
+                      className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-3xl sm:text-4xl font-bold border-2 border-slate-700 ${
+                        isOwnProfile ? 'cursor-pointer hover:opacity-80 transition-opacity relative group' : ''
+                      }`}
+                    >
+                      {(isEditingNickname ? newNickname : user.nickname).charAt(0).toUpperCase()}
+                      {isOwnProfile && (
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
+                          <i className="ri-camera-line text-white text-xl"></i>
+                        </div>
+                      )}
+                      {isUploadingImage && (
+                        <div className="absolute inset-0 bg-black/70 flex items-center justify-center rounded-full">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-              <LevelBadge level={progress.level} size="lg" />
-            </div>
-            {/* 신고하기 버튼 (자기 자신이 아닐 때만 표시) */}
-            {user?.auth_user_id && currentUser?.id !== user.auth_user_id && (
-              <button
-                onClick={() => setShowReportModal(true)}
-                className="px-3 sm:px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/50 rounded-lg transition-all text-sm font-semibold flex items-center gap-2"
-              >
-                <i className="ri-flag-line"></i>
-                <span className="hidden sm:inline">{lang === 'ko' ? '신고하기' : 'Report'}</span>
-              </button>
-            )}
-          </div>
-
-          {/* XP Progress Bar */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between text-sm text-slate-400 mb-2">
-              <span>{t.profile.xp}</span>
-              <span>{currentLevelXP} / {nextLevelXP} XP</span>
-            </div>
-            <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-teal-500 to-cyan-500 transition-all duration-500"
-                style={{ width: `${xpProgress}%` }}
-              />
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              {t.profile.nextLevel} {xpToNextLevel(progress.xp, progress.level)} {t.profile.xpNeeded}
-            </p>
-          </div>
-
-          {/* 통계 */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-teal-400">{progress.points}</div>
-              <div className="text-xs text-slate-400">{t.profile.points}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-400">{progress.current_streak}</div>
-              <div className="text-xs text-slate-400">{t.profile.streak}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-400">{actualSolveCount}</div>
-              <div className="text-xs text-slate-400">{t.profile.solved}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-pink-400">{receivedHearts}</div>
-              <div className="text-xs text-slate-400">{t.profile.hearts}</div>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-400">{userTitles.length}</div>
-              <div className="text-xs text-slate-400">{t.profile.titles}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-400">{createdProblemsCount}</div>
-              <div className="text-xs text-slate-400">{lang === 'ko' ? '만든 문제' : 'Created Problems'}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* 대표 칭호 선택 */}
-        <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700/50 mb-6">
-          <h2 className="text-xl font-bold mb-4">{t.profile.selectedTitle}</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {titles
-              .filter(t => userTitles.includes(t.id))
-              .map((title) => (
-                <button
-                  key={title.id}
-                  onClick={() => handleSelectTitle(title.id)}
-                  className={`p-3 rounded-lg border-2 transition-all text-left ${
-                    selectedTitleId === title.id
-                      ? `bg-gradient-to-r ${getRarityColor(title.rarity)} text-white border-transparent`
-                      : 'bg-slate-700/50 text-slate-300 border-slate-600 hover:border-slate-500'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    {title.icon && <span>{title.icon}</span>}
-                    <div className="flex-1">
-                      <div className="font-semibold text-sm">
-                        {lang === 'en' && (title as any).name_en ? (title as any).name_en : title.name}
+              </div>
+              
+              {/* 프로필 정보 */}
+              <div className="flex-1 min-w-0">
+                {/* 사용자 이름 및 버튼 */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
+                  <div className="flex-1">
+                    {isEditingNickname ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={newNickname}
+                          onChange={(e) => setNewNickname(e.target.value)}
+                          className="text-xl sm:text-2xl font-semibold bg-slate-800 border border-slate-600 rounded px-3 py-1 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                          maxLength={20}
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveNickname();
+                            else if (e.key === 'Escape') handleCancelEditNickname();
+                          }}
+                        />
+                        <button
+                          onClick={handleSaveNickname}
+                          disabled={isSavingNickname}
+                          className="px-3 py-1 bg-teal-500 hover:bg-teal-600 text-white rounded text-sm font-semibold disabled:opacity-50"
+                        >
+                          {lang === 'ko' ? '저장' : 'Save'}
+                        </button>
+                        <button
+                          onClick={handleCancelEditNickname}
+                          className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm font-semibold"
+                        >
+                          {lang === 'ko' ? '취소' : 'Cancel'}
+                        </button>
                       </div>
-                      {((lang === 'en' && (title as any).description_en) || title.description) && (
-                        <div className="text-xs opacity-75 mt-1">
-                          {lang === 'en' && (title as any).description_en ? (title as any).description_en : title.description}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))}
-          </div>
-          {titles.filter(t => userTitles.includes(t.id)).length === 0 && (
-            <p className="text-slate-400 text-center py-4">{t.profile.noTitles}</p>
-          )}
-        </div>
-
-        {/* 업적 */}
-        <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700/50">
-          <h2 className="text-xl font-bold mb-4">{t.profile.achievements}</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {achievements.map((achievement) => {
-              const isUnlocked = userAchievements.includes(achievement.id);
-              return (
-                <div
-                  key={achievement.id}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    isUnlocked
-                      ? `bg-gradient-to-r ${getRarityColor(achievement.rarity)} text-white border-transparent`
-                      : 'bg-slate-700/30 text-slate-400 border-slate-600 opacity-50'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    {achievement.icon && (
-                      <span className="text-2xl">{achievement.icon}</span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <h1 
+                          onClick={isOwnProfile ? handleEditNickname : undefined}
+                          className={`text-xl sm:text-2xl font-semibold ${isOwnProfile ? 'cursor-pointer hover:text-teal-400 transition-colors' : ''}`}
+                          title={isOwnProfile ? (lang === 'ko' ? '클릭하여 닉네임 수정' : 'Click to edit nickname') : undefined}
+                        >
+                          {user.nickname}
+                        </h1>
+                      </div>
                     )}
-                    <div className="flex-1">
-                      <div className="font-semibold mb-1">
-                        {lang === 'en' && (achievement as any).name_en ? (achievement as any).name_en : achievement.name}
-                      </div>
-                      <div className="text-xs opacity-75">
-                        {lang === 'en' && (achievement as any).description_en ? (achievement as any).description_en : achievement.description}
-                      </div>
-                      {isUnlocked && (
-                        <div className="text-xs mt-2 opacity-75">
-                          {t.common.reward}: +{achievement.reward_xp} XP, +{achievement.reward_points} P
-                        </div>
-                      )}
-                    </div>
-                    {!isUnlocked && (
-                      <i className="ri-lock-line text-lg"></i>
+                  </div>
+                  
+                  {/* 액션 버튼 */}
+                  <div className="flex items-center gap-2">
+                    {isOwnProfile ? (
+                      <>
+                        <Link href={`/${lang}/create-problem`}>
+                          <button className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-semibold transition-colors">
+                            {lang === 'ko' ? '문제 만들기' : 'Create Problem'}
+                          </button>
+                        </Link>
+                        <button
+                          onClick={handleEditNickname}
+                          className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                        >
+                          {lang === 'ko' ? '프로필 편집' : 'Edit Profile'}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={handleFollow}
+                          className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+                            isFollowing
+                              ? 'bg-slate-800 hover:bg-slate-700 text-white'
+                              : 'bg-blue-500 hover:bg-blue-600 text-white'
+                          }`}
+                        >
+                          {isFollowing ? (lang === 'ko' ? '팔로잉' : 'Following') : (lang === 'ko' ? '팔로우' : 'Follow')}
+                        </button>
+                        <button
+                          onClick={() => setShowReportModal(true)}
+                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                          title={lang === 'ko' ? '신고하기' : 'Report'}
+                        >
+                          <i className="ri-flag-line"></i>
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
-              );
-            })}
+
+                {/* 통계 */}
+                <div className="flex items-center gap-4 sm:gap-6 mb-4">
+                  <div className="text-center">
+                    <span className="text-base sm:text-lg font-semibold">{createdProblemsCount}</span>
+                    <span className="text-sm text-slate-400 ml-1">{lang === 'ko' ? '게시물' : 'posts'}</span>
+                  </div>
+                  <button
+                    onClick={handleShowFollowers}
+                    className="text-center hover:opacity-80 transition-opacity cursor-pointer"
+                  >
+                    <span className="text-base sm:text-lg font-semibold">{followersCount}</span>
+                    <span className="text-sm text-slate-400 ml-1">{lang === 'ko' ? '팔로워' : 'followers'}</span>
+                  </button>
+                  <button
+                    onClick={handleShowFollowing}
+                    className="text-center hover:opacity-80 transition-opacity cursor-pointer"
+                  >
+                    <span className="text-base sm:text-lg font-semibold">{followingCount}</span>
+                    <span className="text-sm text-slate-400 ml-1">{lang === 'ko' ? '팔로잉' : 'following'}</span>
+                  </button>
+                </div>
+
+                {/* 사용자 설명 */}
+                <div className="mb-4 space-y-2">
+                  <div className="text-sm text-white">
+                    <LevelBadge level={progress.level} size="md" />
+                  </div>
+                  {/* 추천인 코드 */}
+                  {user.referral_code && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-slate-400">{lang === 'ko' ? '추천인 코드:' : 'Referral Code:'}</span>
+                      <code className="bg-slate-800 px-2 py-1 rounded text-cyan-400 font-mono font-semibold">
+                        {user.referral_code}
+                      </code>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(user.referral_code);
+                          showToast(lang === 'ko' ? '추천인 코드가 복사되었습니다.' : 'Referral code copied.', 'success');
+                        }}
+                        className="text-slate-400 hover:text-white transition-colors"
+                        title={lang === 'ko' ? '복사하기' : 'Copy'}
+                      >
+                        <i className="ri-file-copy-line"></i>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-          {achievements.length === 0 && (
-            <p className="text-slate-400 text-center py-4">{t.profile.noAchievements}</p>
-          )}
         </div>
+
+        {/* 문제 목록 - Thread 스타일 (최신순만) */}
+        {filteredProblems.length > 0 ? (
+          <div className="container mx-auto px-4 max-w-4xl space-y-4">
+            {filteredProblems.map((problem) => (
+              <Link key={problem.id} href={`/${lang}/problem/${problem.id}`}>
+                <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 hover:bg-slate-800 transition-colors cursor-pointer">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base sm:text-lg font-semibold text-white mb-2 line-clamp-2">
+                        {problem.title}
+                      </h3>
+                      {problem.content && (
+                        <p className="text-sm text-slate-400 mb-3 line-clamp-2">
+                          {problem.content.replace(/<[^>]*>/g, '').substring(0, 150)}...
+                        </p>
+                      )}
+                      <div className="flex items-center gap-4 text-xs sm:text-sm text-slate-400">
+                        <span className="flex items-center gap-1">
+                          <i className="ri-heart-line"></i>
+                          {problem.like_count || 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <i className="ri-chat-3-line"></i>
+                          {problem.comment_count || 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <i className="ri-eye-line"></i>
+                          {problem.view_count || 0}
+                        </span>
+                        <span className="text-slate-500">
+                          {new Date(problem.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : createdProblemsCount > 0 ? (
+          <div className="container mx-auto px-4 max-w-4xl">
+            <div className="text-center py-12">
+              <p className="text-slate-400">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="container mx-auto px-4 max-w-4xl">
+            <div className="text-center py-12">
+              <div className="text-4xl mb-4 text-slate-600">
+                <i className="ri-image-add-line"></i>
+              </div>
+              <p className="text-slate-400 mb-2">
+                {isOwnProfile 
+                  ? (lang === 'ko' ? '아직 만든 문제가 없습니다.' : 'No problems created yet.')
+                  : (lang === 'ko' ? '아직 만든 문제가 없습니다.' : 'No problems yet.')
+                }
+              </p>
+              {isOwnProfile && (
+                <Link href={`/${lang}/create-problem`}>
+                  <button className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors">
+                    {lang === 'ko' ? '첫 문제 만들기' : 'Create First Problem'}
+                  </button>
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 칭호 섹션 - Thread 스타일 */}
+        {userTitles.length > 0 && (
+          <div className="container mx-auto px-4 max-w-4xl mt-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-6">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <i className="ri-medal-line text-purple-400"></i>
+                {lang === 'ko' ? '칭호' : 'Titles'}
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {titles
+                  .filter(t => userTitles.includes(t.id))
+                  .map((title) => (
+                    <button
+                      key={title.id}
+                      onClick={() => handleSelectTitle(title.id)}
+                      className={`p-3 rounded-lg border-2 transition-all text-left ${
+                        selectedTitleId === title.id
+                          ? `bg-gradient-to-r ${getRarityColor(title.rarity)} text-white border-transparent ring-2 ring-white/50`
+                          : `bg-slate-800 text-slate-300 border-slate-700 hover:border-slate-600`
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {title.icon && <span className="text-xl">{title.icon}</span>}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm truncate">
+                            {lang === 'en' && (title as any).name_en ? (title as any).name_en : title.name}
+                          </div>
+                          {title.description && (
+                            <div className="text-xs opacity-75 mt-1 truncate">
+                              {lang === 'en' && (title as any).description_en ? (title as any).description_en : title.description}
+                            </div>
+                          )}
+                        </div>
+                        {selectedTitleId === title.id && (
+                          <i className="ri-check-line text-white"></i>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 업적 섹션 - Thread 스타일 */}
+        {userAchievements.length > 0 && (
+          <div className="container mx-auto px-4 max-w-4xl mt-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-6">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <i className="ri-award-line text-yellow-400"></i>
+                {lang === 'ko' ? '업적' : 'Achievements'}
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {achievements
+                  .filter(a => userAchievements.includes(a.id))
+                  .slice(0, 6)
+                  .map((achievement) => (
+                    <div
+                      key={achievement.id}
+                      className={`p-3 rounded-lg border-2 bg-gradient-to-r ${getRarityColor(achievement.rarity)} text-white border-transparent`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {achievement.icon && <span className="text-xl">{achievement.icon}</span>}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm truncate">
+                            {lang === 'en' && (achievement as any).name_en ? (achievement as any).name_en : achievement.name}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+              {userAchievements.length > 6 && (
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-slate-400">
+                    {lang === 'ko' 
+                      ? `+ ${userAchievements.length - 6}개의 업적 더보기`
+                      : `+ ${userAchievements.length - 6} more achievements`
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* 계정 삭제 섹션 (자기 자신의 프로필일 때만 표시) */}
         {((user.auth_user_id && currentUser?.id === user.auth_user_id) || (!user.auth_user_id && !currentUser)) && (
@@ -820,6 +1379,124 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                   }
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 팔로워 목록 모달 */}
+      {showFollowersModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-xl p-6 sm:p-8 border border-slate-700 max-w-md w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-white">
+                {lang === 'ko' ? '팔로워' : 'Followers'}
+              </h2>
+              <button
+                onClick={() => setShowFollowersModal(false)}
+                className="text-slate-400 hover:text-white transition-colors text-2xl"
+              >
+                <i className="ri-close-line"></i>
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {isLoadingFollowers ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
+                  <p className="text-slate-400 mt-2">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
+                </div>
+              ) : followersList.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-slate-400">{lang === 'ko' ? '팔로워가 없습니다.' : 'No followers yet.'}</p>
+                </div>
+              ) : (
+                followersList.map((follower) => (
+                  <Link
+                    key={follower.id}
+                    href={`/${lang}/profile/${follower.id}`}
+                    onClick={() => setShowFollowersModal(false)}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700 transition-colors"
+                  >
+                    {follower.profile_image_url ? (
+                      <img
+                        src={follower.profile_image_url}
+                        alt={follower.nickname}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold">
+                        {follower.nickname.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-white truncate">{follower.nickname}</div>
+                      {follower.referral_code && (
+                        <div className="text-xs text-slate-400 truncate">{follower.referral_code}</div>
+                      )}
+                    </div>
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 팔로잉 목록 모달 */}
+      {showFollowingModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-xl p-6 sm:p-8 border border-slate-700 max-w-md w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-white">
+                {lang === 'ko' ? '팔로잉' : 'Following'}
+              </h2>
+              <button
+                onClick={() => setShowFollowingModal(false)}
+                className="text-slate-400 hover:text-white transition-colors text-2xl"
+              >
+                <i className="ri-close-line"></i>
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {isLoadingFollowing ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
+                  <p className="text-slate-400 mt-2">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
+                </div>
+              ) : followingList.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-slate-400">{lang === 'ko' ? '팔로잉 중인 사용자가 없습니다.' : 'Not following anyone yet.'}</p>
+                </div>
+              ) : (
+                followingList.map((following) => (
+                  <Link
+                    key={following.id}
+                    href={`/${lang}/profile/${following.id}`}
+                    onClick={() => setShowFollowingModal(false)}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700 transition-colors"
+                  >
+                    {following.profile_image_url ? (
+                      <img
+                        src={following.profile_image_url}
+                        alt={following.nickname}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold">
+                        {following.nickname.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-white truncate">{following.nickname}</div>
+                      {following.referral_code && (
+                        <div className="text-xs text-slate-400 truncate">{following.referral_code}</div>
+                      )}
+                    </div>
+                  </Link>
+                ))
+              )}
             </div>
           </div>
         </div>

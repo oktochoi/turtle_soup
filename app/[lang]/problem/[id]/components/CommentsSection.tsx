@@ -16,6 +16,7 @@ interface CommentsSectionProps {
   editCommentIsSpoiler: boolean;
   revealedSpoilers: Set<string>;
   commentGameUserIds: Map<string, string>;
+  commentProfileImages: Map<string, string | null>;
   onCommentTextChange: (value: string) => void;
   onSpoilerChange: (value: boolean) => void;
   onSubmitComment: () => void;
@@ -40,6 +41,7 @@ export default function CommentsSection({
   editCommentIsSpoiler,
   revealedSpoilers,
   commentGameUserIds,
+  commentProfileImages,
   onCommentTextChange,
   onSpoilerChange,
   onSubmitComment,
@@ -114,50 +116,77 @@ export default function CommentsSection({
               return (
                 <React.Fragment key={comment.id}>
                   <div className="bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700">
-                    <div className="flex items-start justify-between mb-2 gap-2">
-                      <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-start gap-3">
+                      {/* 프로필 이미지 - 댓글 왼쪽에 크게 표시 */}
+                      <div className="flex-shrink-0">
                         {commentGameUserIds.get(comment.id) ? (
-                          <Link href={`/${lang}/profile/${commentGameUserIds.get(comment.id)}`} className="hover:opacity-80 transition-opacity">
-                            <UserLabel
-                              userId={commentGameUserIds.get(comment.id)!}
-                              nickname={comment.nickname}
-                              size="sm"
-                            />
+                          <Link href={`/${lang}/profile/${commentGameUserIds.get(comment.id)}`} className="hover:opacity-80 transition-opacity block">
+                            {commentProfileImages.get(comment.id) ? (
+                              <img
+                                src={commentProfileImages.get(comment.id)!}
+                                alt={comment.nickname}
+                                className="w-10 h-10 rounded-full object-cover border border-slate-600"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-base border border-slate-600">
+                                {comment.nickname.charAt(0).toUpperCase()}
+                              </div>
+                            )}
                           </Link>
                         ) : (
-                          <span className="text-xs sm:text-sm font-semibold text-cyan-400 break-words">{comment.nickname}</span>
-                        )}
-                        <span className="text-xs text-slate-500">·</span>
-                        <span className="text-xs text-slate-500">
-                          {new Date(comment.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
-                        </span>
-                        {comment.updated_at && comment.updated_at !== comment.created_at && (
-                          <>
-                            <span className="text-xs text-slate-500">·</span>
-                            <span className="text-xs text-slate-500">({t.common.edited})</span>
-                          </>
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-base border border-slate-600">
+                            {comment.nickname.charAt(0).toUpperCase()}
+                          </div>
                         )}
                       </div>
-                      {isCommentOwner && !isEditingThis && (
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <button
-                            onClick={() => onEditComment(comment)}
-                            className="text-xs text-slate-400 hover:text-teal-400 transition-colors p-1"
-                            title={t.common.edit}
-                          >
-                            <i className="ri-edit-line"></i>
-                          </button>
-                          <button
-                            onClick={() => onDeleteComment(comment.id)}
-                            className="text-xs text-slate-400 hover:text-red-400 transition-colors p-1"
-                            title={t.common.delete}
-                          >
-                            <i className="ri-delete-bin-line"></i>
-                          </button>
+
+                      {/* 댓글 내용 */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between mb-2 gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {commentGameUserIds.get(comment.id) ? (
+                              <Link href={`/${lang}/profile/${commentGameUserIds.get(comment.id)}`} className="hover:opacity-80 transition-opacity">
+                                <UserLabel
+                                  userId={commentGameUserIds.get(comment.id)!}
+                                  nickname={comment.nickname}
+                                  size="sm"
+                                  showProfileImage={false}
+                                />
+                              </Link>
+                            ) : (
+                              <span className="text-xs sm:text-sm font-semibold text-cyan-400 break-words">{comment.nickname}</span>
+                            )}
+                            <span className="text-xs text-slate-500">·</span>
+                            <span className="text-xs text-slate-500">
+                              {new Date(comment.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
+                            </span>
+                            {comment.updated_at && comment.updated_at !== comment.created_at && (
+                              <>
+                                <span className="text-xs text-slate-500">·</span>
+                                <span className="text-xs text-slate-500">({t.common.edited})</span>
+                              </>
+                            )}
+                          </div>
+                          {isCommentOwner && !isEditingThis && (
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <button
+                                onClick={() => onEditComment(comment)}
+                                className="text-xs text-slate-400 hover:text-teal-400 transition-colors p-1"
+                                title={t.common.edit}
+                              >
+                                <i className="ri-edit-line"></i>
+                              </button>
+                              <button
+                                onClick={() => onDeleteComment(comment.id)}
+                                className="text-xs text-slate-400 hover:text-red-400 transition-colors p-1"
+                                title={t.common.delete}
+                              >
+                                <i className="ri-delete-bin-line"></i>
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    {isEditingThis ? (
+                        {isEditingThis ? (
                       <div className="space-y-2">
                         <textarea
                           value={editCommentText}
@@ -227,6 +256,8 @@ export default function CommentsSection({
                         )}
                       </div>
                     )}
+                      </div>
+                    </div>
                   </div>
                 </React.Fragment>
               );

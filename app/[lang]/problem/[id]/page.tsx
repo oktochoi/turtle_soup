@@ -80,7 +80,9 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
   const [showShareModal, setShowShareModal] = useState(false);
   const [hasSubmittedAnswer, setHasSubmittedAnswer] = useState(false);
   const [authorGameUserId, setAuthorGameUserId] = useState<string | null>(null);
+  const [authorProfileImage, setAuthorProfileImage] = useState<string | null>(null);
   const [commentGameUserIds, setCommentGameUserIds] = useState<Map<string, string>>(new Map());
+  const [commentProfileImages, setCommentProfileImages] = useState<Map<string, string | null>>(new Map());
   const [showHints, setShowHints] = useState<boolean[]>([false, false, false]); // 힌트 1, 2, 3 표시 여부
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [nextProblem, setNextProblem] = useState<Problem | null>(null);
@@ -646,16 +648,17 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
         hasIntId: (data as any).int_id !== null && (data as any).int_id !== undefined
       });
       
-      // 작성자의 game_user_id 찾기
+      // 작성자의 game_user_id와 프로필 이미지 찾기
       if (data.user_id) {
         const { data: gameUser } = await supabase
           .from('game_users')
-          .select('id')
+          .select('id, profile_image_url')
           .eq('auth_user_id', data.user_id)
           .maybeSingle();
 
         if (gameUser) {
           setAuthorGameUserId(gameUser.id);
+          setAuthorProfileImage(gameUser.profile_image_url);
         }
       }
       
@@ -827,22 +830,25 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
       if (error) throw error;
       setComments(data || []);
 
-      // 각 댓글 작성자의 game_user_id 찾기
+      // 각 댓글 작성자의 game_user_id와 프로필 이미지 찾기
       const userIds = new Map<string, string>();
+      const profileImages = new Map<string, string | null>();
       for (const comment of data || []) {
         if (comment.user_id) {
           const { data: gameUser } = await supabase
             .from('game_users')
-            .select('id')
+            .select('id, profile_image_url')
             .eq('auth_user_id', comment.user_id)
             .maybeSingle();
 
           if (gameUser) {
             userIds.set(comment.id, gameUser.id);
+            profileImages.set(comment.id, gameUser.profile_image_url);
           }
         }
       }
       setCommentGameUserIds(userIds);
+      setCommentProfileImages(profileImages);
     } catch (error) {
       console.error('댓글 로드 오류:', error);
     }
@@ -1688,6 +1694,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
           onLikeClick={handleLike}
           onShareClick={() => setShowShareModal(true)}
           authorGameUserId={authorGameUserId}
+          authorProfileImage={authorProfileImage}
           quizType={quizType}
           t={t}
         />
@@ -1699,6 +1706,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
           quizType={quizType}
           quizContent={quizContent}
           authorGameUserId={authorGameUserId}
+          authorProfileImage={authorProfileImage}
           isEditing={isEditing}
           editTitle={editTitle}
           editContent={editContent}
@@ -1919,6 +1927,7 @@ export default function ProblemPage({ params }: { params: Promise<{ lang: string
           editCommentIsSpoiler={editCommentIsSpoiler}
           revealedSpoilers={revealedSpoilers}
           commentGameUserIds={commentGameUserIds}
+          commentProfileImages={commentProfileImages}
           onCommentTextChange={setCommentText}
           onSpoilerChange={setIsSpoiler}
           onSubmitComment={handleSubmitComment}
