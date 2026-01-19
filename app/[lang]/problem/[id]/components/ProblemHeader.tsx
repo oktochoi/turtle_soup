@@ -26,6 +26,7 @@ interface ProblemHeaderProps {
   onLikeClick: () => void;
   onShareClick: () => void;
   authorGameUserId: string | null;
+  authorProfileImage?: string | null;
   quizType?: string; // 퀴즈 타입 (밸런스 게임에서 별점 숨기기용)
   t: any;
 }
@@ -52,6 +53,7 @@ export default function ProblemHeader({
   onLikeClick,
   onShareClick,
   authorGameUserId,
+  authorProfileImage,
   quizType,
   t,
 }: ProblemHeaderProps) {
