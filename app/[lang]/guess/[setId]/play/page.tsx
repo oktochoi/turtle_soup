@@ -7,6 +7,94 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { GuessCard } from '@/lib/types/guess';
 
+// 애니메이션 스타일 추가
+const animationStyles = `
+  @keyframes bounce-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.3) translateY(-50px);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+    70% {
+      transform: scale(0.9);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  
+  @keyframes scale-up {
+    0% {
+      transform: scale(0);
+    }
+    50% {
+      transform: scale(1.2);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  
+  @keyframes slide-up {
+    0% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes fade-in {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+    20%, 40%, 60%, 80% { transform: translateX(10px); }
+  }
+  
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-10deg); }
+    75% { transform: rotate(10deg); }
+  }
+  
+  .animate-bounce-in {
+    animation: bounce-in 0.6s ease-out;
+  }
+  
+  .animate-scale-up {
+    animation: scale-up 0.5s ease-out;
+  }
+  
+  .animate-slide-up {
+    animation: slide-up 0.5s ease-out 0.2s both;
+  }
+  
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out 0.4s both;
+  }
+  
+  .animate-shake {
+    animation: shake 0.5s ease-in-out;
+  }
+  
+  .animate-wiggle {
+    animation: wiggle 0.5s ease-in-out;
+  }
+`;
+
 export default function GuessPlayPage() {
   const params = useParams();
   const lang = (params?.lang as string) || 'ko';
@@ -30,6 +118,8 @@ export default function GuessPlayPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showResult, setShowResult] = useState(false);
   const [results, setResults] = useState<Array<{card: GuessCard, isCorrect: boolean, userAnswer: string}>>([]);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [guessSetTitle, setGuessSetTitle] = useState<string>('');
 
   useEffect(() => {
     if (setId) {
@@ -110,10 +200,7 @@ export default function GuessPlayPage() {
 
     if (correct) {
       setScore(score + 1);
-      // 정답이면 2초 후 다음 카드
-      setTimeout(() => {
-        nextCard();
-      }, 2000);
+      // 자동으로 넘어가지 않음 - 사용자가 버튼을 클릭해야 함
     }
   };
 
@@ -257,8 +344,10 @@ export default function GuessPlayPage() {
   if (!currentCard) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="container mx-auto px-4 py-4 max-w-4xl">
+    <>
+      <style dangerouslySetInnerHTML={{ __html: animationStyles }} />
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+        <div className="container mx-auto px-4 py-4 max-w-4xl">
         {/* 진행 상태 */}
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -288,6 +377,13 @@ export default function GuessPlayPage() {
               <i className="ri-star-line mr-1"></i>
               {score}
             </div>
+            <button
+              onClick={() => setShowShareModal(true)}
+              className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors text-sm"
+              title={lang === 'ko' ? '공유하기' : 'Share'}
+            >
+              <i className="ri-share-line"></i>
+            </button>
           </div>
         </div>
 
@@ -381,15 +477,15 @@ export default function GuessPlayPage() {
                   
                   if (correct) {
                     setScore(score + 1);
-                    setTimeout(() => nextCard(), 1000);
+                    // 자동으로 넘어가지 않음 - 사용자가 버튼을 클릭해야 함
                   }
                 }}
                 disabled={isCorrect !== null}
                 className={`flex-1 p-6 rounded-lg border-2 text-4xl font-bold transition-all ${
                   isCorrect === true && userAnswer === 'O'
-                    ? 'border-green-500 bg-green-500/10 text-green-400'
+                    ? 'border-green-500 bg-green-500/10 text-green-400 animate-bounce-in'
                     : isCorrect === false && userAnswer === 'O'
-                    ? 'border-red-500 bg-red-500/10 text-red-400'
+                    ? 'border-red-500 bg-red-500/10 text-red-400 animate-shake'
                     : 'border-slate-700 bg-slate-900 hover:border-slate-600 disabled:opacity-50'
                 }`}
               >
@@ -408,15 +504,15 @@ export default function GuessPlayPage() {
                   
                   if (correct) {
                     setScore(score + 1);
-                    setTimeout(() => nextCard(), 1000);
+                    // 자동으로 넘어가지 않음 - 사용자가 버튼을 클릭해야 함
                   }
                 }}
                 disabled={isCorrect !== null}
                 className={`flex-1 p-6 rounded-lg border-2 text-4xl font-bold transition-all ${
                   isCorrect === true && userAnswer === 'X'
-                    ? 'border-green-500 bg-green-500/10 text-green-400'
+                    ? 'border-green-500 bg-green-500/10 text-green-400 animate-bounce-in'
                     : isCorrect === false && userAnswer === 'X'
-                    ? 'border-red-500 bg-red-500/10 text-red-400'
+                    ? 'border-red-500 bg-red-500/10 text-red-400 animate-shake'
                     : 'border-slate-700 bg-slate-900 hover:border-slate-600 disabled:opacity-50'
                 }`}
               >
@@ -427,19 +523,52 @@ export default function GuessPlayPage() {
 
           {/* 정답/오답 표시 */}
           {isCorrect === true && (
-            <div className="mb-4 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-green-400 text-center">
-              <i className="ri-checkbox-circle-fill mr-2 text-xl"></i>
-              {lang === 'ko' ? '정답입니다!' : 'Correct!'}
+            <div className="mb-4">
+              <div className="p-6 bg-green-500/20 border-2 border-green-500/50 rounded-xl text-green-400 text-center animate-bounce-in mb-3">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-75"></div>
+                    <div className="relative bg-green-500 rounded-full p-4 animate-scale-up">
+                      <i className="ri-checkbox-circle-fill text-4xl text-white"></i>
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold animate-slide-up">
+                    {lang === 'ko' ? '정답입니다! 🎉' : 'Correct! 🎉'}
+                  </div>
+                  <div className="text-sm text-green-300 animate-fade-in">
+                    {lang === 'ko' ? '잘했어요!' : 'Well done!'}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={nextCard}
+                className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold px-4 py-3 rounded-lg transition-all"
+              >
+                {lang === 'ko' ? '다음 문제' : 'Next Question'}
+              </button>
             </div>
           )}
           {isCorrect === false && (
-            <div className="mb-4">
-              <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-center mb-2">
-                <i className="ri-close-circle-fill mr-2 text-xl"></i>
-                {lang === 'ko' ? '오답입니다' : 'Incorrect'}
+            <div className="mb-4 animate-shake">
+              <div className="p-6 bg-red-500/20 border-2 border-red-500/50 rounded-xl text-red-400 text-center mb-3">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="relative">
+                    <div className="bg-red-500 rounded-full p-4 animate-wiggle">
+                      <i className="ri-close-circle-fill text-4xl text-white"></i>
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {lang === 'ko' ? '오답입니다' : 'Incorrect'}
+                  </div>
+                </div>
               </div>
-              <div className="text-sm text-slate-300 text-center mb-2">
-                {lang === 'ko' ? '정답' : 'Answer'}: {Array.isArray(currentCard.answers) ? currentCard.answers.join(', ') : ''}
+              <div className="p-3 bg-slate-900/50 rounded-lg mb-3 text-center">
+                <div className="text-sm text-slate-400 mb-1">
+                  {lang === 'ko' ? '정답' : 'Answer'}
+                </div>
+                <div className="text-base font-semibold text-green-400">
+                  {Array.isArray(currentCard.answers) ? currentCard.answers.join(', ') : ''}
+                </div>
               </div>
               <button
                 onClick={handlePass}
@@ -469,8 +598,98 @@ export default function GuessPlayPage() {
             </div>
           )}
         </div>
+        </div>
+
+        {/* 공유 모달 */}
+        {showShareModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowShareModal(false)}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-white">
+                  {lang === 'ko' ? '퀴즈 공유하기' : 'Share Quiz'}
+                </h2>
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="text-slate-400 hover:text-white transition-colors"
+                >
+                  <i className="ri-close-line text-2xl"></i>
+                </button>
+              </div>
+              
+              {(() => {
+                const shareUrl = typeof window !== 'undefined' 
+                  ? `${window.location.origin}/${lang}/guess/${setId}/play?count=${playCount === 'all' ? selectedCards.length : playCount}&time=${timePerCard === null ? 'unlimited' : timePerCard}`
+                  : '';
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
+                      <h3 className="text-sm font-semibold text-white mb-2">{guessSetTitle}</h3>
+                      <p className="text-xs text-slate-400">
+                        {lang === 'ko' ? `문제 ${playCount === 'all' ? selectedCards.length : playCount}개` : `${playCount === 'all' ? selectedCards.length : playCount} questions`}
+                        {timePerCard !== null && (
+                          <span> • {lang === 'ko' ? `카드당 ${timePerCard}초` : `${timePerCard}s per card`}</span>
+                        )}
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <button
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(shareUrl);
+                            alert(lang === 'ko' ? '링크가 복사되었습니다!' : 'Link copied!');
+                            setShowShareModal(false);
+                          } catch (error) {
+                            alert(lang === 'ko' ? '링크 복사에 실패했습니다.' : 'Failed to copy link.');
+                          }
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-all font-medium"
+                      >
+                        <i className="ri-file-copy-line"></i>
+                        <span>{lang === 'ko' ? '링크 복사' : 'Copy Link'}</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          const text = lang === 'ko' 
+                            ? `${guessSetTitle} - 퀴즈 도전하기!`
+                            : `${guessSetTitle} - Take the quiz!`;
+                          const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+                          window.open(twitterUrl, '_blank', 'width=550,height=420');
+                          setShowShareModal(false);
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-all font-medium"
+                      >
+                        <i className="ri-twitter-x-line"></i>
+                        <span>{lang === 'ko' ? '트위터 공유' : 'Share on Twitter'}</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+                          window.open(facebookUrl, '_blank', 'width=550,height=420');
+                          setShowShareModal(false);
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all font-medium"
+                      >
+                        <i className="ri-facebook-line"></i>
+                        <span>{lang === 'ko' ? '페이스북 공유' : 'Share on Facebook'}</span>
+                      </button>
+                    </div>
+                    
+                    <div className="p-3 bg-slate-900/50 rounded-lg border border-slate-700">
+                      <p className="text-xs text-slate-400 mb-1">{lang === 'ko' ? '공유 링크' : 'Share Link'}</p>
+                      <p className="text-xs text-teal-400 break-all font-mono">{shareUrl}</p>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  );
-}
+      </>
+    );
+  }
 

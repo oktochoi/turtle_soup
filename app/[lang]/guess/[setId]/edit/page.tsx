@@ -24,6 +24,11 @@ export default function EditGuessSetPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [editingCardIndex, setEditingCardIndex] = useState<number | null>(null);
   
+  // 편집 중인 카드 상태
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [editCardQuestion, setEditCardQuestion] = useState('');
+  const [editCardAnswers, setEditCardAnswers] = useState<string[]>([]);
+  
   // 새 카드 추가 상태
   const [newCardType, setNewCardType] = useState<CardType>('text');
   const [newCardQuestion, setNewCardQuestion] = useState(''); // 텍스트 질문 (필수)
@@ -705,24 +710,141 @@ export default function EditGuessSetPage() {
                       {lang === 'ko' ? '정답' : 'Answers'}: {Array.isArray(card.answers) ? card.answers.join(', ') : ''}
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleDeleteCard(card.id)}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    <i className="ri-delete-bin-line"></i>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {editingCardId === card.id ? (
+                      <>
+                        <button
+                          onClick={async () => {
+                            try {
+                              const supabase = createClient();
+                              const { error } = await supabase
+                                .from('guess_cards')
+                                .update({
+                                  question: editCardQuestion.trim(),
+                                  answers: editCardAnswers.filter(a => a.trim()),
+                                })
+                                .eq('id', card.id);
+
+                              if (error) throw error;
+                              setEditingCardId(null);
+                              setEditCardQuestion('');
+                              setEditCardAnswers([]);
+                              await loadSet();
+                            } catch (error: any) {
+                              console.error('카드 수정 오류:', error);
+                              alert(lang === 'ko' ? `카드 수정 실패: ${error?.message}` : `Failed to update card: ${error?.message}`);
+                            }
+                          }}
+                          className="text-green-400 hover:text-green-300"
+                          title={lang === 'ko' ? '저장' : 'Save'}
+                        >
+                          <i className="ri-check-line"></i>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingCardId(null);
+                            setEditCardQuestion('');
+                            setEditCardAnswers([]);
+                          }}
+                          className="text-slate-400 hover:text-slate-300"
+                          title={lang === 'ko' ? '취소' : 'Cancel'}
+                        >
+                          <i className="ri-close-line"></i>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingCardId(card.id);
+                            setEditCardQuestion(card.question || '');
+                            setEditCardAnswers(Array.isArray(card.answers) ? [...card.answers] : ['']);
+                          }}
+                          className="text-teal-400 hover:text-teal-300"
+                          title={lang === 'ko' ? '편집' : 'Edit'}
+                        >
+                          <i className="ri-edit-line"></i>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCard(card.id)}
+                          className="text-red-400 hover:text-red-300"
+                          title={lang === 'ko' ? '삭제' : 'Delete'}
+                        >
+                          <i className="ri-delete-bin-line"></i>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-                {card.card_type === 'text' && Array.isArray(card.images) && card.images.length > 0 && (
-                  <div className="flex gap-2 overflow-x-auto">
-                    {card.images.map((img, imgIdx) => (
-                      <img key={imgIdx} src={img} alt={`Card ${idx + 1} Image ${imgIdx + 1}`} className="w-20 h-20 object-cover rounded" />
-                    ))}
+                {editingCardId === card.id ? (
+                  <div className="mt-3 space-y-3 p-3 bg-slate-900 rounded-lg">
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-slate-300">
+                        {lang === 'ko' ? '질문' : 'Question'} <span className="text-red-400">*</span>
+                      </label>
+                      <textarea
+                        value={editCardQuestion}
+                        onChange={(e) => setEditCardQuestion(e.target.value)}
+                        placeholder={lang === 'ko' ? '질문을 입력하세요' : 'Enter question'}
+                        rows={3}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm resize-none"
+                        maxLength={500}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-slate-300">
+                        {lang === 'ko' ? '정답' : 'Answers'} <span className="text-red-400">*</span>
+                      </label>
+                      {editCardAnswers.map((answer, ansIdx) => (
+                        <div key={ansIdx} className="flex gap-2 mb-2">
+                          <input
+                            type="text"
+                            value={answer}
+                            onChange={(e) => {
+                              const newAnswers = [...editCardAnswers];
+                              newAnswers[ansIdx] = e.target.value;
+                              setEditCardAnswers(newAnswers);
+                            }}
+                            placeholder={lang === 'ko' ? '정답 입력' : 'Enter answer'}
+                            className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+                          />
+                          {editCardAnswers.length > 1 && (
+                            <button
+                              onClick={() => {
+                                const newAnswers = editCardAnswers.filter((_, i) => i !== ansIdx);
+                                setEditCardAnswers(newAnswers);
+                              }}
+                              className="text-red-400 hover:text-red-300 px-2"
+                            >
+                              <i className="ri-close-line"></i>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => setEditCardAnswers([...editCardAnswers, ''])}
+                        className="text-teal-400 hover:text-teal-300 text-xs"
+                      >
+                        <i className="ri-add-line mr-1"></i>
+                        {lang === 'ko' ? '정답 추가' : 'Add Answer'}
+                      </button>
+                    </div>
                   </div>
-                )}
-                {card.card_type === 'media' && card.media_url && (
-                  <div className="mt-2">
-                    <div className="text-xs text-slate-400">{lang === 'ko' ? '미디어' : 'Media'}: {card.media_url}</div>
-                  </div>
+                ) : (
+                  <>
+                    {card.card_type === 'text' && Array.isArray(card.images) && card.images.length > 0 && (
+                      <div className="flex gap-2 overflow-x-auto mt-2">
+                        {card.images.map((img, imgIdx) => (
+                          <img key={imgIdx} src={img} alt={`Card ${idx + 1} Image ${imgIdx + 1}`} className="w-20 h-20 object-cover rounded" />
+                        ))}
+                      </div>
+                    )}
+                    {card.card_type === 'media' && card.media_url && (
+                      <div className="mt-2">
+                        <div className="text-xs text-slate-400">{lang === 'ko' ? '미디어' : 'Media'}: {card.media_url}</div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             ))

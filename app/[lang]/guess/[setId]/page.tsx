@@ -357,6 +357,55 @@ export default function GuessSetDetailPage() {
     }
   };
 
+  const handleEditRequest = async (cardId: string, currentQuestion: string, currentAnswer: string) => {
+    if (!user) {
+      alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Please log in.');
+      return;
+    }
+
+    if (!guessSet || !guessSet.creator_id) {
+      alert(lang === 'ko' ? '작성자를 찾을 수 없습니다.' : 'Creator not found.');
+      return;
+    }
+
+    const requestMessage = prompt(
+      lang === 'ko' 
+        ? `수정 요청 내용을 입력하세요:\n\n현재 질문: ${currentQuestion}\n현재 정답: ${currentAnswer}`
+        : `Enter your edit request:\n\nCurrent Question: ${currentQuestion}\nCurrent Answer: ${currentAnswer}`
+    );
+
+    if (!requestMessage || !requestMessage.trim()) {
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      
+      // 알림 생성
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: guessSet.creator_id,
+          type: 'edit_request',
+          title: lang === 'ko' ? '수정 요청' : 'Edit Request',
+          message: `${lang === 'ko' ? '카드 수정 요청' : 'Card Edit Request'}: ${requestMessage}`,
+          link: `/${lang}/guess/${setId}?card=${cardId}`,
+          is_read: false,
+        });
+
+      if (notificationError) {
+        console.error('알림 생성 오류:', notificationError);
+        alert(lang === 'ko' ? `알림 전송 실패: ${notificationError.message}` : `Notification failed: ${notificationError.message}`);
+        return;
+      }
+
+      alert(lang === 'ko' ? '수정 요청이 전송되었습니다.' : 'Edit request sent.');
+    } catch (error: any) {
+      console.error('수정 요청 오류:', error);
+      alert(lang === 'ko' ? `수정 요청 실패: ${error?.message}` : `Failed to send edit request: ${error?.message}`);
+    }
+  };
+
   const handleSubmitComment = async () => {
     if (!user || !setId || (!newComment.trim() && !commentImage)) return;
 
@@ -570,45 +619,6 @@ export default function GuessSetDetailPage() {
             {lang === 'ko' ? '게임 시작하기' : 'Start Game'}
           </button>
         </div>
-
-        {/* 카드 목록 */}
-        {cards.length > 0 && (
-          <div className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-700 mb-6">
-            <h2 className="text-lg font-semibold mb-4">{lang === 'ko' ? '카드 목록' : 'Card List'}</h2>
-            <div className="space-y-3">
-              {cards.map((card, index) => (
-                <div key={card.id} className="bg-slate-900 rounded-lg p-4 border border-slate-700">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs font-semibold text-teal-400 bg-teal-400/10 px-2 py-1 rounded">
-                          #{index + 1}
-                        </span>
-                        {card.question && (
-                          <h3 className="text-sm font-semibold text-white line-clamp-2">
-                            {card.question}
-                          </h3>
-                        )}
-                      </div>
-                      {card.answers && Array.isArray(card.answers) && card.answers.length > 0 && (
-                        <p className="text-xs text-slate-400">
-                          {lang === 'ko' ? '정답' : 'Answer'}: {card.answers.join(', ')}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => setShowCardShareModal(card.id)}
-                      className="flex-shrink-0 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors text-sm"
-                      title={lang === 'ko' ? '공유하기' : 'Share'}
-                    >
-                      <i className="ri-share-line"></i>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* 댓글 섹션 */}
         <div className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-700">
