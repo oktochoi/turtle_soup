@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -39,6 +39,11 @@ export default function GuessSetDetailPage() {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [userNickname, setUserNickname] = useState<string | null>(null);
   const [customTimeInput, setCustomTimeInput] = useState<string>('');
+  const [commentImage, setCommentImage] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const commentImageInputRef = useRef<HTMLInputElement | null>(null);
+  const [showCardShareModal, setShowCardShareModal] = useState<string | null>(null);
+  const [creatorInfo, setCreatorInfo] = useState<{id: string; nickname: string; profile_image_url: string | null} | null>(null);
 
   useEffect(() => {
     if (setId) {
@@ -65,16 +70,36 @@ export default function GuessSetDetailPage() {
       setGuessSet(setData);
       setIsCreator(user?.id === setData.creator_id);
 
+      // 작성자 정보 가져오기
+      if (setData.creator_id) {
+        const { data: creator } = await supabase
+          .from('game_users')
+          .select('id, nickname, profile_image_url')
+          .eq('id', setData.creator_id)
+          .maybeSingle();
+        
+        if (creator) {
+          setCreatorInfo(creator);
+        }
+      }
+
       // 관리자 확인 및 사용자 닉네임 가져오기
       if (user) {
         const { data: gameUser } = await supabase
           .from('game_users')
           .select('is_admin, nickname')
-          .eq('id', user.id)
+          .eq('auth_user_id', user.id)
           .maybeSingle();
         
         setIsAdmin(gameUser?.is_admin || false);
-        setUserNickname(gameUser?.nickname || null);
+        if (gameUser) {
+          const { data: gameUserById } = await supabase
+            .from('game_users')
+            .select('nickname')
+            .eq('id', user.id)
+            .maybeSingle();
+          setUserNickname(gameUserById?.nickname || gameUser.nickname || null);
+        }
       }
 
       // 카드 로드
@@ -300,8 +325,40 @@ export default function GuessSetDetailPage() {
     }
   };
 
+  const handleImageUpload = async (file: File) => {
+    if (!user) return;
+    
+    setIsUploadingImage(true);
+    try {
+      const supabase = createClient();
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `comment-images/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('public')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('public')
+        .getPublicUrl(filePath);
+
+      setCommentImage(data.publicUrl);
+    } catch (error: any) {
+      console.error('이미지 업로드 오류:', error);
+      alert(lang === 'ko' ? `이미지 업로드 실패: ${error?.message}` : `Image upload failed: ${error?.message}`);
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   const handleSubmitComment = async () => {
-    if (!user || !setId || !newComment.trim()) return;
+    if (!user || !setId || (!newComment.trim() && !commentImage)) return;
 
     setIsSubmittingComment(true);
     try {
@@ -311,11 +368,13 @@ export default function GuessSetDetailPage() {
         .insert({
           set_id: setId,
           user_id: user.id,
-          content: newComment.trim(),
+          content: newComment.trim() || '',
+          image_url: commentImage,
         });
 
       if (error) throw error;
       setNewComment('');
+      setCommentImage(null);
       await loadComments();
     } catch (error: any) {
       console.error('댓글 작성 오류:', error);
@@ -380,6 +439,28 @@ export default function GuessSetDetailPage() {
           {guessSet.description && (
             <p className="text-slate-300 mb-4">{guessSet.description}</p>
           )}
+          
+          {/* 작성자 정보 */}
+          {creatorInfo && (
+            <div className="mb-4 flex items-center gap-2">
+              <span className="text-xs text-slate-400">{lang === 'ko' ? '작성자' : 'Creator'}:</span>
+              <Link href={`/${lang}/profile/${creatorInfo.id}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                {creatorInfo.profile_image_url ? (
+                  <img
+                    src={creatorInfo.profile_image_url}
+                    alt={creatorInfo.nickname}
+                    className="w-6 h-6 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-xs">
+                    {creatorInfo.nickname.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="text-sm font-semibold text-teal-400">{creatorInfo.nickname}</span>
+              </Link>
+            </div>
+          )}
+          
           <div className="flex items-center flex-wrap gap-4 text-sm">
             <span className="text-slate-400">
               <i className="ri-file-list-line mr-1"></i>
@@ -490,6 +571,45 @@ export default function GuessSetDetailPage() {
           </button>
         </div>
 
+        {/* 카드 목록 */}
+        {cards.length > 0 && (
+          <div className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-700 mb-6">
+            <h2 className="text-lg font-semibold mb-4">{lang === 'ko' ? '카드 목록' : 'Card List'}</h2>
+            <div className="space-y-3">
+              {cards.map((card, index) => (
+                <div key={card.id} className="bg-slate-900 rounded-lg p-4 border border-slate-700">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-semibold text-teal-400 bg-teal-400/10 px-2 py-1 rounded">
+                          #{index + 1}
+                        </span>
+                        {card.question && (
+                          <h3 className="text-sm font-semibold text-white line-clamp-2">
+                            {card.question}
+                          </h3>
+                        )}
+                      </div>
+                      {card.answers && Array.isArray(card.answers) && card.answers.length > 0 && (
+                        <p className="text-xs text-slate-400">
+                          {lang === 'ko' ? '정답' : 'Answer'}: {card.answers.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setShowCardShareModal(card.id)}
+                      className="flex-shrink-0 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors text-sm"
+                      title={lang === 'ko' ? '공유하기' : 'Share'}
+                    >
+                      <i className="ri-share-line"></i>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 댓글 섹션 */}
         <div className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-700">
           <h2 className="text-lg font-semibold mb-4">{lang === 'ko' ? '댓글' : 'Comments'}</h2>
@@ -505,9 +625,58 @@ export default function GuessSetDetailPage() {
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none text-sm"
                 maxLength={500}
               />
+              
+              {/* 이미지 업로드 */}
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (file.size > 5 * 1024 * 1024) {
+                        alert(lang === 'ko' ? '이미지 크기는 5MB 이하여야 합니다.' : 'Image size must be 5MB or less.');
+                        return;
+                      }
+                      handleImageUpload(file);
+                    }
+                  }}
+                  className="hidden"
+                  ref={commentImageInputRef}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (commentImageInputRef.current) {
+                      commentImageInputRef.current.click();
+                    }
+                  }}
+                  disabled={isUploadingImage}
+                  className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition-colors disabled:opacity-50"
+                >
+                  <i className="ri-image-line mr-1"></i>
+                  {lang === 'ko' ? '이미지' : 'Image'}
+                </button>
+                {commentImage && (
+                  <div className="flex items-center gap-2">
+                    <img src={commentImage} alt="Preview" className="w-12 h-12 object-cover rounded" />
+                    <button
+                      type="button"
+                      onClick={() => setCommentImage(null)}
+                      className="text-red-400 hover:text-red-300"
+                    >
+                      <i className="ri-close-line"></i>
+                    </button>
+                  </div>
+                )}
+                {isUploadingImage && (
+                  <span className="text-xs text-slate-400">{lang === 'ko' ? '업로드 중...' : 'Uploading...'}</span>
+                )}
+              </div>
+              
               <button
                 onClick={handleSubmitComment}
-                disabled={!newComment.trim() || isSubmittingComment}
+                disabled={(!newComment.trim() && !commentImage) || isSubmittingComment}
                 className="mt-2 bg-teal-500 hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-lg transition-all text-sm"
               >
                 {isSubmittingComment ? (lang === 'ko' ? '작성 중...' : 'Submitting...') : (lang === 'ko' ? '댓글 작성' : 'Post Comment')}
@@ -544,9 +713,18 @@ export default function GuessSetDetailPage() {
                         {new Date(comment.created_at).toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US')}
                       </span>
                     </div>
-                    <p className={`text-sm whitespace-pre-wrap ${
+                    <p className={`text-sm whitespace-pre-wrap mb-2 ${
                       isOwnComment ? 'text-cyan-200' : 'text-slate-300'
                     }`}>{comment.content}</p>
+                    {comment.image_url && (
+                      <div className="mt-2">
+                        <img
+                          src={comment.image_url}
+                          alt="Comment image"
+                          className="max-w-full max-h-64 object-contain rounded-lg border border-slate-700"
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -646,22 +824,38 @@ export default function GuessSetDetailPage() {
                     onChange={(e) => {
                       const val = e.target.value;
                       setCustomTimeInput(val);
-                      if (val && !isNaN(parseInt(val)) && parseInt(val) > 0) {
-                        setTimePerCard(parseInt(val));
+                      if (val && !isNaN(parseInt(val))) {
+                        const numVal = parseInt(val);
+                        // 3초~180초(3분) 범위로 제한
+                        if (numVal >= 3 && numVal <= 180) {
+                          setTimePerCard(numVal);
+                        } else if (numVal < 3) {
+                          setTimePerCard(3);
+                          setCustomTimeInput('3');
+                        } else if (numVal > 180) {
+                          setTimePerCard(180);
+                          setCustomTimeInput('180');
+                        }
                       }
                     }}
-                    placeholder={lang === 'ko' ? '직접 입력 (초 단위, 예: 3)' : 'Custom (seconds, e.g., 3)'}
-                    min="1"
+                    placeholder={lang === 'ko' ? '직접 입력 (3초~180초, 예: 3)' : 'Custom (3-180 seconds, e.g., 3)'}
+                    min="3"
+                    max="180"
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
                   {customTimeInput && (
                     <p className="text-xs text-teal-400 mt-1">
-                      {lang === 'ko' ? `${customTimeInput}초로 설정됨` : `Set to ${customTimeInput} seconds`}
+                      {lang === 'ko' ? `${customTimeInput}초로 설정됨 (3초~180초)` : `Set to ${customTimeInput} seconds (3-180 seconds)`}
+                    </p>
+                  )}
+                  {customTimeInput && (parseInt(customTimeInput) < 3 || parseInt(customTimeInput) > 180) && (
+                    <p className="text-xs text-red-400 mt-1">
+                      {lang === 'ko' ? '시간 제한은 3초 이상 180초(3분) 이하여야 합니다.' : 'Time limit must be between 3 and 180 seconds.'}
                     </p>
                   )}
                 </div>
                 <p className="text-xs text-slate-400 mt-2">
-                  {lang === 'ko' ? '모든 카드에 동일한 시간이 적용됩니다' : 'Same time limit for all cards'}
+                  {lang === 'ko' ? '모든 카드에 동일한 시간이 적용됩니다 (3초~180초)' : 'Same time limit for all cards (3-180 seconds)'}
                 </p>
               </div>
 
@@ -684,6 +878,11 @@ export default function GuessSetDetailPage() {
                       alert(lang === 'ko' ? '문제 개수는 최소 10개 이상이어야 합니다.' : 'Number of questions must be at least 10.');
                       return;
                     }
+                    // 시간 제한 검증 (3초~180초 또는 무제한만 허용)
+                    if (timePerCard !== null && (timePerCard < 3 || timePerCard > 180)) {
+                      alert(lang === 'ko' ? '시간 제한은 3초 이상 180초(3분) 이하여야 합니다.' : 'Time limit must be between 3 and 180 seconds.');
+                      return;
+                    }
                     // 플레이 화면으로 이동 (세션 생성)
                     const timeParam = timePerCard === null ? 'unlimited' : timePerCard;
                     router.push(`/${lang}/guess/${setId}/play?count=${actualCount}&time=${timeParam}`);
@@ -693,6 +892,97 @@ export default function GuessSetDetailPage() {
                   {lang === 'ko' ? '시작하기' : 'Start'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* 카드 공유 모달 */}
+        {showCardShareModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowCardShareModal(null)}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-white">
+                  {lang === 'ko' ? '카드 공유하기' : 'Share Card'}
+                </h2>
+                <button
+                  onClick={() => setShowCardShareModal(null)}
+                  className="text-slate-400 hover:text-white transition-colors"
+                >
+                  <i className="ri-close-line text-2xl"></i>
+                </button>
+              </div>
+              
+              {(() => {
+                const card = cards.find(c => c.id === showCardShareModal);
+                if (!card) return null;
+                
+                const shareUrl = typeof window !== 'undefined' 
+                  ? `${window.location.origin}/${lang}/guess/${setId}#card-${card.id}`
+                  : '';
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
+                      <h3 className="text-sm font-semibold text-white mb-2">{card.question}</h3>
+                      {card.answers && Array.isArray(card.answers) && card.answers.length > 0 && (
+                        <p className="text-xs text-slate-400">
+                          {lang === 'ko' ? '정답' : 'Answer'}: {card.answers.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <button
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(shareUrl);
+                            alert(lang === 'ko' ? '링크가 복사되었습니다!' : 'Link copied!');
+                            setShowCardShareModal(null);
+                          } catch (error) {
+                            alert(lang === 'ko' ? '링크 복사에 실패했습니다.' : 'Failed to copy link.');
+                          }
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-all font-medium"
+                      >
+                        <i className="ri-file-copy-line"></i>
+                        <span>{lang === 'ko' ? '링크 복사' : 'Copy Link'}</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          const text = lang === 'ko' 
+                            ? `${guessSet.title} - ${card.question}`
+                            : `${guessSet.title} - ${card.question}`;
+                          const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+                          window.open(twitterUrl, '_blank', 'width=550,height=420');
+                          setShowCardShareModal(null);
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-all font-medium"
+                      >
+                        <i className="ri-twitter-x-line"></i>
+                        <span>{lang === 'ko' ? '트위터 공유' : 'Share on Twitter'}</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+                          window.open(facebookUrl, '_blank', 'width=550,height=420');
+                          setShowCardShareModal(null);
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all font-medium"
+                      >
+                        <i className="ri-facebook-line"></i>
+                        <span>{lang === 'ko' ? '페이스북 공유' : 'Share on Facebook'}</span>
+                      </button>
+                    </div>
+                    
+                    <div className="p-3 bg-slate-900/50 rounded-lg border border-slate-700">
+                      <p className="text-xs text-slate-400 mb-1">{lang === 'ko' ? '공유 링크' : 'Share Link'}</p>
+                      <p className="text-xs text-teal-400 break-all font-mono">{shareUrl}</p>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
