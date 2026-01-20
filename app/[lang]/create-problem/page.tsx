@@ -33,6 +33,7 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
   const [content, setContent] = useState(''); // story
   const [answer, setAnswer] = useState(''); // truth
   const [hints, setHints] = useState<string[]>(['', '', '']); // 최대 3개
+  const [originalAuthor, setOriginalAuthor] = useState(''); // 원작자 (선택사항)
   
   // Nonsense 타입용
   const [question, setQuestion] = useState('');
@@ -203,6 +204,11 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         tags: getTagsFromQuizType(quizType), // 게임 유형에 맞는 태그 자동 추가
         lang: currentLang,
       };
+      
+      // 원작자가 있는 경우 추가 (soup 타입만)
+      if (quizType === 'soup' && originalAuthor.trim()) {
+        insertData.original_author = originalAuthor.trim();
+      }
       
       // soup 타입은 기존 방식 유지 (하위 호환성)
       if (quizType === 'soup') {
@@ -476,6 +482,47 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
           </h1>
         </div>
 
+        {/* 고전 퍼즐 안내 */}
+        <div className="mb-4 sm:mb-5 rounded-xl border border-slate-700 bg-slate-800/60 p-4 text-xs sm:text-sm text-slate-200 space-y-2">
+          <p className="font-semibold text-slate-100">
+            {lang === 'ko'
+              ? '고전 바다거북스프·논리 퍼즐 운영 원칙'
+              : 'Classic Turtle Soup / Logic Puzzle Policy'}
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-slate-300">
+            <li>
+              {lang === 'ko'
+                ? '아이디어·사고 구조 중심의 퍼즐은 저작권 침해가 아니며, 특정 문장을 그대로 복제하지 않는 한 문제가 없습니다.'
+                : 'Idea/logic-based puzzles are not copyright infringement unless you copy exact wording.'}
+            </li>
+            <li>
+              {lang === 'ko'
+                ? '대부분의 고전 퍼즐은 원작자를 특정할 수 없으므로 개인 원작자 표기는 하지 않습니다.'
+                : 'Most classic puzzles have no verifiable single author, so we do not name individuals.'}
+            </li>
+            <li>
+              {lang === 'ko'
+                ? '출처 표기 예시: Classic Turtle Soup (Public Domain), Classic Logic Puzzle (Unknown)'
+                : 'Source examples: Classic Turtle Soup (Public Domain), Classic Logic Puzzle (Unknown)'}
+            </li>
+            <li>
+              {lang === 'ko'
+                ? '신뢰 가능한 집합 출처만 사용: 위키백과 등'
+                : 'Use only reputable aggregate sources (e.g., Wikipedia).'}
+            </li>
+            <li className="text-slate-200 font-medium">
+              {lang === 'ko'
+                ? '본 플랫폼의 일부 문제는 전 세계적으로 공유되어 온 고전 바다거북스프 및 논리 퍼즐을 바탕으로 재구성되었습니다.'
+                : 'Some puzzles here are reconstructed from globally shared classic Turtle Soup and logic puzzles.'}
+            </li>
+            <li className="text-slate-200 font-medium">
+              {lang === 'ko'
+                ? '본 플랫폼의 퍼즐 콘텐츠는 저작권상 명확한 법적 문제 없이 운영 가능하며, 윤리적 투명성을 위해 “고전 퍼즐 기반”임을 명시하는 방식을 채택합니다.'
+                : 'Our puzzles are operated without copyright issues; we state they are “classic puzzle-based” for transparency.'}
+            </li>
+          </ul>
+        </div>
+
         <div className="space-y-4 sm:space-y-5 lg:space-y-6">
           {/* 맞추기 게임 바로가기 */}
           <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-xl p-4">
@@ -546,9 +593,11 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
                 story={content}
                 truth={answer}
                 hints={hints}
+                originalAuthor={originalAuthor}
                 onStoryChange={setContent}
                 onTruthChange={setAnswer}
                 onHintsChange={setHints}
+                onOriginalAuthorChange={setOriginalAuthor}
                 lang={currentLang}
               />
 

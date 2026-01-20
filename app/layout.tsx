@@ -25,7 +25,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "퀴즈 천국",
-  description: "다양한 퀴즈와 추리 게임을 즐기는 퀴즈 플랫폼",
+  description: "바다거북스프, 밸런스게임, 라이어, 마피아게임, 퀴즈와 추리 게임을 즐기는 퀴즈 플랫폼",
 };
 
 export default function RootLayout({

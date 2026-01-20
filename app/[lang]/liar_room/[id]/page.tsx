@@ -29,7 +29,6 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
   const [isEliminated, setIsEliminated] = useState(false); // 내가 제외되었는지 여부
   const [gameResult, setGameResult] = useState<'CITIZEN_WIN' | 'LIAR_WIN' | null>(null); // 게임 결과
   const [nickname, setNickname] = useState('');
-  const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [roomCreatedAt, setRoomCreatedAt] = useState<Date | null>(null);
@@ -46,72 +45,64 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
   const [votingTimeLeft, setVotingTimeLeft] = useState<number | null>(null); // 투표 시간 (초, 15초)
   const [isAdmin, setIsAdmin] = useState(false); // 관리자 여부
 
-  // 로그인한 유저는 닉네임 자동 설정, 비로그인은 닉네임 입력 모달
+  // 로그인 필수: 로그인 유저 닉네임 자동 사용
   useEffect(() => {
     if (authLoading) return;
+    if (!user) {
+      alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Login required.');
+      router.push(`/${lang}/auth/login`);
+      return;
+    }
 
     const loadUserNickname = async () => {
       try {
-        // localStorage에서 저장된 닉네임 확인
-        const savedNickname = localStorage.getItem(`nickname_${roomCode}`);
-        if (savedNickname) {
-          setNickname(savedNickname);
-          setShowNicknameModal(false);
-          await joinRoom(savedNickname, false);
-          return;
-        }
+        // 관리자 권한 확인
+        const { data: gameUser } = await supabase
+          .from('game_users')
+          .select('is_admin')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        setIsAdmin(gameUser?.is_admin || false);
 
-        if (user) {
-          // 관리자 권한 확인
-          const { data: gameUser } = await supabase
-            .from('game_users')
-            .select('is_admin')
-            .eq('id', user.id)
-            .maybeSingle();
-          
-          setIsAdmin(gameUser?.is_admin || false);
+        // rooms 테이블에서 호스트 확인
+        const { data: roomData } = await supabase
+          .from('rooms')
+          .select('host_nickname, host_user_id')
+          .eq('code', roomCode)
+          .single();
+        
+        // users 테이블에서 닉네임 가져오기
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabaseClient = createClient();
+        const { data: userData } = await supabaseClient
+          .from('users')
+          .select('nickname')
+          .eq('id', user.id)
+          .maybeSingle();
 
-          // 로그인한 유저: rooms 테이블에서 호스트 확인
-          const { data: roomData } = await supabase
-            .from('rooms')
-            .select('host_nickname, host_user_id')
-            .eq('code', roomCode)
-            .single();
-          
-          if (roomData) {
-            // 호스트인 경우
-            if (roomData.host_user_id === user.id) {
-              setIsHost(true);
-              const hostNickname = roomData.host_nickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User');
-              setNickname(hostNickname);
-              await joinRoom(hostNickname, true);
-            } else {
-              // 일반 참가자인 경우 users 테이블에서 닉네임 가져오기
-              const { createClient } = await import('@/lib/supabase/client');
-              const supabaseClient = createClient();
-              const { data: userData } = await supabaseClient
-                .from('users')
-                .select('nickname')
-                .eq('id', user.id)
-                .maybeSingle();
-              
-              const userNickname = userData?.nickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User');
-              setNickname(userNickname);
-              await joinRoom(userNickname, false);
-            }
-          }
+        const userNickname = roomData?.host_user_id === user.id
+          ? (roomData.host_nickname || userData?.nickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User'))
+          : (userData?.nickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User'));
+
+        if (roomData?.host_user_id === user.id) {
+          setIsHost(true);
+          setNickname(userNickname);
+          await joinRoom(userNickname, true);
         } else {
-          // 로그인하지 않은 경우 닉네임 입력 모달 표시
-          setShowNicknameModal(true);
+          setIsHost(false);
+          setNickname(userNickname);
+          await joinRoom(userNickname, false);
         }
       } catch (err) {
         console.error('닉네임 로드 오류:', err);
-        setShowNicknameModal(true);
+        alert(lang === 'ko' ? '닉네임을 불러오지 못했습니다.' : 'Failed to load nickname.');
+        router.push(`/${lang}`);
       }
     };
 
     loadUserNickname();
-  }, [user, authLoading, roomCode, lang]);
+  }, [user, authLoading, roomCode, lang, router]);
 
   // 방 참여 함수 (중복 방지: 이미 존재하면 무시)
   const joinRoom = async (playerNickname: string, isHostPlayer: boolean) => {
@@ -165,20 +156,6 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
     } catch (err) {
       console.error('❌ 방 참여 오류:', err);
     }
-  };
-
-  const handleSetNickname = async (name: string) => {
-    if (!name.trim()) return;
-
-    const trimmedName = name.trim();
-    setNickname(trimmedName);
-    setShowNicknameModal(false);
-    
-    // localStorage에 닉네임 저장
-    localStorage.setItem(`nickname_${roomCode}`, trimmedName);
-    
-    // 방 참여
-    await joinRoom(trimmedName, false);
   };
 
   // 방 정보 로드
@@ -879,41 +856,6 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
           <p className="text-slate-400">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (showNicknameModal) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center px-4">
-        <div className="bg-slate-800 rounded-2xl p-6 sm:p-8 max-w-md w-full border border-slate-700 shadow-2xl">
-          <div className="text-center mb-6">
-            <i className="ri-user-add-line text-4xl sm:text-5xl text-teal-400 mb-4"></i>
-            <h2 className="text-xl sm:text-2xl font-bold mb-2">{lang === 'ko' ? '닉네임 설정' : 'Set Nickname'}</h2>
-            <p className="text-slate-400 text-sm">{lang === 'ko' ? '방에 입장하기 위해 닉네임을 입력해주세요.' : 'Please enter a nickname to join the room.'}</p>
-          </div>
-          <input
-            type="text"
-            placeholder={lang === 'ko' ? '닉네임을 입력하세요' : 'Enter nickname'}
-            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-4 text-sm"
-            maxLength={20}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                handleSetNickname((e.target as HTMLInputElement).value);
-              }
-            }}
-            autoFocus
-          />
-          <button
-            onClick={(e) => {
-              const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-              handleSetNickname(input.value);
-            }}
-            className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-xl transition-all duration-200 whitespace-nowrap"
-          >
-            {lang === 'ko' ? '입장하기' : 'Join'}
-          </button>
         </div>
       </div>
     );

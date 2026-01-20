@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { Question, Guess, Room } from '@/lib/types';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -54,7 +55,6 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
   const [nickname, setNickname] = useState('');
-  const [showNicknameModal, setShowNicknameModal] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [roomPassword, setRoomPassword] = useState<string | null>(null);
@@ -62,6 +62,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
   const [enteredPassword, setEnteredPassword] = useState('');
   const [roomCreatedAt, setRoomCreatedAt] = useState<Date | null>(null);
   const [lastChatAt, setLastChatAt] = useState<Date | null>(null);
+  const [playerUserIds, setPlayerUserIds] = useState<Record<string, string>>({}); // 닉네임 -> game_user_id 매핑
 
   // Supabase에서 방 정보 로드
   useEffect(() => {
@@ -137,133 +138,132 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
     if (spectatorParam) {
       console.log('✅ 관전 모드로 접속 감지');
       setIsSpectator(true);
-      // 관전 모드도 채팅을 위해 닉네임 입력 필요
-      // 닉네임이 없으면 모달 표시
-      const savedNickname = localStorage.getItem(`nickname_${roomCode}`);
-      if (!savedNickname) {
-        setShowNicknameModal(true);
-      } else {
-        setNickname(savedNickname);
-        setShowNicknameModal(false);
-      }
+      // 관전 모드도 채팅을 위해 닉네임 필요 - 로그인한 유저의 닉네임 사용
+      const loadSpectatorNickname = async () => {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          const { data: gameUser } = await supabase
+            .from('game_users')
+            .select('nickname')
+            .eq('auth_user_id', authUser.id)
+            .single();
+          
+          if (gameUser?.nickname) {
+            setNickname(gameUser.nickname);
+          }
+        }
+      };
+      loadSpectatorNickname();
     }
   }, []); // 컴포넌트 마운트 시 한 번만 실행
 
-  // URL 파라미터에서 호스트 여부와 닉네임 확인, localStorage에서 닉네임 불러오기
+  // 로그인 체크 - 방 입장 전에 로그인 여부 확인
   useEffect(() => {
     if (typeof window === 'undefined' || isLoading) return;
-
-      const urlParams = new URLSearchParams(window.location.search);
-    const hostParam = urlParams.get('host') === 'true';
-    const nicknameParam = urlParams.get('nickname');
-    const passwordParam = urlParams.get('password');
     
-    // 호스트 여부를 먼저 설정 (roomPassword 로딩과 관계없이)
-    // URL 파라미터에서 호스트 여부 확인
-    if (hostParam) {
-      console.log('✅ 호스트로 접속:', hostParam);
-      setIsHost(true);
-      console.log('✅ isHost 상태 설정됨:', true);
-      
-      if (nicknameParam) {
-        const decodedNickname = decodeURIComponent(nicknameParam);
-        setNickname(decodedNickname);
-        setShowNicknameModal(false);
-        localStorage.setItem(`nickname_${roomCode}`, decodedNickname);
-        localStorage.setItem(`roomCode_${roomCode}`, roomCode);
-        joinRoom(decodedNickname, true);
-      } else {
-        // 호스트인데 닉네임이 없으면 localStorage에서 가져오기
-        const savedNickname = localStorage.getItem(`nickname_${roomCode}`);
-        if (savedNickname) {
-          setNickname(savedNickname);
-          setShowNicknameModal(false);
-          joinRoom(savedNickname, true);
-        } else {
-          setShowNicknameModal(true);
-        }
-      }
-      return;
-    }
-    
-    // 호스트가 아닌 경우, 데이터베이스에서 실제 호스트 여부 확인
-    const checkHostStatus = async () => {
-      if (nicknameParam) {
-        const { data: playerData } = await supabase
-          .from('players')
-          .select('is_host')
-          .eq('room_code', roomCode)
-          .eq('nickname', decodeURIComponent(nicknameParam))
-          .single();
-        
-        if (playerData) {
-          setIsHost(playerData.is_host || false);
-        }
+    const checkAuth = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        // 로그인하지 않은 경우 로그인 페이지로 리다이렉트
+        alert(lang === 'ko' 
+          ? '멀티플레이 방에 입장하려면 로그인이 필요합니다.' 
+          : 'You must be logged in to join multiplayer rooms.');
+        router.push(`/${lang}/auth/login?redirect=/${lang}/room/${roomCode}`);
+        return;
       }
     };
     
-    checkHostStatus();
-    
-    // 비밀번호가 아직 로드되지 않았으면 대기
-    if (roomPassword === null) return;
-    
-    // URL에 닉네임이 이미 있으면 (rooms 페이지에서 설정한 경우)
-    if (nicknameParam) {
-      const decodedNickname = decodeURIComponent(nicknameParam);
-      setNickname(decodedNickname);
-      setShowNicknameModal(false); // 닉네임 모달 표시하지 않음
-      // localStorage에 저장
-      localStorage.setItem(`nickname_${roomCode}`, decodedNickname);
-      localStorage.setItem(`roomCode_${roomCode}`, roomCode);
-      
-      // 비밀번호가 있는 방인 경우 체크
-      if (roomPassword) {
-        // URL에 비밀번호가 없거나 틀리면 비밀번호 모달 표시
-        if (!passwordParam || passwordParam !== roomPassword) {
-          setShowPasswordModal(true);
+    // 방 로드가 완료된 후에만 체크
+    if (!isLoading) {
+      checkAuth();
+    }
+  }, [isLoading, roomCode, lang, router]);
+
+  // 로그인한 유저의 닉네임 가져오기 및 방 참여
+  useEffect(() => {
+    if (typeof window === 'undefined' || isLoading || roomPassword === null) return;
+    if (nickname) return; // 이미 닉네임이 설정되어 있으면 스킵
+
+    const loadUserNicknameAndJoin = async () => {
+      try {
+        // 로그인한 유저 정보 가져오기
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (!authUser) {
+          router.push(`/${lang}/auth/login?redirect=/${lang}/room/${roomCode}`);
           return;
         }
-        // 비밀번호가 맞으면 방 참여
-        joinRoom(decodedNickname, hostParam);
-      } else {
-        // 비밀번호가 없으면 바로 방 참여
-        joinRoom(decodedNickname, hostParam);
-      }
-      return;
-    }
-    
-    // URL에 닉네임이 없는 경우 (직접 URL로 접근한 경우)
-    // localStorage에서 저장된 닉네임 확인 (같은 방 코드인 경우만)
-    const savedNickname = localStorage.getItem(`nickname_${roomCode}`);
-    const savedRoomCode = localStorage.getItem(`roomCode_${roomCode}`);
-    
-    if (savedNickname && savedRoomCode === roomCode) {
-      // localStorage에 저장된 닉네임이 있고 같은 방이면 사용
-      console.log('💾 저장된 닉네임 불러오기:', savedNickname);
-      setNickname(savedNickname);
-      setShowNicknameModal(false);
-      
-      // 비밀번호가 있는 방인 경우 체크
-      if (roomPassword) {
-        // URL에 비밀번호가 없거나 틀리면 비밀번호 모달 표시
-        if (!passwordParam || passwordParam !== roomPassword) {
-          setShowPasswordModal(true);
+
+        // game_users 테이블에서 닉네임 가져오기
+        const { data: gameUser } = await supabase
+          .from('game_users')
+          .select('id, nickname')
+          .eq('auth_user_id', authUser.id)
+          .single();
+
+        if (!gameUser || !gameUser.nickname) {
+          alert(lang === 'ko' 
+            ? '닉네임이 설정되지 않았습니다. 프로필에서 닉네임을 설정해주세요.' 
+            : 'Nickname not set. Please set your nickname in your profile.');
+          router.push(`/${lang}/auth/setup-nickname`);
           return;
         }
-        // 비밀번호가 맞으면 방 참여
-        joinRoom(savedNickname, hostParam);
-      } else {
-        // 비밀번호가 없으면 바로 방 참여
-        joinRoom(savedNickname, hostParam);
+
+        const userNickname = gameUser.nickname;
+        setNickname(userNickname);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const hostParam = urlParams.get('host') === 'true';
+        const passwordParam = urlParams.get('password');
+
+        // 호스트 여부 확인
+        if (hostParam) {
+          setIsHost(true);
+        } else {
+          // 데이터베이스에서 실제 호스트 여부 확인
+          const { data: playerData } = await supabase
+            .from('players')
+            .select('is_host')
+            .eq('room_code', roomCode)
+            .eq('nickname', userNickname)
+            .single();
+          
+          if (playerData) {
+            setIsHost(playerData.is_host || false);
+          }
+        }
+
+        // 비밀번호가 있는 방인 경우 체크
+        if (roomPassword) {
+          // URL에 비밀번호가 없거나 틀리면 비밀번호 모달 표시
+          if (!passwordParam || passwordParam !== roomPassword) {
+            setShowPasswordModal(true);
+            return;
+          }
+        }
+
+        // 방 참여
+        await joinRoom(userNickname, hostParam);
+      } catch (error) {
+        console.error('닉네임 로드 오류:', error);
+        alert(lang === 'ko' ? '방 입장에 실패했습니다.' : 'Failed to join room.');
       }
-    } else {
-      // 둘 다 없으면 닉네임 모달 표시
-      setShowNicknameModal(true);
-    }
-  }, [roomCode, isLoading, roomPassword]);
+    };
+
+    loadUserNicknameAndJoin();
+  }, [roomCode, isLoading, roomPassword, nickname, lang, router]);
 
   // 방 참여 함수
   const joinRoom = async (playerNickname: string, isHostPlayer: boolean) => {
+    // 로그인 체크
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert(lang === 'ko' 
+        ? '멀티플레이 방에 입장하려면 로그인이 필요합니다.' 
+        : 'You must be logged in to join multiplayer rooms.');
+      router.push(`/${lang}/auth/login?redirect=/${lang}/room/${roomCode}`);
+      return;
+    }
+    
     try {
       const { error: playerError } = await supabase
         .from('players')
@@ -283,7 +283,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
 
   // 실시간 구독 설정
   useEffect(() => {
-    if (!roomCode || showNicknameModal) return;
+    if (!roomCode || !nickname) return;
 
     // Questions 실시간 구독
     const questionsChannel = supabase
@@ -571,19 +571,34 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
         },
         async (payload) => {
           console.log('🔔 Players Realtime 이벤트:', payload.eventType);
-          // 참가자 목록 다시 로드
-          const { data: playersData } = await supabase
-            .from('players')
-            .select('nickname, is_host')
-            .eq('room_code', roomCode);
-          
-          if (playersData) {
-            const newPlayers = playersData.map(p => ({
-              nickname: p.nickname,
-              is_host: p.is_host,
-              is_ready: false,
-            }));
-            setPlayers(newPlayers);
+            // 참가자 목록 다시 로드
+            const { data: playersData } = await supabase
+              .from('players')
+              .select('nickname, is_host')
+              .eq('room_code', roomCode);
+            
+            if (playersData) {
+              const newPlayers = playersData.map(p => ({
+                nickname: p.nickname,
+                is_host: p.is_host,
+                is_ready: false,
+              }));
+              setPlayers(newPlayers);
+              
+              // 각 플레이어의 game_user_id 가져오기
+              const playerNicknames = playersData.map(p => p.nickname);
+              const { data: gameUsers } = await supabase
+                .from('game_users')
+                .select('id, nickname')
+                .in('nickname', playerNicknames);
+              
+              if (gameUsers) {
+                const userIdMap: Record<string, string> = {};
+                gameUsers.forEach(gu => {
+                  userIdMap[gu.nickname] = gu.id;
+                });
+                setPlayerUserIds(prev => ({ ...prev, ...userIdMap }));
+              }
             
             // 새 참가자 입장 알림 - 채팅에 시스템 메시지 추가
             if (payload.eventType === 'INSERT') {
@@ -743,6 +758,21 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
             is_host: p.is_host,
             is_ready: false,
           })));
+          
+          // 각 플레이어의 game_user_id 가져오기
+          const playerNicknames = playersRes.data.map(p => p.nickname);
+          const { data: gameUsers } = await supabase
+            .from('game_users')
+            .select('id, nickname')
+            .in('nickname', playerNicknames);
+          
+          if (gameUsers) {
+            const userIdMap: Record<string, string> = {};
+            gameUsers.forEach(gu => {
+              userIdMap[gu.nickname] = gu.id;
+            });
+            setPlayerUserIds(userIdMap);
+          }
         }
 
         // 최근 대화 시간 업데이트
@@ -800,7 +830,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
       // Polling 제거됨 - Realtime으로 대체
       clearInterval(inactivityCheckInterval);
     };
-  }, [roomCode, showNicknameModal]);
+  }, [roomCode, nickname]);
 
   const handleSubmitQuestion = async (text: string) => {
     if (!text.trim() || gameEnded || !nickname) return;
@@ -1197,37 +1227,6 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
     }
   };
 
-  const handleSetNickname = async (name: string) => {
-    if (!name.trim()) return;
-
-    const trimmedName = name.trim();
-    setNickname(trimmedName);
-      setShowNicknameModal(false);
-    
-    // localStorage에 닉네임 저장
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(`nickname_${roomCode}`, trimmedName);
-      localStorage.setItem(`roomCode_${roomCode}`, roomCode);
-      console.log('💾 닉네임 저장됨:', trimmedName);
-    }
-    
-    // 비밀번호가 있는 방인 경우 비밀번호 모달 표시
-    if (roomPassword) {
-      // URL에 비밀번호가 이미 있으면 체크하지 않음
-      const urlParams = new URLSearchParams(window.location.search);
-      const passwordParam = urlParams.get('password');
-      if (passwordParam && passwordParam === roomPassword) {
-        // 비밀번호가 이미 맞으면 바로 참여
-        await joinRoom(trimmedName, false);
-      } else {
-        // 비밀번호 모달 표시
-        setShowPasswordModal(true);
-      }
-    } else {
-      // 비밀번호가 없으면 바로 방 참여
-      await joinRoom(trimmedName, false);
-    }
-  };
 
   const handlePasswordSubmit = async () => {
     if (!enteredPassword.trim()) {
@@ -1244,9 +1243,24 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
     setShowPasswordModal(false);
     setError('');
     
-    // 닉네임이 없으면 닉네임 모달 표시
+    // 닉네임이 없으면 다시 로드
     if (!nickname.trim()) {
-      setShowNicknameModal(true);
+      // 닉네임 다시 로드 시도
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        const { data: gameUser } = await supabase
+          .from('game_users')
+          .select('nickname')
+          .eq('auth_user_id', authUser.id)
+          .single();
+        
+        if (gameUser?.nickname) {
+          setNickname(gameUser.nickname);
+          await joinRoom(gameUser.nickname, false);
+          return;
+        }
+      }
+      alert(lang === 'ko' ? '닉네임을 불러올 수 없습니다.' : 'Failed to load nickname.');
       return;
     }
     
@@ -1281,6 +1295,48 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
     } catch (err) {
       console.error('재시작 오류:', err);
       alert(t.room.restartFail);
+    }
+  };
+
+  // 참가자 강퇴 함수
+  const handleKickPlayer = async (playerNickname: string) => {
+    if (!isHost) return;
+    if (playerNickname === nickname) {
+      alert(lang === 'ko' ? '자기 자신을 강퇴할 수 없습니다.' : 'You cannot kick yourself.');
+      return;
+    }
+    
+    if (!confirm(lang === 'ko' 
+      ? `${playerNickname}님을 강퇴하시겠습니까?` 
+      : `Are you sure you want to kick ${playerNickname}?`)) {
+      return;
+    }
+    
+    try {
+      // players 테이블에서 제거
+      const { error } = await supabase
+        .from('players')
+        .delete()
+        .eq('room_code', roomCode)
+        .eq('nickname', playerNickname);
+      
+      if (error) throw error;
+      
+      // 채팅에 시스템 메시지 추가
+      await supabase
+        .from('room_chats')
+        .insert({
+          room_code: roomCode,
+          nickname: 'SYSTEM',
+          message: lang === 'ko' 
+            ? `🚫 ${playerNickname}님이 방장에 의해 강퇴되었습니다.` 
+            : `🚫 ${playerNickname} was kicked by the host.`,
+        });
+      
+      alert(lang === 'ko' ? '참가자가 강퇴되었습니다.' : 'Player has been kicked.');
+    } catch (err) {
+      console.error('강퇴 오류:', err);
+      alert(lang === 'ko' ? '강퇴에 실패했습니다.' : 'Failed to kick player.');
     }
   };
 
@@ -1366,39 +1422,6 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
     );
   }
 
-  if (showNicknameModal) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center px-4">
-        <div className="bg-slate-800 rounded-2xl p-6 sm:p-8 max-w-md w-full border border-slate-700 shadow-2xl">
-          <div className="text-center mb-6">
-            <i className="ri-user-add-line text-4xl sm:text-5xl text-teal-400 mb-4"></i>
-            <h2 className="text-xl sm:text-2xl font-bold mb-2">{t.room.setNickname}</h2>
-            <p className="text-slate-400 text-sm">{t.room.setNicknameDesc}</p>
-          </div>
-          <input
-            type="text"
-            placeholder={t.room.nicknamePlaceholder}
-            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-4 text-sm"
-            maxLength={20}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                handleSetNickname((e.target as HTMLInputElement).value);
-              }
-            }}
-          />
-          <button
-            onClick={(e) => {
-              const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-              handleSetNickname(input.value);
-            }}
-            className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-xl transition-all duration-200 whitespace-nowrap"
-          >
-            {t.room.start}
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
@@ -1649,33 +1672,59 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
                   {lang === 'ko' ? '참가자' : 'Players'} ({players.length})
                 </h3>
                 <div className="space-y-1.5 sm:space-y-2">
-                  {players.map((player, idx) => (
-                    <div
-                      key={idx}
-                      className={`flex items-center justify-between p-2 sm:p-2.5 rounded-lg ${
-                        player.is_host
-                          ? 'bg-gradient-to-r from-teal-500/20 to-cyan-500/20 border border-teal-500/30'
-                          : 'bg-slate-700/30'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
-                        {player.is_host && (
-                          <i className="ri-vip-crown-line text-yellow-400 text-xs sm:text-sm flex-shrink-0"></i>
-                        )}
-                        <span className={`text-xs sm:text-sm truncate ${
-                          player.is_host ? 'text-teal-400 font-semibold' : 'text-slate-300'
-                        }`}>
-                          {player.nickname}
-                        </span>
-                      </div>
-                      {player.is_ready && (
-                        <div className="flex items-center gap-1 text-green-400 text-xs">
-                          <i className="ri-checkbox-circle-fill"></i>
-                          <span className="hidden sm:inline">{lang === 'ko' ? '준비완료' : 'Ready'}</span>
+                  {players.map((player, idx) => {
+                    const playerUserId = playerUserIds[player.nickname];
+                    return (
+                      <div
+                        key={idx}
+                        className={`flex items-center justify-between p-2 sm:p-2.5 rounded-lg ${
+                          player.is_host
+                            ? 'bg-gradient-to-r from-teal-500/20 to-cyan-500/20 border border-teal-500/30'
+                            : 'bg-slate-700/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+                          {player.is_host && (
+                            <i className="ri-vip-crown-line text-yellow-400 text-xs sm:text-sm flex-shrink-0"></i>
+                          )}
+                          {playerUserId ? (
+                            <Link 
+                              href={`/${lang}/profile/${playerUserId}`}
+                              className={`text-xs sm:text-sm truncate hover:underline cursor-pointer ${
+                                player.is_host ? 'text-teal-400 font-semibold' : 'text-slate-300'
+                              }`}
+                              title={lang === 'ko' ? '프로필 보기 (신고 가능)' : 'View profile (can report)'}
+                            >
+                              {player.nickname}
+                            </Link>
+                          ) : (
+                            <span className={`text-xs sm:text-sm truncate ${
+                              player.is_host ? 'text-teal-400 font-semibold' : 'text-slate-300'
+                            }`}>
+                              {player.nickname}
+                            </span>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-2">
+                          {player.is_ready && (
+                            <div className="flex items-center gap-1 text-green-400 text-xs">
+                              <i className="ri-checkbox-circle-fill"></i>
+                              <span className="hidden sm:inline">{lang === 'ko' ? '준비완료' : 'Ready'}</span>
+                            </div>
+                          )}
+                          {isHost && !player.is_host && player.nickname !== nickname && (
+                            <button
+                              onClick={() => handleKickPlayer(player.nickname)}
+                              className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors text-red-400 hover:text-red-300"
+                              title={lang === 'ko' ? '강퇴하기' : 'Kick player'}
+                            >
+                              <i className="ri-user-unfollow-line text-sm"></i>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

@@ -127,24 +127,65 @@ export default function ProblemContent({
       {/* Soup 타입: 기존 방식 */}
       {quizType === 'soup' && (
         <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 mb-4 border border-slate-700/50">
-          {problem.author && (
-            <div className="mb-3 pb-3 border-b border-slate-700">
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
-                <span>{t.problem.author}:</span>
-                {authorGameUserId ? (
-                  <Link href={`/${lang}/profile/${authorGameUserId}`} className="hover:opacity-80 transition-opacity">
-                    <UserLabel
-                      userId={authorGameUserId}
-                      nickname={problem.author}
-                      size="sm"
-                      showProfileImage={true}
-                      profileImageUrl={authorProfileImage || null}
-                    />
-                  </Link>
-                ) : (
-                  <span className="text-cyan-400">{problem.author}</span>
-                )}
-              </div>
+          {(problem.author || (problem as any).original_author) && (
+            <div className="mb-3 pb-3 border-b border-slate-700 space-y-2">
+              {problem.author && (
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
+                  <span>{t.problem.author}:</span>
+                  {authorGameUserId ? (
+                    <Link href={`/${lang}/profile/${authorGameUserId}`} className="hover:opacity-80 transition-opacity">
+                      <UserLabel
+                        userId={authorGameUserId}
+                        nickname={problem.author}
+                        size="sm"
+                        showProfileImage={true}
+                        profileImageUrl={authorProfileImage || null}
+                      />
+                    </Link>
+                  ) : (
+                    <span className="text-cyan-400">{problem.author}</span>
+                  )}
+                </div>
+              )}
+              {((problem as any).original_author || (problem as any).original_title) && (
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400 flex-wrap">
+                  <i className="ri-user-star-line text-purple-400"></i>
+                  <span>{lang === 'ko' ? '원작' : 'Original'}:</span>
+                  {(problem as any).original_title && (
+                    <a
+                      href={(problem as any).source_url || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-400 hover:text-purple-300 hover:underline transition-colors"
+                      onClick={(e) => {
+                        if (!(problem as any).source_url) {
+                          e.preventDefault();
+                        }
+                      }}
+                    >
+                      {(problem as any).original_title}
+                    </a>
+                  )}
+                  {(problem as any).original_author && (
+                    <>
+                      {((problem as any).original_title) && <span className="text-slate-500">·</span>}
+                      <a
+                        href={(problem as any).source_url || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-purple-400 hover:text-purple-300 hover:underline transition-colors"
+                        onClick={(e) => {
+                          if (!(problem as any).source_url) {
+                            e.preventDefault();
+                          }
+                        }}
+                      >
+                        {(problem as any).original_author}
+                      </a>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
           <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{problem.content}</p>
@@ -154,24 +195,65 @@ export default function ProblemContent({
       {/* 다른 퀴즈 타입: 플레이 컴포넌트 */}
       {quizType !== 'soup' && quizContent && (
         <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 mb-4 border border-slate-700/50">
-          {problem.author && (
-            <div className="mb-3 pb-3 border-b border-slate-700">
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
-                <span>{t.problem.author}:</span>
-                {authorGameUserId ? (
-                  <Link href={`/${lang}/profile/${authorGameUserId}`} className="hover:opacity-80 transition-opacity">
-                    <UserLabel
-                      userId={authorGameUserId}
-                      nickname={problem.author}
-                      size="sm"
-                      showProfileImage={true}
-                      profileImageUrl={authorProfileImage || null}
-                    />
-                  </Link>
-                ) : (
-                  <span className="text-cyan-400">{problem.author}</span>
-                )}
-              </div>
+          {(problem.author || (problem as any).original_author) && (
+            <div className="mb-3 pb-3 border-b border-slate-700 space-y-2">
+              {problem.author && (
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
+                  <span>{t.problem.author}:</span>
+                  {authorGameUserId ? (
+                    <Link href={`/${lang}/profile/${authorGameUserId}`} className="hover:opacity-80 transition-opacity">
+                      <UserLabel
+                        userId={authorGameUserId}
+                        nickname={problem.author}
+                        size="sm"
+                        showProfileImage={true}
+                        profileImageUrl={authorProfileImage || null}
+                      />
+                    </Link>
+                  ) : (
+                    <span className="text-cyan-400">{problem.author}</span>
+                  )}
+                </div>
+              )}
+              {((problem as any).original_author || (problem as any).original_title) && (
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400 flex-wrap">
+                  <i className="ri-user-star-line text-purple-400"></i>
+                  <span>{lang === 'ko' ? '원작' : 'Original'}:</span>
+                  {(problem as any).original_title && (
+                    <a
+                      href={(problem as any).source_url || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-400 hover:text-purple-300 hover:underline transition-colors"
+                      onClick={(e) => {
+                        if (!(problem as any).source_url) {
+                          e.preventDefault();
+                        }
+                      }}
+                    >
+                      {(problem as any).original_title}
+                    </a>
+                  )}
+                  {(problem as any).original_author && (
+                    <>
+                      {((problem as any).original_title) && <span className="text-slate-500">·</span>}
+                      <a
+                        href={(problem as any).source_url || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-purple-400 hover:text-purple-300 hover:underline transition-colors"
+                        onClick={(e) => {
+                          if (!(problem as any).source_url) {
+                            e.preventDefault();
+                          }
+                        }}
+                      >
+                        {(problem as any).original_author}
+                      </a>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

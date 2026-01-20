@@ -33,7 +33,6 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
   
   // 라이어 게임용 필드
   const [roomName, setRoomName] = useState('');
-  const [hostNickname, setHostNickname] = useState('');
   const [theme, setTheme] = useState<Theme | ''>('');
   const [level, setLevel] = useState<Level>('NORMAL');
   const [maxPlayers, setMaxPlayers] = useState(6);
@@ -61,30 +60,6 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
       router.push(`/${lang}/auth/login`);
     }
   }, [user, authLoading, router, lang]);
-
-  // 로그인한 유저의 닉네임을 기본값으로 설정
-  useEffect(() => {
-    const loadUserNickname = async () => {
-      if (user && !hostNickname && quizType === 'liar') {
-        try {
-          const { createClient } = await import('@/lib/supabase/client');
-          const supabaseClient = createClient();
-          const { data: userData } = await supabaseClient
-            .from('users')
-            .select('nickname')
-            .eq('id', user.id)
-            .maybeSingle();
-          
-          if (userData?.nickname) {
-            setHostNickname(userData.nickname);
-          }
-        } catch (error) {
-          console.error('닉네임 로드 오류:', error);
-        }
-      }
-    };
-    loadUserNickname();
-  }, [user, hostNickname, quizType]);
 
   // 게임 타입에 따른 색상 테마
   const getThemeColors = (type: QuizType | null) => {
@@ -145,14 +120,6 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
         newErrors.roomName = lang === 'ko' ? '방 이름은 20자 이하여야 합니다' : 'Room name must be 20 characters or less';
       } else if (!/^[가-힣a-zA-Z0-9\s]+$/.test(roomName.trim())) {
         newErrors.roomName = lang === 'ko' ? '특수문자는 사용할 수 없습니다' : 'Special characters are not allowed';
-      }
-      
-      if (!hostNickname.trim()) {
-        newErrors.hostNickname = lang === 'ko' ? '호스트 닉네임을 입력해주세요' : 'Please enter host nickname';
-      } else if (hostNickname.trim().length < 1) {
-        newErrors.hostNickname = lang === 'ko' ? '호스트 닉네임을 입력해주세요' : 'Please enter host nickname';
-      } else if (hostNickname.trim().length > 20) {
-        newErrors.hostNickname = lang === 'ko' ? '호스트 닉네임은 20자 이하여야 합니다' : 'Host nickname must be 20 characters or less';
       }
       
       if (!theme) {
@@ -236,18 +203,13 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
     try {
       const supabaseClient = createClient();
       
-      // 호스트 닉네임 (라이어 게임은 입력값 사용, 다른 게임은 DB에서 가져오기)
-      let finalHostNickname = '';
-      if (quizType === 'liar') {
-        finalHostNickname = hostNickname.trim() || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User');
-      } else {
-        const { data: userData } = await supabaseClient
-          .from('users')
-          .select('nickname')
-          .eq('id', user.id)
-          .maybeSingle();
-        finalHostNickname = userData?.nickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User');
-      }
+      // 호스트 닉네임: 로그인 유저 닉네임 자동 사용
+      const { data: userData } = await supabaseClient
+        .from('users')
+        .select('nickname')
+        .eq('id', user.id)
+        .maybeSingle();
+      const finalHostNickname = userData?.nickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User');
       
       // 고유한 방 코드 생성
       let roomCode = generateRoomCode();
@@ -600,50 +562,6 @@ export default function CreateRoom({ params }: { params: Promise<{ lang: string 
                     <li>• {lang === 'ko' ? `최대 인원: ${maxPlayers}명` : `Max players: ${maxPlayers}`}</li>
                     <li>• {lang === 'ko' ? `라이어 수: 인원에 따라 자동 설정 (3~5명: 1명, 6~9명: 2명, 10명 이상: 3명)` : `Liar count: Auto-set by player count (3-5: 1, 6-9: 2, 10+: 3)`}</li>
                   </ul>
-                </div>
-              </div>
-
-              {/* 호스트 닉네임 (필수) */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2" style={{ color: themeColors.textPrimary }}>
-                  <i className="ri-user-line mr-1"></i>
-                  {lang === 'ko' ? '호스트 닉네임' : 'Host Nickname'} <span style={{ color: themeColors.accentColor }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={hostNickname}
-                  onChange={(e) => {
-                    setHostNickname(e.target.value);
-                    if (errors.hostNickname) {
-                      setErrors({ ...errors, hostNickname: '' });
-                    }
-                  }}
-                  placeholder={lang === 'ko' ? '호스트 닉네임을 입력하세요' : 'Enter host nickname'}
-                  className="w-full rounded-lg px-4 py-2.5 text-sm border focus:outline-none focus:ring-2 transition-all"
-                  style={{
-                    backgroundColor: themeColors.surfaceColor,
-                    borderColor: errors.hostNickname ? '#F87171' : themeColors.borderColor,
-                    color: themeColors.textPrimary,
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = themeColors.accentColor;
-                    e.target.style.boxShadow = `0 0 0 2px ${themeColors.accentColor}40`;
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = themeColors.borderColor;
-                    e.target.style.boxShadow = 'none';
-                  }}
-                  maxLength={20}
-                />
-                <div className="flex items-center justify-between mt-1">
-                  {errors.hostNickname && (
-                    <p className="text-xs" style={{ color: '#F87171' }}>
-                      {errors.hostNickname}
-                    </p>
-                  )}
-                  <p className="text-xs ml-auto" style={{ color: themeColors.textSecondary }}>
-                    {hostNickname.length} / 20
-                  </p>
                 </div>
               </div>
 

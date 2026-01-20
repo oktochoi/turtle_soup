@@ -377,7 +377,17 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
     setFilteredRooms(filtered);
   }, [searchQuery, privacyFilter, minPlayers, sortOption, rooms]);
 
-  const handleJoinRoom = (roomCode: string, hasPassword: boolean, quizType?: string, roomType?: 'game' | 'chat') => {
+  const handleJoinRoom = async (roomCode: string, hasPassword: boolean, quizType?: string, roomType?: 'game' | 'chat') => {
+    // 로그인 체크
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert(lang === 'ko' 
+        ? '멀티플레이 방에 입장하려면 로그인이 필요합니다.' 
+        : 'You must be logged in to join multiplayer rooms.');
+      router.push(`/${lang}/auth/login?redirect=/${lang}/rooms`);
+      return;
+    }
+    
     // 수다방인 경우
     if (roomType === 'chat') {
       if (hasPassword) {
@@ -404,10 +414,22 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
     }
   };
 
-  const handleSubmitPassword = () => {
+  const handleSubmitPassword = async () => {
     if (!selectedRoom) return;
     if (!password.trim()) {
       setError(t.room.enterPasswordAlert);
+      return;
+    }
+    
+    // 로그인 체크
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert(lang === 'ko' 
+        ? '멀티플레이 방에 입장하려면 로그인이 필요합니다.' 
+        : 'You must be logged in to join multiplayer rooms.');
+      router.push(`/${lang}/auth/login?redirect=/${lang}/rooms`);
+      setShowPasswordModal(false);
+      setPassword('');
       return;
     }
     

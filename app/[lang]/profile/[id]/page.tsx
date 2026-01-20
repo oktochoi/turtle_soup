@@ -970,6 +970,16 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                     )}
                   </div>
                 </div>
+                
+                {/* 신고 안내 문구 */}
+                {!isOwnProfile && (
+                  <div className="mt-3 p-2 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                    <p className="text-xs text-slate-400 text-center">
+                      <i className="ri-information-line mr-1"></i>
+                      {lang === 'ko' ? '※ 프로필에서 사용자를 신고할 수 있습니다' : '※ You can report users from their profile'}
+                    </p>
+                  </div>
+                )}
 
                 {/* 통계 */}
                 <div className="flex items-center gap-4 sm:gap-6 mb-4">

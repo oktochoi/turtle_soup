@@ -7,11 +7,13 @@ interface QuizFormSoupProps {
   truth: string;
   hints: string[];
   imageUrl?: string;
+  originalAuthor?: string;
   onStoryChange: (value: string) => void;
   onTruthChange: (value: string) => void;
   onHintsChange: (hints: string[]) => void;
   onImageChange?: (file: File | null) => void;
   onImageUrlChange?: (url: string) => void;
+  onOriginalAuthorChange?: (value: string) => void;
   lang?: 'ko' | 'en';
 }
 
@@ -20,11 +22,13 @@ export default function QuizFormSoup({
   truth,
   hints,
   imageUrl,
+  originalAuthor = '',
   onStoryChange,
   onTruthChange,
   onHintsChange,
   onImageChange,
   onImageUrlChange,
+  onOriginalAuthorChange,
   lang = 'ko',
 }: QuizFormSoupProps) {
   return (
@@ -99,6 +103,27 @@ export default function QuizFormSoup({
           ))}
         </div>
       </div>
+
+      {/* 원작자 (선택사항) */}
+      {onOriginalAuthorChange && (
+        <div>
+          <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+            <i className="ri-user-star-line mr-1 text-purple-400"></i>
+            {lang === 'ko' ? '원작자 (선택사항)' : 'Original Author (Optional)'}
+          </label>
+          <input
+            type="text"
+            value={originalAuthor}
+            onChange={(e) => onOriginalAuthorChange(e.target.value)}
+            placeholder={lang === 'ko' ? '원작자가 있는 경우 입력하세요' : 'Enter original author if applicable'}
+            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+            maxLength={100}
+          />
+          <div className="text-right text-xs text-slate-500 mt-1">
+            {originalAuthor.length} / 100
+          </div>
+        </div>
+      )}
     </>
   );
 }
