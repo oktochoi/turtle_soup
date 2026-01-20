@@ -391,7 +391,12 @@ export default function GuessPlayPage() {
         <div className="bg-slate-800 rounded-xl p-6 sm:p-8 border border-slate-700 mb-6">
           {/* 질문 */}
           {currentCard.question && (
-            <div className="text-2xl font-bold mb-4 text-white text-center">
+            <div className={`font-bold mb-4 text-white text-center ${
+              (!Array.isArray(currentCard.images) || currentCard.images.length === 0) && 
+              currentCard.card_type !== 'media' 
+                ? 'text-4xl sm:text-5xl' 
+                : 'text-2xl'
+            }`}>
               {currentCard.question}
             </div>
           )}
@@ -455,7 +460,13 @@ export default function GuessPlayPage() {
                   }
                 }}
                 placeholder={lang === 'ko' ? '정답을 입력하세요' : 'Enter your answer'}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className={`w-full rounded-lg px-4 py-3 text-lg text-white focus:outline-none focus:ring-2 transition-colors ${
+                  isCorrect === true 
+                    ? 'bg-green-500/20 border-2 border-green-500 focus:ring-green-500' 
+                    : isCorrect === false 
+                    ? 'bg-red-500/20 border-2 border-red-500 focus:ring-red-500'
+                    : 'bg-slate-900 border border-slate-700 focus:ring-teal-500'
+                }`}
                 disabled={isCorrect !== null}
               />
             </div>
@@ -524,20 +535,12 @@ export default function GuessPlayPage() {
           {/* 정답/오답 표시 */}
           {isCorrect === true && (
             <div className="mb-4">
-              <div className="p-6 bg-green-500/20 border-2 border-green-500/50 rounded-xl text-green-400 text-center animate-bounce-in mb-3">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-75"></div>
-                    <div className="relative bg-green-500 rounded-full p-4 animate-scale-up">
-                      <i className="ri-checkbox-circle-fill text-4xl text-white"></i>
-                    </div>
-                  </div>
-                  <div className="text-2xl font-bold animate-slide-up">
+              <div className="p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-400 text-center mb-3">
+                <div className="flex items-center justify-center gap-2">
+                  <i className="ri-checkbox-circle-fill text-lg"></i>
+                  <span className="text-sm font-semibold">
                     {lang === 'ko' ? '정답입니다! 🎉' : 'Correct! 🎉'}
-                  </div>
-                  <div className="text-sm text-green-300 animate-fade-in">
-                    {lang === 'ko' ? '잘했어요!' : 'Well done!'}
-                  </div>
+                  </span>
                 </div>
               </div>
               <button
@@ -549,21 +552,9 @@ export default function GuessPlayPage() {
             </div>
           )}
           {isCorrect === false && (
-            <div className="mb-4 animate-shake">
-              <div className="p-6 bg-red-500/20 border-2 border-red-500/50 rounded-xl text-red-400 text-center mb-3">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="relative">
-                    <div className="bg-red-500 rounded-full p-4 animate-wiggle">
-                      <i className="ri-close-circle-fill text-4xl text-white"></i>
-                    </div>
-                  </div>
-                  <div className="text-2xl font-bold">
-                    {lang === 'ko' ? '오답입니다' : 'Incorrect'}
-                  </div>
-                </div>
-              </div>
+            <div className="mb-4">
               <div className="p-3 bg-slate-900/50 rounded-lg mb-3 text-center">
-                <div className="text-sm text-slate-400 mb-1">
+                <div className="text-xs text-slate-400 mb-1">
                   {lang === 'ko' ? '정답' : 'Answer'}
                 </div>
                 <div className="text-base font-semibold text-green-400">

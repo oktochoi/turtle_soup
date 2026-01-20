@@ -43,6 +43,7 @@ export default function GuessSetDetailPage() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const commentImageInputRef = useRef<HTMLInputElement | null>(null);
   const [showCardShareModal, setShowCardShareModal] = useState<string | null>(null);
+  const [showSetShareModal, setShowSetShareModal] = useState(false);
   const [creatorInfo, setCreatorInfo] = useState<{id: string; nickname: string; profile_image_url: string | null} | null>(null);
 
   useEffect(() => {
@@ -222,16 +223,29 @@ export default function GuessSetDetailPage() {
       // 각 댓글에 사용자 정보 추가
       if (data && data.length > 0) {
         const userIds = [...new Set(data.map(c => c.user_id))];
+        
+        // users와 game_users에서 정보 가져오기
         const { data: usersData } = await supabase
           .from('users')
           .select('id, nickname')
           .in('id', userIds);
         
+        const { data: gameUsersData } = await supabase
+          .from('game_users')
+          .select('auth_user_id, nickname, profile_image_url')
+          .in('auth_user_id', userIds);
+        
         const usersMap = new Map(usersData?.map(u => [u.id, u.nickname]) || []);
-        const commentsWithUsers = data.map(comment => ({
-          ...comment,
-          user_nickname: usersMap.get(comment.user_id) || 'User'
-        }));
+        const gameUsersMap = new Map(gameUsersData?.map(gu => [gu.auth_user_id, { nickname: gu.nickname, profile_image_url: gu.profile_image_url }]) || []);
+        
+        const commentsWithUsers = data.map(comment => {
+          const gameUser = gameUsersMap.get(comment.user_id);
+          return {
+            ...comment,
+            user_nickname: gameUser?.nickname || usersMap.get(comment.user_id) || 'User',
+            user_profile_image: gameUser?.profile_image_url || null
+          };
+        });
         setComments(commentsWithUsers);
       } else {
         setComments([]);
@@ -491,7 +505,7 @@ export default function GuessSetDetailPage() {
           
           {/* 작성자 정보 */}
           {creatorInfo && (
-            <div className="mb-4 flex items-center gap-2">
+            <div className="mb-3 flex items-center gap-2">
               <span className="text-xs text-slate-400">{lang === 'ko' ? '작성자' : 'Creator'}:</span>
               <Link href={`/${lang}/profile/${creatorInfo.id}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                 {creatorInfo.profile_image_url ? (
@@ -509,6 +523,23 @@ export default function GuessSetDetailPage() {
               </Link>
             </div>
           )}
+
+          {/* 공유 버튼 */}
+          <div className="mb-3">
+            <button
+              onClick={() => setShowSetShareModal(true)}
+              className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors text-sm"
+            >
+              <i className="ri-share-line"></i>
+              <span>{lang === 'ko' ? '공유하기' : 'Share'}</span>
+            </button>
+          </div>
+
+          {/* 조회수 */}
+          <div className="mb-4 flex items-center gap-2 text-sm text-slate-400">
+            <i className="ri-eye-line"></i>
+            <span>{lang === 'ko' ? '조회수' : 'Views'}: {(guessSet as any)?.view_count || 0}</span>
+          </div>
           
           <div className="flex items-center flex-wrap gap-4 text-sm">
             <span className="text-slate-400">
@@ -706,35 +737,46 @@ export default function GuessSetDetailPage() {
                 return (
                   <div 
                     key={comment.id} 
-                    className={`rounded-lg p-3 border ${
-                      isOwnComment 
-                        ? 'bg-cyan-500/10 border-cyan-500/30' 
-                        : 'bg-slate-900 border-slate-700'
-                    }`}
+                    className={`bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700`}
                   >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`text-sm font-semibold ${
-                        isOwnComment ? 'text-cyan-400' : 'text-teal-400'
-                      }`}>
-                        {comment.user_nickname || (comment.user_id?.substring(0, 8) || 'User')}
-                        {isOwnComment && userNickname && ` (${userNickname})`}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        {new Date(comment.created_at).toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US')}
-                      </span>
-                    </div>
-                    <p className={`text-sm whitespace-pre-wrap mb-2 ${
-                      isOwnComment ? 'text-cyan-200' : 'text-slate-300'
-                    }`}>{comment.content}</p>
-                    {comment.image_url && (
-                      <div className="mt-2">
+                    <div className="flex items-start gap-3 mb-2">
+                      {comment.user_profile_image ? (
                         <img
-                          src={comment.image_url}
-                          alt="Comment image"
-                          className="max-w-full max-h-64 object-contain rounded-lg border border-slate-700"
+                          src={comment.user_profile_image}
+                          alt={comment.user_nickname || 'User'}
+                          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                         />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                          {(comment.user_nickname || 'U').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-sm font-semibold ${
+                            isOwnComment ? 'text-cyan-400' : 'text-teal-400'
+                          }`}>
+                            {comment.user_nickname || (comment.user_id?.substring(0, 8) || 'User')}
+                            {isOwnComment && userNickname && ` (${userNickname})`}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            {new Date(comment.created_at).toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US')}
+                          </span>
+                        </div>
+                        <p className={`text-sm whitespace-pre-wrap mb-2 ${
+                          isOwnComment ? 'text-cyan-200' : 'text-slate-300'
+                        }`}>{comment.content}</p>
+                        {comment.image_url && (
+                          <div className="mt-2">
+                            <img
+                              src={comment.image_url}
+                              alt="Comment image"
+                              className="max-w-full max-h-64 object-contain rounded-lg border border-slate-700"
+                            />
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })
@@ -902,6 +944,92 @@ export default function GuessSetDetailPage() {
                   {lang === 'ko' ? '시작하기' : 'Start'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* 세트 공유 모달 */}
+        {showSetShareModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowSetShareModal(false)}>
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-white">
+                  {lang === 'ko' ? '퀴즈 세트 공유하기' : 'Share Quiz Set'}
+                </h2>
+                <button
+                  onClick={() => setShowSetShareModal(false)}
+                  className="text-slate-400 hover:text-white transition-colors"
+                >
+                  <i className="ri-close-line text-2xl"></i>
+                </button>
+              </div>
+              
+              {(() => {
+                const shareUrl = typeof window !== 'undefined' 
+                  ? `${window.location.origin}/${lang}/guess/${setId}`
+                  : '';
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
+                      <h3 className="text-sm font-semibold text-white mb-2">{guessSet?.title}</h3>
+                      {guessSet?.description && (
+                        <p className="text-xs text-slate-400 line-clamp-2">{guessSet.description}</p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <button
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(shareUrl);
+                            alert(lang === 'ko' ? '링크가 복사되었습니다!' : 'Link copied!');
+                            setShowSetShareModal(false);
+                          } catch (error) {
+                            alert(lang === 'ko' ? '링크 복사에 실패했습니다.' : 'Failed to copy link.');
+                          }
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-all font-medium"
+                      >
+                        <i className="ri-file-copy-line"></i>
+                        <span>{lang === 'ko' ? '링크 복사' : 'Copy Link'}</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          const text = lang === 'ko' 
+                            ? `${guessSet?.title} - 퀴즈 도전하기!`
+                            : `${guessSet?.title} - Take the quiz!`;
+                          const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+                          window.open(twitterUrl, '_blank', 'width=550,height=420');
+                          setShowSetShareModal(false);
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-all font-medium"
+                      >
+                        <i className="ri-twitter-x-line"></i>
+                        <span>{lang === 'ko' ? '트위터 공유' : 'Share on Twitter'}</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+                          window.open(facebookUrl, '_blank', 'width=550,height=420');
+                          setShowSetShareModal(false);
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all font-medium"
+                      >
+                        <i className="ri-facebook-line"></i>
+                        <span>{lang === 'ko' ? '페이스북 공유' : 'Share on Facebook'}</span>
+                      </button>
+                    </div>
+                    
+                    <div className="p-3 bg-slate-900/50 rounded-lg border border-slate-700">
+                      <p className="text-xs text-slate-400 mb-1">{lang === 'ko' ? '공유 링크' : 'Share Link'}</p>
+                      <p className="text-xs text-teal-400 break-all font-mono">{shareUrl}</p>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
