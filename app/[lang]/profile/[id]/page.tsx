@@ -29,7 +29,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
   const [actualSolveCount, setActualSolveCount] = useState<number>(0);
   const [receivedHearts, setReceivedHearts] = useState<number>(0);
   const [createdProblemsCount, setCreatedProblemsCount] = useState<number>(0);
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isLoading: isAuthLoading } = useAuth();
   
   // 문제 목록 및 정렬
   const [problems, setProblems] = useState<any[]>([]);
@@ -73,14 +73,14 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
     loadProfile();
   }, [userId]);
 
-  // currentUser가 변경될 때마다 isOwnProfile 재확인
+  // currentUser 또는 isAuthLoading이 변경될 때마다 isOwnProfile 재확인
   useEffect(() => {
-    if (user) {
+    if (user && !isAuthLoading) {
       const ownProfile = (user.auth_user_id && currentUser?.id === user.auth_user_id) || 
                          (!user.auth_user_id && !currentUser);
       setIsOwnProfile(ownProfile);
     }
-  }, [currentUser, user]);
+  }, [currentUser, user, isAuthLoading]);
 
   const loadProfile = async () => {
     try {
@@ -97,6 +97,21 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
       }
 
       setUser(userData);
+
+      // isOwnProfile 즉시 설정
+      // currentUser가 아직 로드되지 않았더라도, auth_user_id를 통해 가능하면 확인
+      // 만약 currentUser가 아직 로드 중이라면, useEffect에서 재확인됨
+      if (!isAuthLoading) {
+        // useAuth가 로드 완료되었으면 즉시 확인
+        const ownProfile = (userData.auth_user_id && currentUser?.id === userData.auth_user_id) || 
+                           (!userData.auth_user_id && !currentUser);
+        setIsOwnProfile(ownProfile);
+      } else {
+        // useAuth가 아직 로드 중이면 일단 false로 설정하고, useEffect에서 재확인
+        setIsOwnProfile(false);
+      }
+
+      
 
       // Progress
       const { data: progressData } = await supabase
@@ -185,19 +200,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
         }
       }
 
-      // 자기 자신의 프로필인지 확인
-      // currentUser가 로드될 때까지 기다려야 할 수 있으므로, useEffect로 업데이트
-      const checkOwnProfile = () => {
-        const ownProfile = (userData.auth_user_id && currentUser?.id === userData.auth_user_id) || 
-                           (!userData.auth_user_id && !currentUser);
-        console.log('Checking own profile:', { 
-          auth_user_id: userData.auth_user_id, 
-          currentUser_id: currentUser?.id, 
-          ownProfile 
-        });
-        setIsOwnProfile(ownProfile);
-      };
-      checkOwnProfile();
+      // 자기 자신의 프로필인지 확인은 이미 위에서 설정됨
 
       // 문제 목록 로드
       if (userData.auth_user_id) {
