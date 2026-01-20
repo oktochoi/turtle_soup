@@ -694,9 +694,9 @@ export default function GuessSetDetailPage() {
                   }}
                   disabled={isUploadingImage}
                   className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition-colors disabled:opacity-50"
+                  title={lang === 'ko' ? '이미지' : 'Image'}
                 >
-                  <i className="ri-image-line mr-1"></i>
-                  {lang === 'ko' ? '이미지' : 'Image'}
+                  <i className="ri-image-line"></i>
                 </button>
                 {commentImage && (
                   <div className="flex items-center gap-2">
@@ -740,25 +740,58 @@ export default function GuessSetDetailPage() {
                     className={`bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700`}
                   >
                     <div className="flex items-start gap-3 mb-2">
-                      {comment.user_profile_image ? (
-                        <img
-                          src={comment.user_profile_image}
-                          alt={comment.user_nickname || 'User'}
-                          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                        />
+                      {comment.user_id ? (
+                        <Link 
+                          href={`/${lang}/profile/${comment.user_id}`}
+                          className="hover:opacity-80 transition-opacity flex-shrink-0"
+                        >
+                          {comment.user_profile_image ? (
+                            <img
+                              src={comment.user_profile_image}
+                              alt={comment.user_nickname || 'User'}
+                              className="w-10 h-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm">
+                              {(comment.user_nickname || 'U').charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </Link>
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                          {(comment.user_nickname || 'U').charAt(0).toUpperCase()}
-                        </div>
+                        <>
+                          {comment.user_profile_image ? (
+                            <img
+                              src={comment.user_profile_image}
+                              alt={comment.user_nickname || 'User'}
+                              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                              {(comment.user_nickname || 'U').charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </>
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-sm font-semibold ${
-                            isOwnComment ? 'text-cyan-400' : 'text-teal-400'
-                          }`}>
-                            {comment.user_nickname || (comment.user_id?.substring(0, 8) || 'User')}
-                            {isOwnComment && userNickname && ` (${userNickname})`}
-                          </span>
+                          {comment.user_id ? (
+                            <Link 
+                              href={`/${lang}/profile/${comment.user_id}`}
+                              className={`text-sm font-semibold hover:opacity-80 transition-opacity cursor-pointer ${
+                                isOwnComment ? 'text-cyan-400' : 'text-teal-400'
+                              }`}
+                            >
+                              {comment.user_nickname || (comment.user_id?.substring(0, 8) || 'User')}
+                              {isOwnComment && userNickname && ` (${userNickname})`}
+                            </Link>
+                          ) : (
+                            <span className={`text-sm font-semibold ${
+                              isOwnComment ? 'text-cyan-400' : 'text-teal-400'
+                            }`}>
+                              {comment.user_nickname || (comment.user_id?.substring(0, 8) || 'User')}
+                              {isOwnComment && userNickname && ` (${userNickname})`}
+                            </span>
+                          )}
                           <span className="text-xs text-slate-500">
                             {new Date(comment.created_at).toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US')}
                           </span>
