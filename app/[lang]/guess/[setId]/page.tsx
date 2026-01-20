@@ -37,6 +37,8 @@ export default function GuessSetDetailPage() {
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [userNickname, setUserNickname] = useState<string | null>(null);
+  const [customTimeInput, setCustomTimeInput] = useState<string>('');
 
   useEffect(() => {
     if (setId) {
@@ -63,15 +65,16 @@ export default function GuessSetDetailPage() {
       setGuessSet(setData);
       setIsCreator(user?.id === setData.creator_id);
 
-      // 관리자 확인
+      // 관리자 확인 및 사용자 닉네임 가져오기
       if (user) {
         const { data: gameUser } = await supabase
           .from('game_users')
-          .select('is_admin')
+          .select('is_admin, nickname')
           .eq('id', user.id)
           .maybeSingle();
         
         setIsAdmin(gameUser?.is_admin || false);
+        setUserNickname(gameUser?.nickname || null);
       }
 
       // 카드 로드
@@ -519,19 +522,34 @@ export default function GuessSetDetailPage() {
                 {lang === 'ko' ? '아직 댓글이 없습니다.' : 'No comments yet.'}
               </p>
             ) : (
-              comments.map((comment) => (
-                <div key={comment.id} className="bg-slate-900 rounded-lg p-3 border border-slate-700">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-semibold text-teal-400">
-                      {comment.user_nickname || (comment.user_id?.substring(0, 8) || 'User')}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      {new Date(comment.created_at).toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US')}
-                    </span>
+              comments.map((comment) => {
+                const isOwnComment = user && comment.user_id === user.id;
+                return (
+                  <div 
+                    key={comment.id} 
+                    className={`rounded-lg p-3 border ${
+                      isOwnComment 
+                        ? 'bg-cyan-500/10 border-cyan-500/30' 
+                        : 'bg-slate-900 border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`text-sm font-semibold ${
+                        isOwnComment ? 'text-cyan-400' : 'text-teal-400'
+                      }`}>
+                        {comment.user_nickname || (comment.user_id?.substring(0, 8) || 'User')}
+                        {isOwnComment && userNickname && ` (${userNickname})`}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {new Date(comment.created_at).toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US')}
+                      </span>
+                    </div>
+                    <p className={`text-sm whitespace-pre-wrap ${
+                      isOwnComment ? 'text-cyan-200' : 'text-slate-300'
+                    }`}>{comment.content}</p>
                   </div>
-                  <p className="text-sm text-slate-300 whitespace-pre-wrap">{comment.content}</p>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -598,7 +616,7 @@ export default function GuessSetDetailPage() {
                 <label className="block text-sm font-medium mb-2 text-slate-300">
                   {lang === 'ko' ? '카드당 시간 제한' : 'Time Limit Per Card'} <span className="text-red-400">*</span>
                 </label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-4 gap-2 mb-2">
                   {[
                     { label: lang === 'ko' ? '30초' : '30s', value: 30 },
                     { label: lang === 'ko' ? '1분' : '1m', value: 60 },
@@ -607,9 +625,12 @@ export default function GuessSetDetailPage() {
                   ].map(option => (
                     <button
                       key={option.value || 'unlimited'}
-                      onClick={() => setTimePerCard(option.value)}
+                      onClick={() => {
+                        setTimePerCard(option.value);
+                        setCustomTimeInput('');
+                      }}
                       className={`p-3 rounded-lg border-2 transition-all ${
-                        timePerCard === option.value
+                        timePerCard === option.value && customTimeInput === ''
                           ? 'border-teal-500 bg-teal-500/10 text-teal-400'
                           : 'border-slate-700 bg-slate-900 hover:border-slate-600'
                       }`}
@@ -617,6 +638,27 @@ export default function GuessSetDetailPage() {
                       {option.label}
                     </button>
                   ))}
+                </div>
+                <div className="mt-2">
+                  <input
+                    type="number"
+                    value={customTimeInput}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCustomTimeInput(val);
+                      if (val && !isNaN(parseInt(val)) && parseInt(val) > 0) {
+                        setTimePerCard(parseInt(val));
+                      }
+                    }}
+                    placeholder={lang === 'ko' ? '직접 입력 (초 단위, 예: 3)' : 'Custom (seconds, e.g., 3)'}
+                    min="1"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                  {customTimeInput && (
+                    <p className="text-xs text-teal-400 mt-1">
+                      {lang === 'ko' ? `${customTimeInput}초로 설정됨` : `Set to ${customTimeInput} seconds`}
+                    </p>
+                  )}
                 </div>
                 <p className="text-xs text-slate-400 mt-2">
                   {lang === 'ko' ? '모든 카드에 동일한 시간이 적용됩니다' : 'Same time limit for all cards'}
