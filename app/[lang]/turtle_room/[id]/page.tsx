@@ -329,9 +329,10 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
     }
   };
 
+  
   // 실시간 구독 설정
   useEffect(() => {
-    if (!roomCode || showNicknameModal) return;
+    if (!roomCode || !nickname) return;
 
     // Questions 실시간 구독
     const questionsChannel = supabase
@@ -856,7 +857,7 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
       // Polling 제거됨 - Realtime으로 대체
       clearInterval(inactivityCheckInterval);
     };
-  }, [roomCode, showNicknameModal]);
+  }, [roomCode, nickname]);
 
   const handleSubmitQuestion = async (text: string) => {
     if (!text.trim() || gameEnded || !nickname) return;
