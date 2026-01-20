@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { Question, Guess, Room } from '@/lib/types';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -54,7 +55,6 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
   const [nickname, setNickname] = useState('');
-  const [showNicknameModal, setShowNicknameModal] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [roomPassword, setRoomPassword] = useState<string | null>(null);
@@ -62,6 +62,7 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
   const [enteredPassword, setEnteredPassword] = useState('');
   const [roomCreatedAt, setRoomCreatedAt] = useState<Date | null>(null);
   const [lastChatAt, setLastChatAt] = useState<Date | null>(null);
+  const [playerUserIds, setPlayerUserIds] = useState<Record<string, string>>({}); // 닉네임 -> game_user_id 매핑
 
   // Supabase에서 방 정보 로드
   useEffect(() => {
@@ -119,6 +120,28 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
     loadRoom();
   }, [roomCode]);
 
+  // 로그인 체크 - 방 입장 전에 로그인 여부 확인
+  useEffect(() => {
+    if (typeof window === 'undefined' || isLoading) return;
+    
+    const checkAuth = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        // 로그인하지 않은 경우 로그인 페이지로 리다이렉트
+        alert(lang === 'ko' 
+          ? '멀티플레이 방에 입장하려면 로그인이 필요합니다.' 
+          : 'You must be logged in to join multiplayer rooms.');
+        router.push(`/${lang}/auth/login?redirect=/${lang}/turtle_room/${roomCode}`);
+        return;
+      }
+    };
+    
+    // 방 로드가 완료된 후에만 체크
+    if (!isLoading) {
+      checkAuth();
+    }
+  }, [isLoading, roomCode, lang, router]);
+
   // 호스트 여부와 관전 모드를 URL 파라미터에서 먼저 확인 (즉시 설정)
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -137,133 +160,94 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
     if (spectatorParam) {
       console.log('✅ 관전 모드로 접속 감지');
       setIsSpectator(true);
-      // 관전 모드도 채팅을 위해 닉네임 입력 필요
-      // 닉네임이 없으면 모달 표시
-      const savedNickname = localStorage.getItem(`nickname_${roomCode}`);
-      if (!savedNickname) {
-        setShowNicknameModal(true);
-      } else {
-        setNickname(savedNickname);
-        setShowNicknameModal(false);
-      }
     }
   }, []); // 컴포넌트 마운트 시 한 번만 실행
 
-  // URL 파라미터에서 호스트 여부와 닉네임 확인, localStorage에서 닉네임 불러오기
+  // 로그인한 유저의 닉네임 가져오기 및 방 참여
   useEffect(() => {
-    if (typeof window === 'undefined' || isLoading) return;
+    if (typeof window === 'undefined' || isLoading || roomPassword === null) return;
+    if (nickname) return; // 이미 닉네임이 설정되어 있으면 스킵
 
-      const urlParams = new URLSearchParams(window.location.search);
-    const hostParam = urlParams.get('host') === 'true';
-    const nicknameParam = urlParams.get('nickname');
-    const passwordParam = urlParams.get('password');
-    
-    // 호스트 여부를 먼저 설정 (roomPassword 로딩과 관계없이)
-    // URL 파라미터에서 호스트 여부 확인
-    if (hostParam) {
-      console.log('✅ 호스트로 접속:', hostParam);
-      setIsHost(true);
-      console.log('✅ isHost 상태 설정됨:', true);
-      
-      if (nicknameParam) {
-        const decodedNickname = decodeURIComponent(nicknameParam);
-        setNickname(decodedNickname);
-        setShowNicknameModal(false);
-        localStorage.setItem(`nickname_${roomCode}`, decodedNickname);
-        localStorage.setItem(`roomCode_${roomCode}`, roomCode);
-        joinRoom(decodedNickname, true);
-      } else {
-        // 호스트인데 닉네임이 없으면 localStorage에서 가져오기
-        const savedNickname = localStorage.getItem(`nickname_${roomCode}`);
-        if (savedNickname) {
-          setNickname(savedNickname);
-          setShowNicknameModal(false);
-          joinRoom(savedNickname, true);
-        } else {
-          setShowNicknameModal(true);
+    const loadUserNicknameAndJoin = async () => {
+      try {
+        // 로그인한 유저 정보 가져오기
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (!authUser) {
+          router.push(`/${lang}/auth/login?redirect=/${lang}/turtle_room/${roomCode}`);
+          return;
         }
-      }
-      return;
-    }
-    
-    // 호스트가 아닌 경우, 데이터베이스에서 실제 호스트 여부 확인
-    const checkHostStatus = async () => {
-      if (nicknameParam) {
-        const { data: playerData } = await supabase
-          .from('players')
-          .select('is_host')
-          .eq('room_code', roomCode)
-          .eq('nickname', decodeURIComponent(nicknameParam))
+
+        // game_users 테이블에서 닉네임 가져오기
+        const { data: gameUser } = await supabase
+          .from('game_users')
+          .select('id, nickname')
+          .eq('auth_user_id', authUser.id)
           .single();
-        
-        if (playerData) {
-          setIsHost(playerData.is_host || false);
+
+        if (!gameUser || !gameUser.nickname) {
+          alert(lang === 'ko' 
+            ? '닉네임이 설정되지 않았습니다. 프로필에서 닉네임을 설정해주세요.' 
+            : 'Nickname not set. Please set your nickname in your profile.');
+          router.push(`/${lang}/auth/setup-nickname`);
+          return;
         }
+
+        const userNickname = gameUser.nickname;
+        setNickname(userNickname);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const hostParam = urlParams.get('host') === 'true';
+        const passwordParam = urlParams.get('password');
+
+        // 호스트 여부 확인
+        if (hostParam) {
+          setIsHost(true);
+        } else {
+          // 데이터베이스에서 실제 호스트 여부 확인
+          const { data: playerData } = await supabase
+            .from('players')
+            .select('is_host')
+            .eq('room_code', roomCode)
+            .eq('nickname', userNickname)
+            .single();
+          
+          if (playerData) {
+            setIsHost(playerData.is_host || false);
+          }
+        }
+
+        // 비밀번호가 있는 방인 경우 체크
+        if (roomPassword) {
+          // URL에 비밀번호가 없거나 틀리면 비밀번호 모달 표시
+          if (!passwordParam || passwordParam !== roomPassword) {
+            setShowPasswordModal(true);
+            return;
+          }
+        }
+
+        // 방 참여
+        await joinRoom(userNickname, hostParam);
+      } catch (error) {
+        console.error('닉네임 로드 오류:', error);
+        alert(lang === 'ko' ? '방 입장에 실패했습니다.' : 'Failed to join room.');
       }
     };
-    
-    checkHostStatus();
-    
-    // 비밀번호가 아직 로드되지 않았으면 대기
-    if (roomPassword === null) return;
-    
-    // URL에 닉네임이 이미 있으면 (rooms 페이지에서 설정한 경우)
-    if (nicknameParam) {
-      const decodedNickname = decodeURIComponent(nicknameParam);
-      setNickname(decodedNickname);
-      setShowNicknameModal(false); // 닉네임 모달 표시하지 않음
-      // localStorage에 저장
-      localStorage.setItem(`nickname_${roomCode}`, decodedNickname);
-      localStorage.setItem(`roomCode_${roomCode}`, roomCode);
-      
-      // 비밀번호가 있는 방인 경우 체크
-      if (roomPassword) {
-        // URL에 비밀번호가 없거나 틀리면 비밀번호 모달 표시
-        if (!passwordParam || passwordParam !== roomPassword) {
-          setShowPasswordModal(true);
-          return;
-        }
-        // 비밀번호가 맞으면 방 참여
-        joinRoom(decodedNickname, hostParam);
-      } else {
-        // 비밀번호가 없으면 바로 방 참여
-        joinRoom(decodedNickname, hostParam);
-      }
-      return;
-    }
-    
-    // URL에 닉네임이 없는 경우 (직접 URL로 접근한 경우)
-    // localStorage에서 저장된 닉네임 확인 (같은 방 코드인 경우만)
-    const savedNickname = localStorage.getItem(`nickname_${roomCode}`);
-    const savedRoomCode = localStorage.getItem(`roomCode_${roomCode}`);
-    
-    if (savedNickname && savedRoomCode === roomCode) {
-      // localStorage에 저장된 닉네임이 있고 같은 방이면 사용
-      console.log('💾 저장된 닉네임 불러오기:', savedNickname);
-      setNickname(savedNickname);
-      setShowNicknameModal(false);
-      
-      // 비밀번호가 있는 방인 경우 체크
-      if (roomPassword) {
-        // URL에 비밀번호가 없거나 틀리면 비밀번호 모달 표시
-        if (!passwordParam || passwordParam !== roomPassword) {
-          setShowPasswordModal(true);
-          return;
-        }
-        // 비밀번호가 맞으면 방 참여
-        joinRoom(savedNickname, hostParam);
-      } else {
-        // 비밀번호가 없으면 바로 방 참여
-        joinRoom(savedNickname, hostParam);
-      }
-    } else {
-      // 둘 다 없으면 닉네임 모달 표시
-      setShowNicknameModal(true);
-    }
-  }, [roomCode, isLoading, roomPassword]);
+
+    loadUserNicknameAndJoin();
+  }, [roomCode, isLoading, roomPassword, nickname, lang, router]);
 
   // 방 참여 함수
   const joinRoom = async (playerNickname: string, isHostPlayer: boolean) => {
+    // 로그인 체크
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert(lang === 'ko' 
+        ? '멀티플레이 방에 입장하려면 로그인이 필요합니다.' 
+        : 'You must be logged in to join multiplayer rooms.');
+      router.push(`/${lang}/auth/login?redirect=/${lang}/turtle_room/${roomCode}`);
+      return;
+    }
+    
     try {
       // 관전자는 max_players 체크 제외
       if (!isSpectator) {
@@ -750,7 +734,7 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
             .order('created_at', { ascending: true }),
           supabase
             .from('players')
-            .select('nickname, is_host')
+            .select('nickname, is_host, game_user_id')
             .eq('room_code', roomCode),
           supabase
             .from('room_chats')
@@ -807,6 +791,14 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
             is_host: p.is_host,
             is_ready: false,
           })));
+          // game_user_id 매핑 저장
+          const userIds: Record<string, string> = {};
+          playersRes.data.forEach((p: any) => {
+            if (p.game_user_id) {
+              userIds[p.nickname] = p.game_user_id;
+            }
+          });
+          setPlayerUserIds(userIds);
         }
 
         // 최근 대화 시간 업데이트
@@ -1300,35 +1292,45 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
     }
   };
 
-  const handleSetNickname = async (name: string) => {
-    if (!name.trim()) return;
-
-    const trimmedName = name.trim();
-    setNickname(trimmedName);
-      setShowNicknameModal(false);
-    
-    // localStorage에 닉네임 저장
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(`nickname_${roomCode}`, trimmedName);
-      localStorage.setItem(`roomCode_${roomCode}`, roomCode);
-      console.log('💾 닉네임 저장됨:', trimmedName);
+  // 참가자 강퇴 함수
+  const handleKickPlayer = async (playerNickname: string) => {
+    if (!isHost) return;
+    if (playerNickname === nickname) {
+      alert(lang === 'ko' ? '자기 자신을 강퇴할 수 없습니다.' : 'You cannot kick yourself.');
+      return;
     }
     
-    // 비밀번호가 있는 방인 경우 비밀번호 모달 표시
-    if (roomPassword) {
-      // URL에 비밀번호가 이미 있으면 체크하지 않음
-      const urlParams = new URLSearchParams(window.location.search);
-      const passwordParam = urlParams.get('password');
-      if (passwordParam && passwordParam === roomPassword) {
-        // 비밀번호가 이미 맞으면 바로 참여
-        await joinRoom(trimmedName, false);
-      } else {
-        // 비밀번호 모달 표시
-        setShowPasswordModal(true);
-      }
-    } else {
-      // 비밀번호가 없으면 바로 방 참여
-      await joinRoom(trimmedName, false);
+    if (!confirm(lang === 'ko' 
+      ? `${playerNickname}님을 강퇴하시겠습니까?` 
+      : `Are you sure you want to kick ${playerNickname}?`)) {
+      return;
+    }
+    
+    try {
+      // players 테이블에서 제거
+      const { error } = await supabase
+        .from('players')
+        .delete()
+        .eq('room_code', roomCode)
+        .eq('nickname', playerNickname);
+      
+      if (error) throw error;
+      
+      // 채팅에 시스템 메시지 추가
+      await supabase
+        .from('room_chats')
+        .insert({
+          room_code: roomCode,
+          nickname: 'SYSTEM',
+          message: lang === 'ko' 
+            ? `🚫 ${playerNickname}님이 방장에 의해 강퇴되었습니다.` 
+            : `🚫 ${playerNickname} was kicked by the host.`,
+        });
+      
+      alert(lang === 'ko' ? '참가자가 강퇴되었습니다.' : 'Player has been kicked.');
+    } catch (err) {
+      console.error('강퇴 오류:', err);
+      alert(lang === 'ko' ? '강퇴에 실패했습니다.' : 'Failed to kick player.');
     }
   };
 
@@ -1347,14 +1349,12 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
     setShowPasswordModal(false);
     setError('');
     
-    // 닉네임이 없으면 닉네임 모달 표시
-    if (!nickname.trim()) {
-      setShowNicknameModal(true);
-      return;
-    }
-    
     // 비밀번호가 맞으면 방 참여
-    await joinRoom(nickname.trim(), false);
+    if (nickname) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hostParam = urlParams.get('host') === 'true';
+      await joinRoom(nickname, hostParam);
+    }
   };
 
   // 방 삭제 로직 제거 - 게임 종료 후에도 방은 유지
@@ -1469,39 +1469,6 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
     );
   }
 
-  if (showNicknameModal) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center px-4">
-        <div className="bg-slate-800 rounded-2xl p-6 sm:p-8 max-w-md w-full border border-slate-700 shadow-2xl">
-          <div className="text-center mb-6">
-            <i className="ri-user-add-line text-4xl sm:text-5xl text-teal-400 mb-4"></i>
-            <h2 className="text-xl sm:text-2xl font-bold mb-2">{t.room.setNickname}</h2>
-            <p className="text-slate-400 text-sm">{t.room.setNicknameDesc}</p>
-          </div>
-          <input
-            type="text"
-            placeholder={t.room.nicknamePlaceholder}
-            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-4 text-sm"
-            maxLength={20}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                handleSetNickname((e.target as HTMLInputElement).value);
-              }
-            }}
-          />
-          <button
-            onClick={(e) => {
-              const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-              handleSetNickname(input.value);
-            }}
-            className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-xl transition-all duration-200 whitespace-nowrap"
-          >
-            {t.room.start}
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
@@ -1765,18 +1732,39 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
                         {player.is_host && (
                           <i className="ri-vip-crown-line text-yellow-400 text-xs sm:text-sm flex-shrink-0"></i>
                         )}
-                        <span className={`text-xs sm:text-sm truncate ${
-                          player.is_host ? 'text-teal-400 font-semibold' : 'text-slate-300'
-                        }`}>
-                          {player.nickname}
-                        </span>
+                        {playerUserIds[player.nickname] ? (
+                          <Link href={`/${lang}/profile/${playerUserIds[player.nickname]}`} className="hover:opacity-80 transition-opacity">
+                            <span className={`text-xs sm:text-sm truncate ${
+                              player.is_host ? 'text-teal-400 font-semibold' : 'text-slate-300'
+                            }`}>
+                              {player.nickname}
+                            </span>
+                          </Link>
+                        ) : (
+                          <span className={`text-xs sm:text-sm truncate ${
+                            player.is_host ? 'text-teal-400 font-semibold' : 'text-slate-300'
+                          }`}>
+                            {player.nickname}
+                          </span>
+                        )}
                       </div>
-                      {player.is_ready && (
-                        <div className="flex items-center gap-1 text-green-400 text-xs">
-                          <i className="ri-checkbox-circle-fill"></i>
-                          <span className="hidden sm:inline">{lang === 'ko' ? '준비완료' : 'Ready'}</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {player.is_ready && (
+                          <div className="flex items-center gap-1 text-green-400 text-xs">
+                            <i className="ri-checkbox-circle-fill"></i>
+                            <span className="hidden sm:inline">{lang === 'ko' ? '준비완료' : 'Ready'}</span>
+                          </div>
+                        )}
+                        {isHost && !player.is_host && player.nickname !== nickname && (
+                          <button
+                            onClick={() => handleKickPlayer(player.nickname)}
+                            className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors text-red-400 hover:text-red-300"
+                            title={lang === 'ko' ? '강퇴하기' : 'Kick player'}
+                          >
+                            <i className="ri-user-unfollow-line text-sm"></i>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
