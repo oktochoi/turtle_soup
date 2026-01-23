@@ -203,39 +203,11 @@ Teamwork is important in multiplayer mode. Since each player's questions become 
     },
     excerpt: {
       ko: '바다거북스프의 랭킹 시스템이 어떻게 작동하는지 알아보세요.',
-      en: 'Learn how Turtle Soup's ranking system works.',
+      en: "Learn how Turtle Soup's ranking system works.",
     },
     content: {
-      ko: `# 랭킹 시스템 완벽 가이드
-
-바다거북스프의 랭킹 시스템은 문제 해결 수와 받은 좋아요 수를 기반으로 결정됩니다.
-
-## 랭킹 요소
-
-1. **문제 해결 수**: 더 많은 문제를 해결할수록 높은 순위를 기록할 수 있습니다.
-2. **좋아요 수**: 다른 플레이어들로부터 받은 좋아요도 랭킹에 영향을 줍니다.
-
-## 랭킹 올리기
-
-랭킹을 올리려면:
-- 다양한 문제를 해결하세요
-- 좋은 문제를 만들어 공유하세요
-- 다른 플레이어들의 문제에 좋아요를 주세요`,
-      en: `# Complete Guide to Ranking System
-
-Turtle Soup's ranking system is determined based on the number of problems solved and likes received.
-
-## Ranking Factors
-
-1. **Number of Problems Solved**: The more problems you solve, the higher your rank.
-2. **Number of Likes**: Likes received from other players also affect your ranking.
-
-## Raising Your Rank
-
-To raise your rank:
-- Solve various problems
-- Create and share good problems
-- Give likes to other players' problems`,
+      ko: '# 랭킹 시스템 완벽 가이드\n\n바다거북스프의 랭킹 시스템은 문제 해결 수와 받은 좋아요 수를 기반으로 결정됩니다.\n\n## 랭킹 요소\n\n1. **문제 해결 수**: 더 많은 문제를 해결할수록 높은 순위를 기록할 수 있습니다.\n2. **좋아요 수**: 다른 플레이어들로부터 받은 좋아요도 랭킹에 영향을 줍니다.\n\n## 랭킹 올리기\n\n랭킹을 올리려면:\n- 다양한 문제를 해결하세요\n- 좋은 문제를 만들어 공유하세요\n- 다른 플레이어들의 문제에 좋아요를 주세요',
+      en: '# Complete Guide to Ranking System\n\nTurtle Soup\'s ranking system is determined based on the number of problems solved and likes received.\n\n## Ranking Factors\n\n1. **Number of Problems Solved**: The more problems you solve, the higher your rank.\n2. **Number of Likes**: Likes received from other players also affect your ranking.\n\n## Raising Your Rank\n\nTo raise your rank:\n- Solve various problems\n- Create and share good problems\n- Give likes to other players\' problems',
     },
     author: '퀴즈 천국 팀',
     publishedAt: '2025-01-18',
@@ -329,7 +301,7 @@ Rules to follow so all players can enjoy the game.
     },
     excerpt: {
       ko: '바다거북스프의 문제 난이도 시스템을 알아보세요.',
-      en: 'Learn about Turtle Soup's problem difficulty system.',
+      en: "Learn about Turtle Soup's problem difficulty system.",
     },
     content: {
       ko: `# 문제 난이도 이해하기
@@ -523,7 +495,7 @@ Techniques to effectively solve Turtle Soup problems.
     },
     excerpt: {
       ko: '바다거북스프의 커뮤니티 기능을 최대한 활용하는 방법을 알아보세요.',
-      en: 'Learn how to make the most of Turtle Soup's community features.',
+      en: "Learn how to make the most of Turtle Soup's community features.",
     },
     content: {
       ko: `# 커뮤니티 기능 활용하기
@@ -605,7 +577,7 @@ We will continue to work hard for a better gaming experience!`,
     },
     excerpt: {
       ko: '바다거북스프가 사용자의 개인정보를 어떻게 보호하는지 알아보세요.',
-      en: 'Learn how Turtle Soup protects users' personal information.',
+      en: "Learn how Turtle Soup protects users' personal information.",
     },
     content: {
       ko: `# 개인정보 보호와 보안
@@ -647,7 +619,7 @@ For more details, please refer to the Privacy Policy.`,
     },
     excerpt: {
       ko: '바다거북스프의 향후 개발 계획을 확인하세요.',
-      en: 'Check out Turtle Soup's future development plans.',
+      en: "Check out Turtle Soup's future development plans.",
     },
     content: {
       ko: `# 바다거북스프의 미래 로드맵

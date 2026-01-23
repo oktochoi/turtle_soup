@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -42,17 +42,106 @@ export default function GuessSetDetailPage() {
   const [commentImage, setCommentImage] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const commentImageInputRef = useRef<HTMLInputElement | null>(null);
+  const viewCountUpdatedRef = useRef<string | null>(null);
   const [showCardShareModal, setShowCardShareModal] = useState<string | null>(null);
   const [showSetShareModal, setShowSetShareModal] = useState(false);
   const [creatorInfo, setCreatorInfo] = useState<{id: string; nickname: string; profile_image_url: string | null} | null>(null);
 
-  useEffect(() => {
-    if (setId) {
-      loadSet();
+  const loadRatingAndLikes = useCallback(async () => {
+    if (!setId || !user) return;
+    
+    try {
+      const supabase = createClient();
+      
+      // 평균 별점 및 개수
+      const set = await supabase
+        .from('guess_sets')
+        .select('average_rating, rating_count, like_count')
+        .eq('id', setId)
+        .single();
+      
+      if (set.data) {
+        setAverageRating(set.data.average_rating || 0);
+        setRatingCount(set.data.rating_count || 0);
+        setLikeCount(set.data.like_count || 0);
+      }
+      
+      // 사용자 별점
+      if (user) {
+        const { data: userRatingData } = await supabase
+          .from('guess_set_ratings')
+          .select('rating')
+          .eq('set_id', setId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        setUserRating(userRatingData?.rating || null);
+        
+        // 사용자 좋아요
+        const { data: likeData } = await supabase
+          .from('guess_set_likes')
+          .select('id')
+          .eq('set_id', setId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        setIsLiked(!!likeData);
+      }
+    } catch (error: any) {
+      console.error('별점/좋아요 로드 오류:', error);
     }
   }, [setId, user]);
 
-  const loadSet = async () => {
+  const loadComments = useCallback(async () => {
+    if (!setId) return;
+    
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('guess_set_comments')
+        .select('*')
+        .eq('set_id', setId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      
+      // 각 댓글에 사용자 정보 추가
+      if (data && data.length > 0) {
+        const userIds = [...new Set(data.map(c => c.user_id))];
+        
+        // users와 game_users에서 정보 가져오기
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('id, nickname')
+          .in('id', userIds);
+        
+        const { data: gameUsersData } = await supabase
+          .from('game_users')
+          .select('auth_user_id, nickname, profile_image_url')
+          .in('auth_user_id', userIds);
+        
+        const usersMap = new Map(usersData?.map(u => [u.id, u.nickname]) || []);
+        const gameUsersMap = new Map(gameUsersData?.map(gu => [gu.auth_user_id, { nickname: gu.nickname, profile_image_url: gu.profile_image_url }]) || []);
+        
+        const commentsWithUsers = data.map(comment => {
+          const gameUser = gameUsersMap.get(comment.user_id);
+          return {
+            ...comment,
+            user_nickname: gameUser?.nickname || usersMap.get(comment.user_id) || 'User',
+            user_profile_image: gameUser?.profile_image_url || null
+          };
+        });
+        setComments(commentsWithUsers);
+      } else {
+        setComments([]);
+      }
+    } catch (error: any) {
+      console.error('댓글 로드 오류:', error);
+    }
+  }, [setId]);
+
+  const loadSet = useCallback(async () => {
     if (!setId) return;
     
     try {
@@ -123,11 +212,17 @@ export default function GuessSetDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [setId, user, loadRatingAndLikes, loadComments]);
+
+  useEffect(() => {
+    if (setId) {
+      loadSet();
+    }
+  }, [setId, loadSet]);
 
   // 조회수 증가 (세트 로드 후 한 번만 실행)
   useEffect(() => {
-    if (guessSet?.id && !isLoading) {
+    if (guessSet?.id && !isLoading && viewCountUpdatedRef.current !== guessSet.id) {
       const updateViewCount = async () => {
         try {
           const supabase = createClient();
@@ -149,6 +244,7 @@ export default function GuessSetDetailPage() {
             
             // 조회수 업데이트 후 세트 데이터 갱신
             if (updatedSet) {
+              viewCountUpdatedRef.current = guessSet.id;
               setGuessSet(updatedSet);
             }
           }
@@ -159,101 +255,7 @@ export default function GuessSetDetailPage() {
       };
       updateViewCount();
     }
-  }, [guessSet?.id, isLoading]); // 세트 ID가 로드될 때 한 번만 실행
-
-  const loadRatingAndLikes = async () => {
-    if (!setId || !user) return;
-    
-    try {
-      const supabase = createClient();
-      
-      // 평균 별점 및 개수
-      const set = await supabase
-        .from('guess_sets')
-        .select('average_rating, rating_count, like_count')
-        .eq('id', setId)
-        .single();
-      
-      if (set.data) {
-        setAverageRating(set.data.average_rating || 0);
-        setRatingCount(set.data.rating_count || 0);
-        setLikeCount(set.data.like_count || 0);
-      }
-      
-      // 사용자 별점
-      if (user) {
-        const { data: userRatingData } = await supabase
-          .from('guess_set_ratings')
-          .select('rating')
-          .eq('set_id', setId)
-          .eq('user_id', user.id)
-          .maybeSingle();
-        
-        setUserRating(userRatingData?.rating || null);
-        
-        // 사용자 좋아요
-        const { data: likeData } = await supabase
-          .from('guess_set_likes')
-          .select('id')
-          .eq('set_id', setId)
-          .eq('user_id', user.id)
-          .maybeSingle();
-        
-        setIsLiked(!!likeData);
-      }
-    } catch (error: any) {
-      console.error('별점/좋아요 로드 오류:', error);
-    }
-  };
-
-  const loadComments = async () => {
-    if (!setId) return;
-    
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('guess_set_comments')
-        .select('*')
-        .eq('set_id', setId)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-      
-      // 각 댓글에 사용자 정보 추가
-      if (data && data.length > 0) {
-        const userIds = [...new Set(data.map(c => c.user_id))];
-        
-        // users와 game_users에서 정보 가져오기
-        const { data: usersData } = await supabase
-          .from('users')
-          .select('id, nickname')
-          .in('id', userIds);
-        
-        const { data: gameUsersData } = await supabase
-          .from('game_users')
-          .select('auth_user_id, nickname, profile_image_url')
-          .in('auth_user_id', userIds);
-        
-        const usersMap = new Map(usersData?.map(u => [u.id, u.nickname]) || []);
-        const gameUsersMap = new Map(gameUsersData?.map(gu => [gu.auth_user_id, { nickname: gu.nickname, profile_image_url: gu.profile_image_url }]) || []);
-        
-        const commentsWithUsers = data.map(comment => {
-          const gameUser = gameUsersMap.get(comment.user_id);
-          return {
-            ...comment,
-            user_nickname: gameUser?.nickname || usersMap.get(comment.user_id) || 'User',
-            user_profile_image: gameUser?.profile_image_url || null
-          };
-        });
-        setComments(commentsWithUsers);
-      } else {
-        setComments([]);
-      }
-    } catch (error: any) {
-      console.error('댓글 로드 오류:', error);
-    }
-  };
+  }, [guessSet, isLoading]);
 
   const handleRatingClick = async (rating: number) => {
     if (!user) {
