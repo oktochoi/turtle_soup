@@ -16,7 +16,9 @@ export default function Home() {
   const t = useTranslations();
   const { user } = useAuth();
   const [todayProblem, setTodayProblem] = useState<Problem | null>(null);
+  const [sampleProblems, setSampleProblems] = useState<Problem[]>([]);
   const [isLoadingProblem, setIsLoadingProblem] = useState(true);
+  const [isLoadingSamples, setIsLoadingSamples] = useState(true);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [checkInMessage, setCheckInMessage] = useState<string | null>(null);
@@ -52,6 +54,7 @@ export default function Home() {
     if (isRedirecting) return;
 
     loadTodayProblem();
+    loadSampleProblems();
     checkTodayCheckIn();
     
     // 주기적으로 비활성 방 정리 (1시간 이상 활동이 없으면 방 제거)
@@ -67,6 +70,50 @@ export default function Home() {
       clearInterval(cleanupInterval);
     };
   }, [user, lang, isRedirecting]);
+
+  const loadSampleProblems = async () => {
+    try {
+      setIsLoadingSamples(true);
+      const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
+      
+      let data: any[] | null = null;
+      let error: any = null;
+      
+      const result = await supabase
+        .from('problems')
+        .select('*')
+        .eq('lang', currentLang)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      
+      data = result.data;
+      error = result.error;
+      
+      if (error && (error.code === '42703' || error.message?.includes('column') || error.message?.includes('lang'))) {
+        const allResult = await supabase
+          .from('problems')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(3);
+        data = allResult.data;
+        error = allResult.error;
+      }
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const filtered = data.filter((problem: any) => {
+          if (!problem.language) return currentLang === 'ko';
+          return problem.language === currentLang;
+        });
+        setSampleProblems(filtered.slice(0, 3));
+      }
+    } catch (error) {
+      console.error('샘플 문제 로드 오류:', error);
+    } finally {
+      setIsLoadingSamples(false);
+    }
+  };
 
   const loadTodayProblem = async () => {
     try {
@@ -525,6 +572,109 @@ export default function Home() {
               <div className="text-center py-8">
                 <i className="ri-time-line text-4xl text-slate-500 mb-3"></i>
                 <p className="text-slate-400 text-sm sm:text-base">{t.home.preparing}</p>
+              </div>
+            </div>
+          )}
+
+          {/* 샘플 문제 섹션 */}
+          <div className="bg-slate-800/40 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 animate-fade-in-up">
+            <h2 className="font-bold mb-5 text-teal-400 flex items-center text-base sm:text-lg lg:text-xl">
+              <div className="p-1.5 bg-teal-500/20 rounded-lg mr-3">
+                <i className="ri-question-answer-line text-lg" aria-hidden="true"></i>
+              </div>
+              {lang === 'ko' ? '샘플 문제' : 'Sample Problems'}
+            </h2>
+            {isLoadingSamples ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-slate-900/50 rounded-lg p-4 animate-pulse">
+                    <div className="h-4 bg-slate-700/50 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-slate-700/50 rounded w-full mb-1"></div>
+                    <div className="h-3 bg-slate-700/50 rounded w-5/6"></div>
+                  </div>
+                ))}
+              </div>
+            ) : sampleProblems.length > 0 ? (
+              <div className="space-y-4">
+                {sampleProblems.map((problem) => (
+                  <Link
+                    key={problem.id}
+                    href={getLocalizedPath(`/problem/${problem.id}`)}
+                    className="block bg-slate-900/50 rounded-lg p-4 hover:bg-slate-900/70 transition-colors border border-slate-700/50 hover:border-teal-500/50"
+                  >
+                    <h3 className="font-semibold text-white mb-2 line-clamp-2">{problem.title}</h3>
+                    <p className="text-slate-400 text-sm line-clamp-2 mb-2">{problem.content}</p>
+                    <div className="flex items-center gap-4 text-xs text-slate-500">
+                      <span className="flex items-center gap-1">
+                        <i className="ri-eye-line"></i>
+                        {problem.view_count || 0}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <i className="ri-heart-line"></i>
+                        {problem.like_count || 0}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-slate-400 text-sm">{lang === 'ko' ? '샘플 문제가 없습니다.' : 'No sample problems available.'}</p>
+            )}
+            <Link
+              href={getLocalizedPath('/problems')}
+              className="mt-4 inline-flex items-center gap-2 text-teal-400 hover:text-teal-300 transition-colors text-sm font-semibold"
+            >
+              <span>{lang === 'ko' ? '더 많은 문제 보기' : 'View More Problems'}</span>
+              <i className="ri-arrow-right-line"></i>
+            </Link>
+          </div>
+
+          {/* 로그인하면 가능한 것 섹션 */}
+          {!user && (
+            <div className="bg-gradient-to-br from-cyan-500/10 via-teal-500/10 to-cyan-500/10 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-cyan-500/30 animate-fade-in-up">
+              <h2 className="font-bold mb-4 text-cyan-400 flex items-center text-base sm:text-lg lg:text-xl">
+                <div className="p-1.5 bg-cyan-500/20 rounded-lg mr-3">
+                  <i className="ri-login-box-line text-lg" aria-hidden="true"></i>
+                </div>
+                {lang === 'ko' ? '로그인하면 가능한 것' : 'What You Can Do When Logged In'}
+              </h2>
+              <ul className="space-y-3 text-sm sm:text-base text-slate-300 mb-6">
+                <li className="flex items-start">
+                  <i className="ri-checkbox-circle-fill text-cyan-400 mr-3 mt-0.5 flex-shrink-0"></i>
+                  <span>{lang === 'ko' ? '멀티플레이어 방을 만들고 친구들과 함께 게임하기' : 'Create multiplayer rooms and play games with friends'}</span>
+                </li>
+                <li className="flex items-start">
+                  <i className="ri-checkbox-circle-fill text-cyan-400 mr-3 mt-0.5 flex-shrink-0"></i>
+                  <span>{lang === 'ko' ? '나만의 추리 문제를 만들어서 공유하기' : 'Create and share your own deduction problems'}</span>
+                </li>
+                <li className="flex items-start">
+                  <i className="ri-checkbox-circle-fill text-cyan-400 mr-3 mt-0.5 flex-shrink-0"></i>
+                  <span>{lang === 'ko' ? '문제에 댓글을 달고 다른 플레이어들과 소통하기' : 'Leave comments on problems and communicate with other players'}</span>
+                </li>
+                <li className="flex items-start">
+                  <i className="ri-checkbox-circle-fill text-cyan-400 mr-3 mt-0.5 flex-shrink-0"></i>
+                  <span>{lang === 'ko' ? '랭킹 시스템에 참여하고 자신의 실력 확인하기' : 'Participate in the ranking system and check your skills'}</span>
+                </li>
+                <li className="flex items-start">
+                  <i className="ri-checkbox-circle-fill text-cyan-400 mr-3 mt-0.5 flex-shrink-0"></i>
+                  <span>{lang === 'ko' ? '출석체크로 경험치와 포인트 획득하기' : 'Earn experience points and points through check-in'}</span>
+                </li>
+              </ul>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href={getLocalizedPath('/auth/login')}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl hover:shadow-cyan-500/50 transform hover:scale-[1.02]"
+                >
+                  <i className="ri-login-box-line"></i>
+                  <span>{lang === 'ko' ? '로그인하기' : 'Log In'}</span>
+                </Link>
+                <Link
+                  href={getLocalizedPath('/play')}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-slate-700/50 hover:bg-slate-700 text-white font-semibold rounded-xl transition-all border border-slate-600"
+                >
+                  <i className="ri-play-line"></i>
+                  <span>{lang === 'ko' ? '게임 시작하기' : 'Start Game'}</span>
+                </Link>
               </div>
             </div>
           )}
