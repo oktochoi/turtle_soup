@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import type { ResponseCookie } from 'next/dist/compiled/@edge-runtime/cookies';
 
 const supportedLocales = ['ko', 'en'];
 const defaultLocale = 'ko';
@@ -137,7 +138,7 @@ export async function middleware(request: NextRequest) {
             getAll() {
               return cookieStore.getAll();
             },
-            setAll(cookiesToSet) {
+            setAll(cookiesToSet: Array<{ name: string; value: string; options?: Partial<ResponseCookie> }>) {
               cookiesToSet.forEach(({ name, value, options }) => {
                 cookieStore.set(name, value, options);
               });

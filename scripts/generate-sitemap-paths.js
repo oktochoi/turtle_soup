@@ -19,7 +19,8 @@ function createSitemapSupabaseClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing Supabase environment variables for sitemap generation');
+    console.warn('⚠️ Missing Supabase environment variables for sitemap generation. Using static paths only.');
+    return null;
   }
 
   return createClient(supabaseUrl, supabaseKey, {
@@ -71,76 +72,80 @@ async function generateSitemapPaths() {
   try {
     const supabase = createSitemapSupabaseClient();
 
-    // 문제 목록 가져오기 (최대 1000개)
-    console.log('Fetching problems from Supabase...');
-    const { data: problems, error: problemsError } = await supabase
-      .from('problems')
-      .select('id, updated_at')
-      .order('updated_at', { ascending: false })
-      .limit(1000);
+    if (supabase) {
+      // 문제 목록 가져오기 (최대 1000개)
+      console.log('Fetching problems from Supabase...');
+      const { data: problems, error: problemsError } = await supabase
+        .from('problems')
+        .select('id, updated_at')
+        .order('updated_at', { ascending: false })
+        .limit(1000);
 
-    if (!problemsError && problems && problems.length > 0) {
-      console.log(`Found ${problems.length} problems`);
-      problems.forEach((problem) => {
-        locales.forEach((locale) => {
-          paths.push({
-            loc: `/${locale}/problem/${problem.id}`,
-            changefreq: 'weekly',
-            priority: 0.8,
-            lastmod: problem.updated_at ? new Date(problem.updated_at).toISOString() : new Date().toISOString(),
+      if (!problemsError && problems && problems.length > 0) {
+        console.log(`Found ${problems.length} problems`);
+        problems.forEach((problem) => {
+          locales.forEach((locale) => {
+            paths.push({
+              loc: `/${locale}/problem/${problem.id}`,
+              changefreq: 'weekly',
+              priority: 0.8,
+              lastmod: problem.updated_at ? new Date(problem.updated_at).toISOString() : new Date().toISOString(),
+            });
           });
         });
-      });
-    } else if (problemsError) {
-      console.error('Error fetching problems:', problemsError);
-    }
+      } else if (problemsError) {
+        console.error('Error fetching problems:', problemsError);
+      }
 
-    // 커뮤니티 게시글 가져오기 (최대 500개)
-    console.log('Fetching posts from Supabase...');
-    const { data: posts, error: postsError } = await supabase
-      .from('posts')
-      .select('id, updated_at')
-      .order('updated_at', { ascending: false })
-      .limit(500);
+      // 커뮤니티 게시글 가져오기 (최대 500개)
+      console.log('Fetching posts from Supabase...');
+      const { data: posts, error: postsError } = await supabase
+        .from('posts')
+        .select('id, updated_at')
+        .order('updated_at', { ascending: false })
+        .limit(500);
 
-    if (!postsError && posts && posts.length > 0) {
-      console.log(`Found ${posts.length} posts`);
-      posts.forEach((post) => {
-        locales.forEach((locale) => {
-          paths.push({
-            loc: `/${locale}/community/${post.id}`,
-            changefreq: 'weekly',
-            priority: 0.7,
-            lastmod: post.updated_at ? new Date(post.updated_at).toISOString() : new Date().toISOString(),
+      if (!postsError && posts && posts.length > 0) {
+        console.log(`Found ${posts.length} posts`);
+        posts.forEach((post) => {
+          locales.forEach((locale) => {
+            paths.push({
+              loc: `/${locale}/community/${post.id}`,
+              changefreq: 'weekly',
+              priority: 0.7,
+              lastmod: post.updated_at ? new Date(post.updated_at).toISOString() : new Date().toISOString(),
+            });
           });
         });
-      });
-    } else if (postsError) {
-      console.error('Error fetching posts:', postsError);
-    }
+      } else if (postsError) {
+        console.error('Error fetching posts:', postsError);
+      }
 
-    // 공개 프로필 가져오기 (최대 200개)
-    console.log('Fetching game_users from Supabase...');
-    const { data: gameUsers, error: usersError } = await supabase
-      .from('game_users')
-      .select('id, updated_at')
-      .order('updated_at', { ascending: false })
-      .limit(200);
+      // 공개 프로필 가져오기 (최대 200개)
+      console.log('Fetching game_users from Supabase...');
+      const { data: gameUsers, error: usersError } = await supabase
+        .from('game_users')
+        .select('id, updated_at')
+        .order('updated_at', { ascending: false })
+        .limit(200);
 
-    if (!usersError && gameUsers && gameUsers.length > 0) {
-      console.log(`Found ${gameUsers.length} game users`);
-      gameUsers.forEach((user) => {
-        locales.forEach((locale) => {
-          paths.push({
-            loc: `/${locale}/profile/${user.id}`,
-            changefreq: 'monthly',
-            priority: 0.6,
-            lastmod: user.updated_at ? new Date(user.updated_at).toISOString() : new Date().toISOString(),
+      if (!usersError && gameUsers && gameUsers.length > 0) {
+        console.log(`Found ${gameUsers.length} game users`);
+        gameUsers.forEach((user) => {
+          locales.forEach((locale) => {
+            paths.push({
+              loc: `/${locale}/profile/${user.id}`,
+              changefreq: 'monthly',
+              priority: 0.6,
+              lastmod: user.updated_at ? new Date(user.updated_at).toISOString() : new Date().toISOString(),
+            });
           });
         });
-      });
-    } else if (usersError) {
-      console.error('Error fetching game_users:', usersError);
+      } else if (usersError) {
+        console.error('Error fetching game_users:', usersError);
+      }
+    } else {
+      console.log('Skipping Supabase data fetching due to missing environment variables');
     }
 
     console.log(`Total paths generated: ${paths.length}`);

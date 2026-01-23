@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development next dev -H 0.0.0.0 -p 3000",
     "build": "next build",
-    "postbuild": "node scripts/generate-sitemap-paths.js && next-sitemap",
+    "postbuild": "node scripts/generate-sitemap-paths.js && npx next-sitemap",
     "lint": "next lint"
   },
   "dependencies": {
