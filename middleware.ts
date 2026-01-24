@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import type { ResponseCookie } from 'next/dist/compiled/@edge-runtime/cookies';
 
 const supportedLocales = ['ko', 'en'];
 const defaultLocale = 'ko';
@@ -19,6 +17,7 @@ const publicPaths = [
   '/contact',
   '/sitemap.xml',
   '/robots.txt',
+  '/auth', // 인증 관련 페이지는 Public
   '/problems', // 문제 목록은 Public
   '/problem', // 개별 문제 상세는 Public
   '/guess', // 맞추기 게임 목록은 Public
@@ -129,18 +128,24 @@ export async function middleware(request: NextRequest) {
   // Protected 경로는 인증 체크
   if (isProtectedPath(pathname)) {
     try {
-      const cookieStore = await cookies();
+      let response = NextResponse.next({
+        request: {
+          headers: request.headers,
+        },
+      });
+
       const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
           cookies: {
             getAll() {
-              return cookieStore.getAll();
+              return request.cookies.getAll();
             },
-            setAll(cookiesToSet: Array<{ name: string; value: string; options?: Partial<ResponseCookie> }>) {
+            setAll(cookiesToSet: Array<{ name: string; value: string; options?: any }>) {
               cookiesToSet.forEach(({ name, value, options }) => {
-                cookieStore.set(name, value, options);
+                request.cookies.set(name, value);
+                response.cookies.set(name, value, options);
               });
             },
           },
@@ -155,6 +160,8 @@ export async function middleware(request: NextRequest) {
         loginUrl.searchParams.set('redirect', pathname);
         return NextResponse.redirect(loginUrl);
       }
+
+      return response;
     } catch (error) {
       // 인증 체크 실패 시 로그인 페이지로 리다이렉트
       const lang = pathSegments[0] || defaultLocale;
