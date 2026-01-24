@@ -38,6 +38,7 @@ const protectedPaths = [
   '/create-room',
   '/create',
   '/edit',
+  '/guess/create', // 맞추기 게임 만들기
   '/turtle_room',
   '/liar_room',
   '/mafia_room',
@@ -54,12 +55,28 @@ function isPublicPath(pathname: string): boolean {
   const pathWithoutLang = pathname.split('/').slice(2).join('/') || '/';
   const fullPath = '/' + pathWithoutLang;
   
+  // Protected 경로는 Public이 아님
+  if (isProtectedPath(pathname)) {
+    return false;
+  }
+  
   // 정확히 일치하거나 시작하는 경로 확인
   return publicPaths.some(publicPath => {
     if (publicPath === '/') {
       return pathname === `/${defaultLocale}` || pathname === `/${defaultLocale}/`;
     }
-    return fullPath === publicPath || fullPath.startsWith(publicPath + '/');
+    // 정확히 일치하거나, publicPath로 시작하되 protected 경로가 아닌 경우
+    if (fullPath === publicPath) {
+      return true;
+    }
+    // publicPath로 시작하는 경우
+    if (fullPath.startsWith(publicPath + '/')) {
+      // 하지만 protected 경로는 제외
+      const remainingPath = fullPath.slice(publicPath.length);
+      // /guess/create 같은 경우는 protected이므로 false
+      return !isProtectedPath(pathname);
+    }
+    return false;
   });
 }
 
@@ -120,57 +137,19 @@ export async function middleware(request: NextRequest) {
     );
   }
 
+  // Protected 경로는 페이지 레벨에서 인증 체크하도록 통과
+  // middleware에서 인증 체크를 하면 쿠키 문제로 인해 모든 페이지가 막힐 수 있음
+  // 인증은 각 페이지 컴포넌트에서 처리하도록 함
+  if (isProtectedPath(pathname)) {
+    return NextResponse.next();
+  }
+
   // Public 경로는 인증 체크 없이 통과
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
-  // Protected 경로는 인증 체크
-  if (isProtectedPath(pathname)) {
-    try {
-      let response = NextResponse.next({
-        request: {
-          headers: request.headers,
-        },
-      });
-
-      const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            getAll() {
-              return request.cookies.getAll();
-            },
-            setAll(cookiesToSet: Array<{ name: string; value: string; options?: any }>) {
-              cookiesToSet.forEach(({ name, value, options }) => {
-                request.cookies.set(name, value);
-                response.cookies.set(name, value, options);
-              });
-            },
-          },
-        }
-      );
-
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        const lang = pathSegments[0] || defaultLocale;
-        const loginUrl = new URL(`/${lang}/auth/login`, request.url);
-        loginUrl.searchParams.set('redirect', pathname);
-        return NextResponse.redirect(loginUrl);
-      }
-
-      return response;
-    } catch (error) {
-      // 인증 체크 실패 시 로그인 페이지로 리다이렉트
-      const lang = pathSegments[0] || defaultLocale;
-      const loginUrl = new URL(`/${lang}/auth/login`, request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-  }
-
+  // 나머지 경로도 통과 (명시적으로 public/protected가 아닌 경우)
   return NextResponse.next();
 }
 
