@@ -172,7 +172,7 @@ export default function AnswerInputSection({
           </div>
         )}
 
-        {/* 힌트 */}
+        {/* 힌트: details/summary로 HTML에 포함 (AdSense 인덱싱) + 접기(UX) */}
         {problem &&
           hints &&
           Array.isArray(hints) &&
@@ -185,68 +185,68 @@ export default function AnswerInputSection({
 
               <div className="space-y-2">
                 {hints.map((hint, index) => (
-                  <div
-                    key={index}
-                    className="bg-slate-800/50 rounded-lg border border-slate-700"
-                  >
-                    <button
-                      onClick={() => {
-                        const newShowHints = [...showHints];
-                        newShowHints[index] = !newShowHints[index];
-                        onShowHintsChange(newShowHints);
-                      }}
-                      className="w-full px-4 py-2.5 flex items-center justify-between text-left hover:bg-slate-700/50 transition-colors rounded-lg"
-                    >
-                      <span className="text-sm sm:text-base text-slate-300">
-                        <i className="ri-lightbulb-flash-line mr-2 text-yellow-400"></i>
-                        {lang === 'ko' ? `힌트 ${index + 1}` : `Hint ${index + 1}`}
-                      </span>
-                      <i
-                        className={`ri-${showHints[index] ? 'eye-off' : 'eye'}-line text-slate-400`}
-                      ></i>
-                    </button>
-
-                    {showHints[index] && (
-                      <div className="px-4 pb-3 pt-2 border-t border-slate-700">
-                        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                          {hint}
-                        </p>
+                  <details key={index} className="group">
+                    <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+                      <div className="bg-slate-800/50 rounded-lg border border-slate-700 hover:border-yellow-500/30 transition-colors px-4 py-2.5 flex items-center justify-between">
+                        <span className="text-sm sm:text-base text-slate-300">
+                          <i className="ri-lightbulb-flash-line mr-2 text-yellow-400"></i>
+                          {lang === 'ko' ? `힌트 ${index + 1}` : `Hint ${index + 1}`}
+                        </span>
+                        <i className="ri-arrow-down-s-line text-slate-400 group-open:rotate-180 transition-transform"></i>
                       </div>
-                    )}
-                  </div>
+                    </summary>
+                    <div className="px-4 pb-3 pt-2 border border-slate-700 border-t-0 rounded-b-lg bg-slate-800/50">
+                      <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                        {hint}
+                      </p>
+                    </div>
+                  </details>
                 ))}
               </div>
             </div>
           )}
 
-        {/* 정답 확인 버튼 (제출 없이도 볼 수 있게) */}
+        {/* 정답: details/summary로 HTML에 포함 (AdSense 인덱싱) + 접기(UX 스포일러 방지) */}
         <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
-          <button
-            onClick={onShowAnswerToggle}
-            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2.5 sm:py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation"
-          >
-            {showAnswer ? (
-              <>
-                <i className="ri-eye-off-line"></i>
-                {t.problem.hideAnswer}
-              </>
-            ) : (
-              <>
-                <i className="ri-eye-line"></i>
-                {t.problem.showAnswer}
-              </>
-            )}
-          </button>
+          {problem && (
+            <details className="group">
+              <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+                <div className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2.5 sm:py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation">
+                  <i className="ri-eye-line group-open:hidden"></i>
+                  <i className="ri-eye-off-line hidden group-open:inline"></i>
+                  <span className="group-open:hidden">{t.problem.showAnswer}</span>
+                  <span className="hidden group-open:inline">{t.problem.hideAnswer}</span>
+                </div>
+              </summary>
+              <div className="mt-3 sm:mt-4 bg-gradient-to-br from-purple-900/30 to-pink-900/30 rounded-lg p-3 sm:p-4 lg:p-6 border border-purple-500/50">
+                <h3 className="font-semibold mb-2 sm:mb-3 text-purple-400 text-sm sm:text-base">
+                  {t.problem.answer}
+                </h3>
+                <p className="text-xs sm:text-sm lg:text-base leading-relaxed whitespace-pre-wrap break-words">
+                  {problem.answer}
+                </p>
+              </div>
+            </details>
+          )}
 
-          {showAnswer && problem && (
-            <div className="mt-3 sm:mt-4 bg-gradient-to-br from-purple-900/30 to-pink-900/30 rounded-lg p-3 sm:p-4 lg:p-6 border border-purple-500/50">
-              <h3 className="font-semibold mb-2 sm:mb-3 text-purple-400 text-sm sm:text-base">
-                {t.problem.answer}
-              </h3>
-              <p className="text-xs sm:text-sm lg:text-base leading-relaxed whitespace-pre-wrap break-words">
-                {problem.answer}
-              </p>
-            </div>
+          {/* 해설 & 추리 포인트: HTML에 포함(AdSense 인덱싱) + 접기(UX 스포일러 방지) */}
+          {problem && (problem as any).explanation && (
+            <details className="mt-4 sm:mt-6 group">
+              <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+                <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 hover:border-teal-500/30 transition-colors flex items-center justify-between">
+                  <span className="font-semibold text-teal-400 text-sm sm:text-base flex items-center gap-2">
+                    <i className="ri-book-open-line"></i>
+                    {lang === 'ko' ? '해설 및 추리 포인트 보기' : 'View Explanation & Deduction Points'}
+                  </span>
+                  <i className="ri-arrow-down-s-line text-xl text-slate-400 group-open:rotate-180 transition-transform"></i>
+                </div>
+              </summary>
+              <div className="mt-2 bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-slate-700/50 border-t-0 rounded-t-none">
+                <p className="text-xs sm:text-sm lg:text-base leading-relaxed whitespace-pre-wrap text-slate-300">
+                  {(problem as any).explanation}
+                </p>
+              </div>
+            </details>
           )}
         </div>
       </div>

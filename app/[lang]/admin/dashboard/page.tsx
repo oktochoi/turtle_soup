@@ -464,7 +464,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
         {/* 통계 카드 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
           {/* 사용자 통계 */}
-          <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700/50">
+          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
             <h2 className="text-xl font-bold mb-4 text-teal-400">
               <i className="ri-user-line mr-2"></i>
               {lang === 'ko' ? '사용자' : 'Users'}
@@ -490,7 +490,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
           </div>
 
           {/* 방 통계 */}
-          <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700/50">
+          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
             <h2 className="text-xl font-bold mb-4 text-blue-400">
               <i className="ri-door-open-line mr-2"></i>
               {lang === 'ko' ? '방' : 'Rooms'}
@@ -516,7 +516,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
           </div>
 
           {/* 문제 통계 */}
-          <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700/50">
+          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
             <h2 className="text-xl font-bold mb-4 text-purple-400">
               <i className="ri-question-line mr-2"></i>
               {lang === 'ko' ? '문제' : 'Problems'}
@@ -546,7 +546,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
           </div>
 
           {/* 이벤트 통계 */}
-          <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700/50">
+          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
             <h2 className="text-xl font-bold mb-4 text-yellow-400">
               <i className="ri-bar-chart-line mr-2"></i>
               {lang === 'ko' ? '이벤트' : 'Events'}
@@ -572,7 +572,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
           </div>
 
           {/* AI 학습 통계 */}
-          <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700/50">
+          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
             <h2 className="text-xl font-bold mb-4 text-orange-400">
               <i className="ri-brain-line mr-2"></i>
               {lang === 'ko' ? 'AI 학습' : 'AI Learning'}
@@ -601,7 +601,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
         {/* 버그 리포트 및 사용자 신고 요약 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-8">
           {/* 버그 리포트 요약 */}
-          <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700/50 hover:border-red-500/50 transition-all">
+          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50 hover:border-red-500/50 transition-all">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-red-400">
                 <i className="ri-bug-line mr-2"></i>
@@ -649,7 +649,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
           </div>
 
           {/* 사용자 신고 요약 */}
-          <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700/50 hover:border-orange-500/50 transition-all">
+          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50 hover:border-orange-500/50 transition-all">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-orange-400">
                 <i className="ri-flag-line mr-2"></i>
@@ -698,7 +698,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
         </div>
 
         {/* 빠른 링크 */}
-        <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-slate-700/50">
+        <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
           <h2 className="text-xl font-bold mb-4">
             <i className="ri-links-line mr-2"></i>
             {lang === 'ko' ? '빠른 링크' : 'Quick Links'}

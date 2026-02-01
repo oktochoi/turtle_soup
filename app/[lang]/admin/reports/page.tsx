@@ -263,7 +263,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
         {/* 신고 목록 */}
         <div className="space-y-4">
           {reports.length === 0 ? (
-            <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-8 border border-slate-700/50 text-center">
+            <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-8 border border-slate-700/50 text-center">
               <p className="text-slate-400">
                 {lang === 'ko' ? '신고가 없습니다.' : 'No reports found.'}
               </p>
@@ -278,7 +278,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
                   setNewStatus(report.status);
                   setShowDetailModal(true);
                 }}
-                className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-4 sm:p-6 border border-slate-700/50 hover:border-blue-500/50 transition-all cursor-pointer"
+                className="bg-slate-800/50 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-slate-700/50 hover:border-blue-500/50 transition-all cursor-pointer"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex-1">

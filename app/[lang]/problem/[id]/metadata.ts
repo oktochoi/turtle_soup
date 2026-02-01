@@ -1,9 +1,11 @@
 import { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { generateMetadata, truncateDescription } from '@/lib/seo';
+import type { Locale } from '@/lib/seo';
 
 export async function generateMetadataForProblem(
-  problemId: string
+  problemId: string,
+  lang: string = 'ko'
 ): Promise<Metadata> {
   const supabase = await createClient();
   const { data: problem } = await supabase
@@ -16,8 +18,9 @@ export async function generateMetadataForProblem(
     return generateMetadata({
       title: '문제를 찾을 수 없습니다',
       description: '요청하신 문제를 찾을 수 없습니다.',
-      path: `/problem/${problemId}`,
+      path: `/${lang}/problem/${problemId}`,
       noindex: true,
+      locale: lang as Locale,
     });
   }
 
@@ -31,11 +34,12 @@ export async function generateMetadataForProblem(
   return generateMetadata({
     title,
     description: `${description} 작성자: ${author}. 조회수 ${problem.view_count || 0}, 좋아요 ${problem.like_count || 0}.`,
-    path: `/problem/${problemId}`,
-    image: `/problem/${problemId}/opengraph-image`,
+    path: `/${lang}/problem/${problemId}`,
+    image: `/${lang}/problem/${problemId}/opengraph-image`,
     type: 'article',
     publishedTime: problem.created_at,
     author,
+    locale: lang as Locale,
   });
 }
 

@@ -1,7 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
+
+const emptySubscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -80,11 +84,9 @@ function ToastItem({ toast, onClose }: ToastProps) {
 
 export default function ToastContainer() {
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
 
   useEffect(() => {
-    setMounted(true);
-    
     // 전역 Toast 함수 등록
     if (typeof window !== 'undefined') {
       (window as any).showToast = (message: string, type: ToastType = 'info', duration?: number) => {

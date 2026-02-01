@@ -88,6 +88,20 @@ export default function SocialBottomBar() {
               </Link>
               <span className="text-slate-600">|</span>
               <Link 
+                href={`/${lang}/faq`}
+                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
+              >
+                {lang === 'ko' ? 'FAQ' : 'FAQ'}
+              </Link>
+              <span className="text-slate-600">|</span>
+              <Link 
+                href={`/${lang}/community?category=notice`}
+                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
+              >
+                {lang === 'ko' ? '공지사항' : 'Notice'}
+              </Link>
+              <span className="text-slate-600">|</span>
+              <Link 
                 href={`/${lang}/community-guidelines`}
                 className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
               >

@@ -24,7 +24,7 @@ export default function ProblemCTABar({
   showAnswer = false,
 }: ProblemCTABarProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 via-slate-800 to-slate-800/95 backdrop-blur-xl border-t border-slate-700/50 z-50 shadow-2xl">
+    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 via-slate-800 to-slate-800/95 backdrop-blur-md border-t border-slate-700/50 z-50 shadow-2xl">
       <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 max-w-4xl">
         {/* Primary 버튼: 이 문제로 방 만들기 (정답 확인 칸이 보일 때만 표시) */}
         {showAnswer && (

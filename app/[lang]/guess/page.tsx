@@ -215,6 +215,20 @@ export default function GuessSetsPage() {
               </button>
             </Link>
           </div>
+
+          {/* 설명 텍스트 (AdSense 품질 강화) */}
+          <div className="mt-4 p-4 sm:p-5 bg-slate-800/60 rounded-xl border border-slate-700/50 text-slate-300 text-sm sm:text-base leading-relaxed space-y-3">
+            <p>
+              {lang === 'ko'
+                ? '맞추기 게임은 카드 세트로 즐기는 바다거북스프형 퀴즈입니다. 사용자가 만든 카드 세트(제목, 정답, 힌트가 있는 카드 묶음)를 시간 제한 안에 맞추는 게임입니다. 한 장씩 카드를 넘기며 정답을 추측하고, 힌트를 활용해 빠르게 맞추면 높은 점수를 얻습니다.'
+                : 'Guess Games are Turtle Soup-style quizzes played with card sets. Guess answers within the time limit using user-created card sets (cards with titles, answers, and hints). Flip cards one by one, guess the answer, and use hints to score higher.'}
+            </p>
+            <p>
+              {lang === 'ko'
+                ? '혼자서 연습하거나 친구들과 대결할 수 있습니다. 인기 세트를 플레이하거나 직접 세트를 만들어 공유할 수 있습니다. 각 세트마다 난이도와 카드 수가 다르므로 자신에게 맞는 세트를 선택하세요.'
+                : 'Practice alone or compete with friends. Play popular sets or create and share your own. Each set has different difficulty and card count—choose one that suits you.'}
+            </p>
+          </div>
         </div>
 
         {/* 필터 및 검색 */}
@@ -378,14 +392,14 @@ export default function GuessSetsPage() {
                 
                 return (
                   <Link key={set.id} href={`/${lang}/guess/${set.id}`}>
-                    <div className="group bg-slate-800/80 backdrop-blur-sm rounded-xl p-4 sm:p-5 lg:p-6 border border-slate-700/60 hover:border-purple-500/50 transition-all duration-200 cursor-pointer h-full flex flex-col shadow-md hover:shadow-lg hover:scale-[1.02]">
+                    <div className="group bg-slate-800/80 backdrop-blur-sm rounded-xl p-4 sm:p-5 lg:p-6 border border-slate-700/60 hover:border-purple-500/50 transition-colors duration-200 cursor-pointer h-full flex flex-col">
                       {/* 커버 이미지 */}
                       {set.cover_image_url && (
                         <div className="w-full h-32 sm:h-40 mb-3 sm:mb-4 rounded-lg overflow-hidden relative">
                           <img
                             src={set.cover_image_url}
                             alt={set.title}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                            className="w-full h-full object-cover"
                             loading="lazy"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>

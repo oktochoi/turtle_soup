@@ -21,11 +21,10 @@ export default function EmptyState({
   onAction,
   lang = 'ko',
 }: EmptyStateProps) {
-  const ActionButton = () => {
+  const buttonClass = "px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-teal-500/50 text-sm sm:text-base touch-manipulation";
+
+  const renderAction = () => {
     if (!actionLabel) return null;
-
-    const buttonClass = "px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-teal-500/50 text-sm sm:text-base touch-manipulation";
-
     if (actionHref) {
       return (
         <Link href={actionHref}>
@@ -35,7 +34,6 @@ export default function EmptyState({
         </Link>
       );
     }
-
     if (onAction) {
       return (
         <button onClick={onAction} className={buttonClass}>
@@ -43,7 +41,6 @@ export default function EmptyState({
         </button>
       );
     }
-
     return null;
   };
 
@@ -58,7 +55,7 @@ export default function EmptyState({
       <p className="text-sm sm:text-base text-slate-400 mb-6 sm:mb-8 max-w-md mx-auto px-4">
         {description}
       </p>
-      <ActionButton />
+      {renderAction()}
     </div>
   );
 }

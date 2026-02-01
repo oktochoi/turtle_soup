@@ -653,6 +653,37 @@ export default function GuessSetDetailPage() {
           </button>
         </div>
 
+        {/* 카드 목록: details/summary로 HTML에 포함 (AdSense/크롤러 인덱싱) */}
+        {cards.length > 0 && (
+          <div className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-700 mb-6">
+            <h2 className="text-lg font-semibold mb-4">
+              {lang === 'ko' ? '카드 목록' : 'Card List'} ({cards.length})
+            </h2>
+            <div className="space-y-2">
+              {cards.map((card, index) => (
+                <details key={card.id} className="group">
+                  <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+                    <div className="bg-slate-900/50 rounded-lg border border-slate-700 hover:border-teal-500/30 transition-colors px-4 py-3 flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-200 line-clamp-1">
+                        {index + 1}. {card.question}
+                      </span>
+                      <i className="ri-arrow-down-s-line text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0 ml-2"></i>
+                    </div>
+                  </summary>
+                  <div className="px-4 pb-3 pt-2 border border-slate-700 border-t-0 rounded-b-lg bg-slate-900/50">
+                    {card.answers && Array.isArray(card.answers) && card.answers.length > 0 && (
+                      <p className="text-xs sm:text-sm text-slate-300">
+                        <span className="font-semibold text-teal-400">{lang === 'ko' ? '정답' : 'Answer'}: </span>
+                        {card.answers.join(', ')}
+                      </p>
+                    )}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 댓글 섹션 */}
         <div className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-700">
           <h2 className="text-lg font-semibold mb-4">{lang === 'ko' ? '댓글' : 'Comments'}</h2>

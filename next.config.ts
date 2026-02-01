@@ -1,6 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // 리다이렉트: 블로그→공지사항, how-to-play→guide
+  async redirects() {
+    return [
+      { source: '/ko/blog', destination: '/ko/community?category=notice', permanent: true },
+      { source: '/ko/blog/:path*', destination: '/ko/community?category=notice', permanent: true },
+      { source: '/en/blog', destination: '/en/community?category=notice', permanent: true },
+      { source: '/en/blog/:path*', destination: '/en/community?category=notice', permanent: true },
+      { source: '/ko/how-to-play', destination: '/ko/guide', permanent: true },
+      { source: '/en/how-to-play', destination: '/en/guide', permanent: true },
+    ];
+  },
   // output: "export" 제거 - Supabase를 사용하는 동적 앱이므로 필요 없음
   images: {
     // Pro 플랜에서 이미지 최적화 활성화

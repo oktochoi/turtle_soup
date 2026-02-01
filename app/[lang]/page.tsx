@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -24,49 +24,35 @@ export default function Home() {
   const [checkInMessage, setCheckInMessage] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // Google OAuth 콜백 처리: code 파라미터가 있으면 즉시 콜백 라우트로 리다이렉트
-  // useLayoutEffect를 사용하여 렌더링 전에 처리
-  useLayoutEffect(() => {
+  // Google OAuth 콜백 처리: code 파라미터가 있으면 콜백 라우트로 리다이렉트
+  // useEffect로 변경하여 INP 개선 (메인 스레드 블로킹 완화)
+  useEffect(() => {
     if (typeof window === 'undefined') return;
-    
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
-    
     if (code && !isRedirecting) {
       setIsRedirecting(true);
-      
-      // 프로덕션 환경 감지
-      const isProduction = window.location.hostname.includes('turtle-soup-rust.vercel.app') || 
-                          window.location.hostname.includes('vercel.app');
-      
-      // 프로덕션에서는 항상 프로덕션 URL 사용, 개발 환경에서는 현재 origin 사용
-      const baseUrl = isProduction 
-        ? 'https://turtle-soup-rust.vercel.app'
-        : window.location.origin;
-      
-      // 즉시 리다이렉트 (렌더링 전에 처리, replace로 히스토리 교체)
+      const isProduction = window.location.hostname.includes('turtle-soup-rust.vercel.app') || window.location.hostname.includes('vercel.app');
+      const baseUrl = isProduction ? 'https://turtle-soup-rust.vercel.app' : window.location.origin;
       window.location.replace(`${baseUrl}/${lang}/auth/callback?code=${encodeURIComponent(code)}`);
     }
   }, [lang, isRedirecting]);
 
+  // 데이터 로딩: 분산 실행으로 INP 개선 (동시 요청 대신 순차/지연)
   useEffect(() => {
-    // 리다이렉트 중이면 다른 작업 수행하지 않음
     if (isRedirecting) return;
-
+    // 1) 오늘의 문제 우선 (가장 중요)
     loadTodayProblem();
-    loadSampleProblems();
-    checkTodayCheckIn();
-    
-    // 주기적으로 비활성 방 정리 (1시간 이상 활동이 없으면 방 제거)
-    const cleanupInterval = setInterval(async () => {
-      try {
-        await fetch('/api/rooms/cleanup', { method: 'POST' });
-      } catch (error) {
-        console.error('방 정리 API 호출 오류:', error);
-      }
-    }, 10 * 60 * 1000); // 10분마다
-
+    // 2) 샘플 문제는 약간 지연
+    const t1 = setTimeout(() => loadSampleProblems(), 100);
+    // 3) 출석체크는 idle 후 실행
+    const t2 = setTimeout(() => checkTodayCheckIn(), 300);
+    const cleanupInterval = setInterval(() => {
+      fetch('/api/rooms/cleanup', { method: 'POST' }).catch(() => {});
+    }, 10 * 60 * 1000);
     return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
       clearInterval(cleanupInterval);
     };
   }, [user, lang, isRedirecting]);
@@ -370,17 +356,17 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative overflow-hidden">
-      {/* 배경 장식 요소 */}
+      {/* 배경 장식 요소 (animate-pulse 제거 - INP 개선) */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-20 left-10 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-3xl"></div>
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12 max-w-md lg:max-w-5xl relative z-10">
-        <header className="text-center mb-8 sm:mb-12 pt-4 sm:pt-6 lg:pt-8 animate-fade-in">
+        <header className="text-center mb-8 sm:mb-12 pt-4 sm:pt-6 lg:pt-8">
           <div className="inline-block mb-4">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-3 bg-gradient-to-r from-teal-400 via-cyan-400 to-teal-400 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-3 bg-gradient-to-r from-teal-400 via-cyan-400 to-teal-400 bg-clip-text text-transparent">
               {t.home.title}
             </h1>
             <div className="h-1 w-24 mx-auto bg-gradient-to-r from-transparent via-teal-400 to-transparent rounded-full"></div>
@@ -389,13 +375,12 @@ export default function Home() {
             {t.home.subtitle}
           </p>
         </header>
-        <div className="flex flex-col lg:flex-row gap-5 sm:gap-6 animate-fade-in-up">
-          {/* 멀티플레이어 섹션 */}
-          <div className="group relative bg-slate-800/40 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 hover:border-teal-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-teal-500/20 hover:-translate-y-1 flex-1">
-            <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className="flex flex-col lg:flex-row gap-5 sm:gap-6">
+          {/* 멀티플레이어 섹션 (backdrop-blur 축소, hover 단순화 - INP 개선) */}
+          <div className="group relative bg-slate-800/60 rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 hover:border-teal-500/50 transition-colors duration-200 flex-1">
             <div className="relative">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                <div className="p-2 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-lg">
                   <i className="ri-group-line text-teal-400 text-xl sm:text-2xl"></i>
                 </div>
                 <h2 className="text-lg sm:text-xl font-bold text-teal-400">{t.home.multiplayer}</h2>
@@ -403,58 +388,53 @@ export default function Home() {
               <p className="text-sm sm:text-base text-slate-300 mb-5 leading-relaxed">{t.home.multiplayerDesc}</p>
               
               <Link href={getLocalizedPath('/rooms')}>
-                <button className="w-full group/btn relative overflow-hidden bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-4 sm:py-5 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-teal-500/50 text-base sm:text-lg transform hover:scale-[1.02]">
-                  <span className="relative z-10 flex items-center justify-center">
+                <button className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-4 sm:py-5 rounded-xl transition-colors duration-200 text-base sm:text-lg active:opacity-90">
+                  <span className="flex items-center justify-center">
                     <i className="ri-group-line mr-2 text-lg"></i>
                     {t.nav.multiplayer}
                   </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-teal-500 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
                 </button>
               </Link>
             </div>
           </div>
 
           {/* 오프라인 섹션 */}
-          <div className="group relative bg-slate-800/40 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-1 flex-1">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="group relative bg-slate-800/60 rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 hover:border-purple-500/50 transition-colors duration-200 flex-1">
             <div className="relative">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                <div className="p-2 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg">
                   <i className="ri-user-line text-purple-400 text-xl sm:text-2xl"></i>
                 </div>
                 <h2 className="text-lg sm:text-xl font-bold text-purple-400">{t.home.offline}</h2>
               </div>
               <p className="text-sm sm:text-base text-slate-300 mb-5 leading-relaxed">{t.home.offlineDesc}</p>
               <Link href={getLocalizedPath('/play')}>
-                <button className="w-full group/btn relative overflow-hidden bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-4 sm:py-5 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-purple-500/50 text-base sm:text-lg transform hover:scale-[1.02]">
-                  <span className="relative z-10 flex items-center justify-center">
+                <button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-4 sm:py-5 rounded-xl transition-colors duration-200 text-base sm:text-lg active:opacity-90">
+                  <span className="flex items-center justify-center">
                     <i className="ri-question-answer-line mr-2 text-lg"></i>
                     {lang === 'ko' ? '게임 시작하기' : 'Start Game'}
                   </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-purple-500 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
                 </button>
               </Link>
             </div>
           </div>
 
           {/* 문제 만들기 섹션 */}
-          <div className="group relative bg-slate-800/40 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 hover:border-orange-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-orange-500/20 hover:-translate-y-1 flex-1">
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="group relative bg-slate-800/60 rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 hover:border-orange-500/50 transition-colors duration-200 flex-1">
             <div className="relative">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                <div className="p-2 bg-gradient-to-br from-orange-500/20 to-amber-500/20 rounded-lg">
                   <i className="ri-add-circle-line text-orange-400 text-xl sm:text-2xl"></i>
                 </div>
                 <h2 className="text-lg sm:text-xl font-bold text-orange-400">{t.problem.createProblem}</h2>
               </div>
               <p className="text-sm sm:text-base text-slate-300 mb-5 leading-relaxed">{lang === 'ko' ? '나만의 문제를 만들어서 공유하세요' : 'Create and share your own problems'}</p>
               <Link href={getLocalizedPath('/create-problem')}>
-                <button className="w-full group/btn relative overflow-hidden bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold py-4 sm:py-5 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-orange-500/50 text-base sm:text-lg transform hover:scale-[1.02]">
-                  <span className="relative z-10 flex items-center justify-center">
+                <button className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold py-4 sm:py-5 rounded-xl transition-colors duration-200 text-base sm:text-lg active:opacity-90">
+                  <span className="flex items-center justify-center">
                     <i className="ri-add-circle-line mr-2 text-lg"></i>
                     {t.problem.createProblem}
                   </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
                 </button>
               </Link>
             </div>
@@ -462,8 +442,8 @@ export default function Home() {
         </div>
 
         <section className="mt-8 sm:mt-12 lg:mt-16 space-y-6">
-          {/* 출석체크 */}
-          <div className="bg-gradient-to-br from-yellow-500/10 via-orange-500/10 to-red-500/10 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-yellow-500/30 animate-fade-in-up">
+          {/* 출석체크 (backdrop-blur 제거 - INP 개선) */}
+          <div className="bg-gradient-to-br from-yellow-500/10 via-orange-500/10 to-red-500/10 rounded-2xl p-5 sm:p-6 lg:p-7 border border-yellow-500/30">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-lg">
@@ -488,7 +468,7 @@ export default function Home() {
               className={`w-full py-3 sm:py-4 rounded-xl font-semibold transition-all duration-300 ${
                 isCheckedIn
                   ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl hover:shadow-yellow-500/50 transform hover:scale-[1.02]'
+                  : 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white transition-colors duration-200 active:opacity-90'
               }`}
             >
               {isCheckingIn ? (
@@ -512,17 +492,17 @@ export default function Home() {
 
           {/* 오늘의 문제 */}
           {isLoadingProblem ? (
-            <div className="bg-slate-800/40 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 animate-pulse">
+            <div className="bg-slate-800/60 rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 animate-pulse">
               <div className="h-6 bg-slate-700/50 rounded w-32 mb-4"></div>
               <div className="h-4 bg-slate-700/50 rounded w-full mb-2"></div>
               <div className="h-4 bg-slate-700/50 rounded w-3/4"></div>
             </div>
           ) : todayProblem ? (
             <Link href={getLocalizedPath(`/problem/${todayProblem.id}`)}>
-              <div className="group bg-gradient-to-br from-slate-800/60 via-slate-800/40 to-slate-800/60 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 hover:border-teal-500/50 transition-all cursor-pointer animate-fade-in-up hover:shadow-2xl hover:shadow-teal-500/20 hover:-translate-y-1">
+              <div className="group bg-slate-800/60 rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 hover:border-teal-500/50 transition-colors duration-200 cursor-pointer">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                    <div className="p-2 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-lg">
                       <i className="ri-calendar-check-line text-teal-400 text-xl sm:text-2xl"></i>
                     </div>
                     <h2 className="font-bold text-teal-400 text-base sm:text-lg lg:text-xl">
@@ -560,7 +540,7 @@ export default function Home() {
               </div>
             </Link>
           ) : (
-            <div className="bg-slate-800/40 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50">
+            <div className="bg-slate-800/60 rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-lg">
                   <i className="ri-calendar-check-line text-teal-400 text-xl sm:text-2xl"></i>
@@ -577,7 +557,7 @@ export default function Home() {
           )}
 
           {/* 샘플 문제 섹션 */}
-          <div className="bg-slate-800/40 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 animate-fade-in-up">
+          <div className="bg-slate-800/60 rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50">
             <h2 className="font-bold mb-5 text-teal-400 flex items-center text-base sm:text-lg lg:text-xl">
               <div className="p-1.5 bg-teal-500/20 rounded-lg mr-3">
                 <i className="ri-question-answer-line text-lg" aria-hidden="true"></i>
@@ -631,7 +611,7 @@ export default function Home() {
 
           {/* 로그인하면 가능한 것 섹션 */}
           {!user && (
-            <div className="bg-gradient-to-br from-cyan-500/10 via-teal-500/10 to-cyan-500/10 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-cyan-500/30 animate-fade-in-up">
+            <div className="bg-gradient-to-br from-cyan-500/10 via-teal-500/10 to-cyan-500/10 rounded-2xl p-5 sm:p-6 lg:p-7 border border-cyan-500/30">
               <h2 className="font-bold mb-4 text-cyan-400 flex items-center text-base sm:text-lg lg:text-xl">
                 <div className="p-1.5 bg-cyan-500/20 rounded-lg mr-3">
                   <i className="ri-login-box-line text-lg" aria-hidden="true"></i>
@@ -663,7 +643,7 @@ export default function Home() {
               <div className="flex flex-wrap gap-3">
                 <Link
                   href={getLocalizedPath('/auth/login')}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl hover:shadow-cyan-500/50 transform hover:scale-[1.02]"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-semibold rounded-xl transition-colors duration-200 active:opacity-90"
                 >
                   <i className="ri-login-box-line"></i>
                   <span>{lang === 'ko' ? '로그인하기' : 'Log In'}</span>
@@ -680,7 +660,7 @@ export default function Home() {
           )}
 
           <Link href={getLocalizedPath('/ranking')}>
-            <div className="bg-slate-800/40 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 hover:border-purple-500/50 transition-all cursor-pointer animate-fade-in-up delay-100">
+            <div className="bg-slate-800/60 rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 hover:border-purple-500/50 transition-colors duration-200 cursor-pointer">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="font-bold mb-2 text-purple-400 flex items-center text-base sm:text-lg lg:text-xl">
@@ -696,7 +676,7 @@ export default function Home() {
             </div>
           </Link>
 
-          <div className="bg-slate-800/40 backdrop-blur-xl rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 animate-fade-in-up delay-200">
+          <div className="bg-slate-800/60 rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50">
             <h2 className="font-bold mb-5 text-teal-400 flex items-center text-base sm:text-lg lg:text-xl">
               <div className="p-1.5 bg-teal-500/20 rounded-lg mr-3">
                 <i className="ri-information-line text-lg" aria-hidden="true"></i>

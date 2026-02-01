@@ -302,6 +302,25 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
               </button>
             </Link>
           </div>
+
+          {/* 설명 텍스트 (AdSense 품질 강화) */}
+          <div className="mt-4 p-4 sm:p-5 bg-slate-800/60 rounded-xl border border-slate-700/50 text-slate-300 text-sm sm:text-base leading-relaxed space-y-3">
+            <p>
+              {lang === 'ko'
+                ? '바다거북스프 문제 목록입니다. 예/아니오 질문만으로 진실을 추리하는 바다거북스프형 퍼즐부터 객관식, OX, 논리 퍼즐, 밸런스 게임까지 다양한 퀴즈를 즐길 수 있습니다. 각 문제를 클릭하면 AI가 질문에 자동으로 답변해주는 오프라인 모드로 혼자서 추리를 즐길 수 있습니다.'
+                : 'Browse Turtle Soup problems. From classic yes/no deduction puzzles to multiple choice, OX quizzes, logic puzzles, and balance games—enjoy a variety of quizzes. Click any problem to play offline mode where AI automatically answers your questions.'}
+            </p>
+            <p>
+              {lang === 'ko'
+                ? '바다거북스프 퍼즐은 장소, 등장인물, 시간, 행동 순서를 체계적으로 좁혀가는 것이 핵심입니다. 초반에는 넓은 범위를 묻고, 정보가 모이면 구체적으로 좁혀가세요. 추리 팁은 튜토리얼 페이지에서 확인할 수 있습니다.'
+                : 'Turtle Soup puzzles require systematically narrowing down location, characters, time, and action order. Ask broad questions first, then narrow down as information accumulates. Check the tutorial page for deduction tips.'}
+            </p>
+            <p>
+              {lang === 'ko'
+                ? '친구들과 함께 플레이하고 싶다면 방 만들기에서 멀티플레이어 모드를 선택하세요. 문제를 만들고 싶다면 위의 "문제 만들기" 버튼을 클릭하세요.'
+                : 'Want to play with friends? Select multiplayer mode in Create Room. To create your own problem, click the "Create Problem" button above.'}
+            </p>
+          </div>
         </div>
 
         {/* 필터 및 검색 */}

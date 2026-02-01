@@ -33,17 +33,21 @@ export default function UserLabel({
   const [displayName, setDisplayName] = useState<string>(nickname || '사용자');
   const [userProfileImage, setUserProfileImage] = useState<string | null>(profileImageUrl || null);
 
-  useEffect(() => {
-    // level이 제공되지 않은 경우 가져오기
-    if (!level) {
-      loadUserData();
-    }
+  const loadTitleById = async (id: number) => {
+    try {
+      const { data: title } = await supabase
+        .from('titles')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-    // titleId가 제공된 경우 칭호 가져오기
-    if (titleId) {
-      loadTitle();
+      if (title) {
+        setUserTitle(title);
+      }
+    } catch (error) {
+      console.error('칭호 로드 오류:', error);
     }
-  }, [userId, level, titleId]);
+  };
 
   const loadUserData = async () => {
     try {
@@ -64,22 +68,6 @@ export default function UserLabel({
     }
   };
 
-  const loadTitleById = async (id: number) => {
-    try {
-      const { data: title } = await supabase
-        .from('titles')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (title) {
-        setUserTitle(title);
-      }
-    } catch (error) {
-      console.error('칭호 로드 오류:', error);
-    }
-  };
-
   const loadTitle = async () => {
     if (!titleId) return;
 
@@ -97,6 +85,18 @@ export default function UserLabel({
       console.error('칭호 로드 오류:', error);
     }
   };
+
+  useEffect(() => {
+    // level이 제공되지 않은 경우 가져오기
+    if (!level) {
+      loadUserData();
+    }
+
+    // titleId가 제공된 경우 칭호 가져오기
+    if (titleId) {
+      loadTitle();
+    }
+  }, [userId, level, titleId]);
 
   const loadNickname = async () => {
     try {

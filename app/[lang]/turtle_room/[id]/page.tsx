@@ -1475,7 +1475,7 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <div className="container mx-auto px-3 sm:px-4 py-4 max-w-6xl">
         {/* 방 정보 카드 (생성 시간, 최근 대화 시간) */}
-        <div className="mb-3 sm:mb-4 bg-slate-800/50 backdrop-blur-xl rounded-lg p-3 sm:p-4 border border-slate-700/50">
+        <div className="mb-3 sm:mb-4 bg-slate-800/50 backdrop-blur-md rounded-lg p-3 sm:p-4 border border-slate-700/50">
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-slate-400">
             {roomCreatedAt && (
               <div className="flex items-center gap-1.5">
@@ -1714,7 +1714,7 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
           <div className="space-y-3 sm:space-y-4">
             {/* 참가자 리스트 */}
             {players.length > 0 && (
-              <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-3 sm:p-4 border border-slate-700/50">
+              <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-slate-700/50">
                 <h3 className="text-xs sm:text-sm font-semibold text-slate-300 mb-2 sm:mb-3 flex items-center gap-2">
                   <i className="ri-group-line text-teal-400 text-sm sm:text-base"></i>
                   {lang === 'ko' ? '참가자' : 'Players'} ({players.length})

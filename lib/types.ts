@@ -54,6 +54,7 @@ export type Problem = {
   updated_at: string;
   user_id?: string;
   hints?: string[] | null; // 최대 3개의 힌트
+  explanation?: string | null; // 해설/배경지식 (AdSense 품질 강화용)
   // 별점 관련 (계산된 값)
   average_rating?: number;
   rating_count?: number;

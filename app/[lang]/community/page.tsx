@@ -2,7 +2,7 @@
 
 import { use } from 'react';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -38,11 +38,15 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
   const resolvedParams = use(params);
   const lang = resolvedParams.lang || 'ko';
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const t = useTranslations();
+  const categoryFromUrl = searchParams.get('category');
   const [posts, setPosts] = useState<Post[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    categoryFromUrl === 'notice' ? 'notice' : 'all'
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [postGameUserIds, setPostGameUserIds] = useState<Map<string, string>>(new Map());
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,6 +74,14 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
     { id: 'funny', label: t.community.funny, icon: 'ri-emotion-laugh-line', color: 'from-pink-500 to-rose-500' },
     { id: 'social', label: t.community.social, icon: 'ri-group-line', color: 'from-teal-500 to-cyan-500' },
   ];
+
+  // URL ?category=notice 파라미터와 동기화
+  useEffect(() => {
+    const cat = searchParams.get('category');
+    if (cat === 'notice') {
+      setSelectedCategory('notice');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     loadPosts();
@@ -287,27 +299,44 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-6xl">
-        <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-            {t.community.title}
-          </h1>
-          <button
-            onClick={() => {
-              if (user) {
-                router.push(`/${lang}/community/create`);
-              } else {
-                router.push(`/${lang}/auth/login`);
-              }
-            }}
-            className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all font-semibold text-sm sm:text-base touch-manipulation active:scale-95"
-          >
-            <i className="ri-pencil-line mr-2"></i>
-            {t.community.createPost}
-          </button>
+        {/* 커뮤니티 헤더 & 소개 (AdSense용 풍부한 콘텐츠) */}
+        <div className="mb-6 bg-slate-800/60 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-slate-700/50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <h1 className="text-xl sm:text-2xl font-bold text-white">
+              {lang === 'ko' ? '바다거북스프 퀴즈하는 커뮤니티' : 'Turtle Soup Quiz Community'}
+            </h1>
+            <button
+              onClick={() => {
+                if (user) {
+                  router.push(`/${lang}/community/create`);
+                } else {
+                  router.push(`/${lang}/auth/login`);
+                }
+              }}
+              className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg font-semibold text-sm flex items-center justify-center gap-2"
+            >
+              <i className="ri-pencil-line"></i>
+              {t.community.createPost}
+            </button>
+          </div>
+          <div className="text-sm sm:text-base text-slate-300 leading-relaxed space-y-2">
+            {lang === 'ko' ? (
+              <>
+                <p>바다거북스프(바거수)는 예/아니오 질문을 통해 이야기의 진실을 추리하는 퀴즈 게임입니다. 이 커뮤니티에서는 바다거북스프 관련 정보 공유, 문제 추천, 해설 논의, 자유 게시, 버그 신고 등 다양한 주제로 소통할 수 있습니다.</p>
+                <p>멀티플레이어 방에서 친구들과 함께 플레이하거나, 오프라인으로 혼자 문제를 풀어보세요. 사용자가 만든 문제와 맞추기 게임 세트도 즐길 수 있습니다. 질문 설계 요령, 힌트 활용법, 추리 팁 등 바거수 실력을 높이는 정보를 공유해 주세요.</p>
+              </>
+            ) : (
+              <>
+                <p>Turtle Soup (Pelican Soup) is a deduction quiz game where you uncover the truth through yes/no questions. In this community, you can share information, recommend problems, discuss solutions, post freely, and report bugs.</p>
+                <p>Play with friends in multiplayer rooms or solve problems offline. Enjoy user-created problems and guess game sets. Share tips on question design, hint usage, and deduction strategies to improve your Turtle Soup skills.</p>
+              </>
+            )}
+          </div>
         </div>
 
+
         {/* 검색 및 필터 */}
-        <div className="mb-4 sm:mb-6 bg-slate-800/50 backdrop-blur-xl rounded-xl p-4 sm:p-6 border border-slate-700/50">
+        <div className="mb-4 sm:mb-6 bg-slate-800/50 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-slate-700/50">
           <div className="space-y-4">
             {/* 검색 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -387,24 +416,21 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
           </div>
         </div>
 
-        {/* 카테고리 탭 */}
+        {/* 커뮤니티 카테고리 탭 (디시 스타일) */}
         <div className="mb-4 sm:mb-6 overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-          <div className="flex gap-2 pb-2 min-w-max">
+          <div className="flex gap-1 sm:gap-2 pb-2 min-w-max border-b border-slate-700">
             {CATEGORIES.map((category) => (
               <button
                 key={category.id}
-                onClick={() => {
-                  setSelectedCategory(category.id);
-                }}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm whitespace-nowrap transition-all flex items-center gap-1.5 sm:gap-2 touch-manipulation ${
+                onClick={() => setSelectedCategory(category.id)}
+                className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-t-lg font-semibold text-xs sm:text-sm whitespace-nowrap transition-all flex items-center gap-1 touch-manipulation -mb-px ${
                   selectedCategory === category.id
-                    ? `bg-gradient-to-r ${category.color} text-white shadow-lg`
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 active:bg-slate-600'
+                    ? `bg-slate-800 text-white border-b-2 border-blue-500`
+                    : 'bg-slate-800/50 text-slate-400 hover:text-slate-300 hover:bg-slate-700/50'
                 }`}
               >
                 <i className={category.icon}></i>
-                <span className="hidden xs:inline">{category.label}</span>
-                <span className="xs:hidden">{category.label.length > 4 ? category.label.substring(0, 4) : category.label}</span>
+                <span>{category.label.length > 6 ? category.label.substring(0, 6) : category.label}</span>
               </button>
             ))}
           </div>
@@ -430,74 +456,75 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
           />
         ) : (
           <>
-            <div className="space-y-4">
-              {paginatedPosts.map((post) => {
+            {/* 커뮤니티 리스트 (테이블 스타일) */}
+            <div className="bg-slate-800/50 backdrop-blur-md rounded-xl border border-slate-700/50 overflow-hidden">
+              {/* 테이블 헤더 */}
+              <div className="hidden sm:grid sm:grid-cols-[auto_auto_1fr_auto_auto_auto_auto] gap-2 sm:gap-4 px-4 py-3 bg-slate-800/80 border-b border-slate-700 text-xs sm:text-sm font-semibold text-slate-400">
+                <span className="w-10 text-center">{lang === 'ko' ? '번호' : '#'}</span>
+                <span className="w-16 sm:w-20">{lang === 'ko' ? '말머리' : 'Cat'}</span>
+                <span>{lang === 'ko' ? '제목' : 'Title'}</span>
+                <span className="w-20 sm:w-24 truncate">{lang === 'ko' ? '글쓴이' : 'Author'}</span>
+                <span className="w-16 sm:w-20">{lang === 'ko' ? '작성일' : 'Date'}</span>
+                <span className="w-12 text-center">{lang === 'ko' ? '조회' : 'Views'}</span>
+                <span className="w-12 text-center">{lang === 'ko' ? '추천' : 'Likes'}</span>
+              </div>
+              {/* 게시글 행 */}
+              {paginatedPosts.map((post, index) => {
                 const categoryInfo = getCategoryInfo(post.category);
+                const rowNum = (currentPage - 1) * itemsPerPage + index + 1;
                 return (
                   <div
                     key={post.id}
                     onClick={() => router.push(`/${lang}/community/${post.id}`)}
-                    className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-4 sm:p-5 lg:p-6 border border-slate-700/50 hover:border-blue-500/50 active:border-blue-500 transition-all cursor-pointer hover:shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1 active:translate-y-0 touch-manipulation"
+                    className="flex flex-col sm:grid sm:grid-cols-[auto_auto_1fr_auto_auto_auto_auto] gap-1 sm:gap-4 px-4 py-3 sm:py-2.5 border-b border-slate-700/50 last:border-b-0 hover:bg-slate-700/30 cursor-pointer transition-colors"
                   >
-                    <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                      {post.is_notice && (
-                        <span className="px-2 py-1 rounded-md text-xs font-semibold bg-gradient-to-r from-red-500 to-pink-500 text-white whitespace-nowrap animate-pulse">
-                          <i className="ri-megaphone-fill mr-1"></i>
-                          {lang === 'ko' ? '공지사항' : 'Notice'}
-                        </span>
-                      )}
-                      <span className={`px-2 py-1 rounded-md text-xs font-semibold bg-gradient-to-r ${categoryInfo.color} text-white whitespace-nowrap`}>
-                        <i className={`${categoryInfo.icon} mr-1`}></i>
-                        {categoryInfo.label}
-                      </span>
-                    </div>
-                    <h2 className={`text-base sm:text-lg lg:text-xl font-bold mb-2 sm:mb-3 line-clamp-2 leading-tight ${
-                      post.is_notice ? 'text-red-400' : 'text-white'
-                    }`}>
-                      {post.is_notice && <i className="ri-pushpin-fill mr-2 text-red-500"></i>}
-                      {post.title}
-                    </h2>
-                    <p className="text-xs sm:text-sm lg:text-base text-slate-300 mb-3 sm:mb-4 line-clamp-2 sm:line-clamp-3 leading-relaxed">
-                      {post.content}
-                    </p>
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 text-xs sm:text-sm text-slate-400">
-                      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-                        {postGameUserIds.get(post.id) ? (
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              router.push(`/${lang}/profile/${postGameUserIds.get(post.id)}`);
-                            }}
-                            className="hover:opacity-80 transition-opacity cursor-pointer"
-                          >
-                            <UserLabel
-                              userId={postGameUserIds.get(post.id)!}
-                              nickname={post.author}
-                              size="sm"
-                            />
-                          </div>
+                    <div className="flex items-center gap-2 sm:contents">
+                      <span className="hidden sm:block w-10 text-center text-sm text-slate-500 self-center">{rowNum}</span>
+                      <span className="flex-shrink-0">
+                        {post.is_notice ? (
+                          <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-red-500/80 text-white">
+                            {lang === 'ko' ? '공지' : 'Notice'}
+                          </span>
                         ) : (
-                          <span className="flex items-center gap-1">
-                            <i className="ri-user-line"></i>
-                            <span className="truncate max-w-[100px] sm:max-w-none">{post.author}</span>
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-semibold bg-gradient-to-r ${categoryInfo.color} text-white`}>
+                            {categoryInfo.label.length > 4 ? categoryInfo.label.substring(0, 4) : categoryInfo.label}
                           </span>
                         )}
-                        <span className="whitespace-nowrap">{formatDate(post.created_at)}</span>
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <h2 className={`text-sm sm:text-base font-semibold line-clamp-1 ${
+                          post.is_notice ? 'text-red-400' : 'text-white'
+                        }`}>
+                          {post.is_notice && <i className="ri-pushpin-fill mr-1 text-red-500 text-xs"></i>}
+                          {post.title}
+                          {post.comment_count > 0 && (
+                            <span className="ml-1 text-slate-500 text-xs">[{post.comment_count}]</span>
+                          )}
+                        </h2>
+                        <p className="sm:hidden text-xs text-slate-400 mt-0.5 line-clamp-1">{post.content}</p>
                       </div>
-                      <div className="flex items-center gap-3 sm:gap-4">
-                        <span className="flex items-center gap-1 whitespace-nowrap">
-                          <i className="ri-eye-line"></i>
-                          {post.view_count}
+                    </div>
+                    <div className="flex items-center justify-between sm:contents mt-1 sm:mt-0 text-xs text-slate-500 gap-2">
+                      {postGameUserIds.get(post.id) ? (
+                        <span
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/${lang}/profile/${postGameUserIds.get(post.id)}`);
+                          }}
+                          className="text-slate-300 hover:opacity-80 cursor-pointer truncate max-w-[80px] sm:max-w-[96px] sm:w-24"
+                        >
+                          {post.author}
                         </span>
-                        <span className="flex items-center gap-1 whitespace-nowrap">
-                          <i className="ri-heart-line"></i>
-                          {post.like_count}
-                        </span>
-                        <span className="flex items-center gap-1 whitespace-nowrap">
-                          <i className="ri-chat-3-line"></i>
-                          {post.comment_count}
-                        </span>
-                      </div>
+                      ) : (
+                        <span className="text-slate-300 truncate max-w-[80px] sm:max-w-[96px] sm:w-24">{post.author}</span>
+                      )}
+                      <span className="whitespace-nowrap sm:w-20">{formatDate(post.created_at)}</span>
+                      <span className="hidden sm:block w-12 text-center">{post.view_count}</span>
+                      <span className="hidden sm:block w-12 text-center">{post.like_count}</span>
+                      <span className="sm:hidden flex gap-3 ml-auto">
+                        <span><i className="ri-eye-line"></i> {post.view_count}</span>
+                        <span><i className="ri-heart-line"></i> {post.like_count}</span>
+                      </span>
                     </div>
                   </div>
                 );

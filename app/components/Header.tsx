@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -12,6 +12,7 @@ import { useTranslations } from '@/hooks/useTranslations';
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, isLoading: authLoading } = useAuth();
   const t = useTranslations();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -118,13 +119,21 @@ export default function Header() {
     router.refresh();
   };
 
-  const isActive = (path: string) => {
-    // 언어 코드를 포함한 경로로 비교
-    const pathWithLang = `/${currentLang}${path === '/' ? '' : path}`;
-    if (path === '/') {
+  const isActive = (path: string, isNoticeLink?: boolean) => {
+    const pathWithoutQuery = path.split('?')[0];
+    const pathWithLang = `/${currentLang}${pathWithoutQuery === '/' ? '' : pathWithoutQuery}`;
+    if (pathWithoutQuery === '/') {
       return pathname === `/${currentLang}` || pathname === `/${currentLang}/`;
     }
-    return pathname?.startsWith(pathWithLang);
+    const pathMatches = pathname?.startsWith(pathWithLang);
+    const category = searchParams.get('category');
+    if (isNoticeLink) {
+      return pathMatches && category === 'notice';
+    }
+    if (pathWithoutQuery === '/community' && !path.includes('?')) {
+      return pathMatches && category !== 'notice'; // 커뮤니티 탭: 공지 필터 아닐 때
+    }
+    return pathMatches;
   };
 
   const getLocalizedPath = (path: string) => {
@@ -136,6 +145,7 @@ export default function Header() {
     { href: '/play', label: t.nav.problems, activeColor: 'bg-purple-500' },
     { href: '/create-problem', label: t.nav.playGame, activeColor: 'bg-pink-500' },
     { href: '/community', label: t.nav.community, activeColor: 'bg-blue-500' },
+    { href: '/community?category=notice', label: t.nav.notice, activeColor: 'bg-red-500' },
     { href: '/ranking', label: t.nav.ranking, activeColor: 'bg-yellow-500' },
     { href: '/tutorial', label: t.nav.tutorial, activeColor: 'bg-cyan-500' },
   ];

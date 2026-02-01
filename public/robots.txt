@@ -1,0 +1,21 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /auth/
+Disallow: /room/
+Disallow: /_next/
+Disallow: /admin/
+
+# Googlebot
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /auth/
+Disallow: /room/
+
+# Host
+Host: https://turtle-soup-rust.vercel.app
+
+# Sitemaps
+Sitemap: https://turtle-soup-rust.vercel.app/sitemap.xml

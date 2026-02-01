@@ -9,9 +9,7 @@ const defaultLocale = 'ko';
 const publicPaths = [
   '/',
   '/about',
-  '/how-to-play',
   '/faq',
-  '/blog',
   '/privacy',
   '/terms',
   '/contact',

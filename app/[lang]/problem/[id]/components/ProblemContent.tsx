@@ -25,9 +25,11 @@ interface ProblemContentProps {
   editTitle: string;
   editContent: string;
   editAnswer: string;
+  editExplanation?: string;
   onEditTitleChange: (value: string) => void;
   onEditContentChange: (value: string) => void;
   onEditAnswerChange: (value: string) => void;
+  onEditExplanationChange?: (value: string) => void;
   onSaveEdit: () => void;
   onCancelEdit: () => void;
   userQuizAnswer: any;
@@ -50,9 +52,11 @@ export default function ProblemContent({
   editTitle,
   editContent,
   editAnswer,
+  editExplanation = '',
   onEditTitleChange,
   onEditContentChange,
   onEditAnswerChange,
+  onEditExplanationChange,
   onSaveEdit,
   onCancelEdit,
   userQuizAnswer,
@@ -104,6 +108,22 @@ export default function ProblemContent({
             </div>
           </>
         )}
+        {/* 해설/배경지식 (모든 퀴즈 타입, AdSense 품질 강화) */}
+        <div>
+          <label className="block text-sm font-medium mb-2 text-slate-300">
+            {lang === 'ko' ? '해설 및 배경지식 (선택)' : 'Explanation & Background (optional)'}
+          </label>
+          <textarea
+            value={editExplanation}
+            onChange={(e) => onEditExplanationChange?.(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 resize-none text-sm"
+            maxLength={5000}
+            placeholder={lang === 'ko' ? '정답의 배경, 유래, 관련 지식 등 300~500단어 권장' : 'Background, origin, related knowledge (300-500 words recommended)'}
+          />
+          <div className="text-right text-xs text-slate-500 mt-1">
+            {editExplanation.length} / 5000
+          </div>
+        </div>
         <div className="flex gap-3">
           <button
             onClick={onSaveEdit}
@@ -407,6 +427,26 @@ export default function ProblemContent({
                 </div>
               )}
             </>
+          )}
+
+          {/* 해설 & 추리 포인트: HTML에 포함(AdSense 인덱싱) + 접기(UX 스포일러 방지) */}
+          {(problem as any).explanation && (
+            <details className="mt-6 group">
+              <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+                <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 hover:border-teal-500/30 transition-colors flex items-center justify-between">
+                  <span className="font-semibold text-teal-400 text-sm sm:text-base flex items-center gap-2">
+                    <i className="ri-book-open-line"></i>
+                    {lang === 'ko' ? '해설 및 추리 포인트 보기' : 'View Explanation & Deduction Points'}
+                  </span>
+                  <i className="ri-arrow-down-s-line text-xl text-slate-400 group-open:rotate-180 transition-transform"></i>
+                </div>
+              </summary>
+              <div className="mt-2 bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-slate-700/50 border-t-0 rounded-t-none">
+                <p className="text-xs sm:text-sm lg:text-base leading-relaxed whitespace-pre-wrap text-slate-300">
+                  {(problem as any).explanation}
+                </p>
+              </div>
+            </details>
           )}
         </div>
       )}
