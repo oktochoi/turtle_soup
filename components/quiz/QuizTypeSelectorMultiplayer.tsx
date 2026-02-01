@@ -51,7 +51,7 @@ export default function QuizTypeSelectorMultiplayer({
                 <div className={`text-xs sm:text-sm font-semibold ${isSelected ? 'text-teal-300' : 'text-slate-300'}`}>
                   {lang === 'ko' ? metadata.name : metadata.nameEn}
                 </div>
-                {(type === 'liar' || type === 'mafia') && (
+                {type === 'mafia' && (
                   <div className="mt-1">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
                       <i className="ri-time-line text-xs"></i>
