@@ -1,7 +1,7 @@
 'use client';
 
 import { use } from 'react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -44,6 +44,8 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
   const [timerStarted, setTimerStarted] = useState(false); // 타이머가 시작되었는지 여부
   const [votingTimeLeft, setVotingTimeLeft] = useState<number | null>(null); // 투표 시간 (초, 15초)
   const [isAdmin, setIsAdmin] = useState(false); // 관리자 여부
+  const speakingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const votingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 로그인 필수: 로그인 유저 닉네임 자동 사용
   useEffect(() => {
@@ -56,11 +58,14 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
 
     const loadUserNickname = async () => {
       try {
-        // 관리자 권한 확인
-        const { data: gameUser } = await supabase
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabaseClient = createClient();
+
+        // 관리자 권한 확인 (auth_user_id 사용)
+        const { data: gameUser } = await supabaseClient
           .from('game_users')
-          .select('is_admin')
-          .eq('id', user.id)
+          .select('is_admin, nickname')
+          .eq('auth_user_id', user.id)
           .maybeSingle();
         
         setIsAdmin(gameUser?.is_admin || false);
@@ -72,18 +77,19 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
           .eq('code', roomCode)
           .single();
         
-        // users 테이블에서 닉네임 가져오기
-        const { createClient } = await import('@/lib/supabase/client');
-        const supabaseClient = createClient();
-        const { data: userData } = await supabaseClient
-          .from('users')
-          .select('nickname')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        const userNickname = roomData?.host_user_id === user.id
-          ? (roomData.host_nickname || userData?.nickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User'))
-          : (userData?.nickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User'));
+        // 닉네임: game_users 우선, 없으면 users
+        let userNickname = gameUser?.nickname;
+        if (!userNickname) {
+          const { data: userData } = await supabaseClient
+            .from('users')
+            .select('nickname')
+            .eq('id', user.id)
+            .maybeSingle();
+          userNickname = userData?.nickname;
+        }
+        userNickname = roomData?.host_user_id === user.id
+          ? (roomData.host_nickname || userNickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User'))
+          : (userNickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User'));
 
         if (roomData?.host_user_id === user.id) {
           setIsHost(true);
@@ -496,82 +502,55 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
     };
   }, [roomCode]);
 
-  // 투표 결과 처리
+  // 투표 결과 처리 (DB에서 최신 투표 집계 후 처리)
   const processVotingResults = useCallback(async () => {
     try {
-      // 현재 votes 상태를 사용하여 가장 많은 표를 받은 플레이어 찾기
-      setVotes(currentVotes => {
-        let maxVotes = 0;
-        let eliminatedPlayer: string | null = null;
-        
-        Object.entries(currentVotes).forEach(([playerNickname, count]) => {
-          if (count > maxVotes) {
-            maxVotes = count;
-            eliminatedPlayer = playerNickname;
-          }
-        });
+      const { data: playersData } = await supabase
+        .from('players')
+        .select('nickname, vote_target, role, eliminated')
+        .eq('room_code', roomCode);
 
-        if (eliminatedPlayer) {
-          // 제외된 플레이어 업데이트
-          setPlayers(prev => {
-            const updated = prev.map(p => 
-              p.nickname === eliminatedPlayer ? { ...p, eliminated: true } : p
-            );
-
-            // 내가 제외되었는지 확인
-            if (eliminatedPlayer === nickname) {
-              setIsEliminated(true);
-            }
-
-            // 제외된 플레이어의 역할 확인
-            const eliminatedPlayerData = updated.find(p => p.nickname === eliminatedPlayer);
-            const wasLiar = eliminatedPlayerData?.role === 'LIAR';
-
-            // 남은 라이어 수 확인
-            const remainingLiars = updated.filter(p => 
-              !p.eliminated && p.role === 'LIAR'
-            ).length;
-
-            // 라이어가 모두 잡혔는지 확인
-            if (wasLiar && remainingLiars === 0) {
-              // 시민 승리
-              setGameResult('CITIZEN_WIN');
-              setGamePhase('RESULT');
-              setGameStatus('FINISHED');
-              
-              // 방 상태 업데이트
-              supabase
-                .from('rooms')
-                .update({ status: 'FINISHED', game_ended: true })
-                .eq('code', roomCode);
-            } else if (remainingLiars === 0) {
-              // 라이어가 모두 잡혔지만 이미 처리됨
-              setGameResult('CITIZEN_WIN');
-              setGamePhase('RESULT');
-              setGameStatus('FINISHED');
-              
-              supabase
-                .from('rooms')
-                .update({ status: 'FINISHED', game_ended: true })
-                .eq('code', roomCode);
-            } else {
-              // 라이어가 남아있으면 계속 게임 진행 (다음 라운드)
-              // 여기서는 간단히 결과 화면으로 전환
-              setGamePhase('RESULT');
-              setGameStatus('FINISHED');
-              
-              supabase
-                .from('rooms')
-                .update({ status: 'FINISHED', game_ended: true })
-                .eq('code', roomCode);
-            }
-
-            return updated;
-          });
-        }
-
-        return currentVotes;
+      const voteCounts: Record<string, number> = {};
+      playersData?.forEach((p: { vote_target?: string }) => {
+        const target = p.vote_target;
+        if (target) voteCounts[target] = (voteCounts[target] || 0) + 1;
       });
+
+      const maxVotes = Math.max(...Object.values(voteCounts), 0);
+      const eliminatedPlayer = Object.entries(voteCounts).find(([, c]) => c === maxVotes)?.[0] ?? null;
+
+      if (!eliminatedPlayer) {
+        setGameResult('LIAR_WIN');
+        setGamePhase('RESULT');
+        setGameStatus('FINISHED');
+        await supabase.from('rooms').update({ status: 'FINISHED', game_ended: true }).eq('code', roomCode);
+        return;
+      }
+
+      await supabase
+        .from('players')
+        .update({ eliminated: true })
+        .eq('room_code', roomCode)
+        .eq('nickname', eliminatedPlayer);
+
+      setPlayers(prev => prev.map(p => p.nickname === eliminatedPlayer ? { ...p, eliminated: true } : p));
+      setVotes(voteCounts);
+      if (eliminatedPlayer === nickname) setIsEliminated(true);
+
+      const eliminatedData = playersData?.find((p: { nickname: string }) => p.nickname === eliminatedPlayer);
+      const wasLiar = (eliminatedData as { role?: string })?.role === 'LIAR';
+      const remainingLiars = (playersData || []).filter(
+        (p: { nickname: string; role?: string }) => p.role === 'LIAR' && p.nickname !== eliminatedPlayer
+      ).length;
+
+      if (wasLiar && remainingLiars === 0) {
+        setGameResult('CITIZEN_WIN');
+      } else {
+        setGameResult(remainingLiars > 0 ? 'LIAR_WIN' : 'CITIZEN_WIN');
+      }
+      setGamePhase('RESULT');
+      setGameStatus('FINISHED');
+      await supabase.from('rooms').update({ status: 'FINISHED', game_ended: true }).eq('code', roomCode);
     } catch (error) {
       console.error('투표 결과 처리 오류:', error);
     }
@@ -579,42 +558,56 @@ export default function LiarRoomPage({ params }: { params: Promise<{ lang: strin
 
   // 발언 시간 타이머
   useEffect(() => {
-    if (gamePhase === 'SPEAKING' && speakingTimeLeft !== null && speakingTimeLeft > 0) {
-      const timer = setInterval(() => {
-        setSpeakingTimeLeft(prev => {
-          if (prev === null || prev <= 1) {
-            clearInterval(timer);
-            // 타이머가 끝나면 투표 단계로 전환
-            setGamePhase('VOTING');
-            setVotingTimeLeft(15); // 투표 시간 15초 시작
-            return 0;
+    if (gamePhase !== 'SPEAKING') return;
+    if (speakingTimerRef.current) clearInterval(speakingTimerRef.current);
+    speakingTimerRef.current = setInterval(() => {
+      setSpeakingTimeLeft(prev => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          if (speakingTimerRef.current) {
+            clearInterval(speakingTimerRef.current);
+            speakingTimerRef.current = null;
           }
-          return prev - 1;
-        });
-      }, 1000);
-      
-      return () => clearInterval(timer);
-    }
-  }, [gamePhase, speakingTimeLeft]);
+          setGamePhase('VOTING');
+          setVotingTimeLeft(15);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (speakingTimerRef.current) {
+        clearInterval(speakingTimerRef.current);
+        speakingTimerRef.current = null;
+      }
+    };
+  }, [gamePhase]);
 
   // 투표 시간 타이머
   useEffect(() => {
-    if (gamePhase === 'VOTING' && votingTimeLeft !== null && votingTimeLeft > 0) {
-      const timer = setInterval(() => {
-        setVotingTimeLeft(prev => {
-          if (prev === null || prev <= 1) {
-            clearInterval(timer);
-            // 투표 시간 종료 시 결과 처리
-            processVotingResults();
-            return 0;
+    if (gamePhase !== 'VOTING') return;
+    if (votingTimerRef.current) clearInterval(votingTimerRef.current);
+    votingTimerRef.current = setInterval(() => {
+      setVotingTimeLeft(prev => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          if (votingTimerRef.current) {
+            clearInterval(votingTimerRef.current);
+            votingTimerRef.current = null;
           }
-          return prev - 1;
-        });
-      }, 1000);
-      
-      return () => clearInterval(timer);
-    }
-  }, [gamePhase, votingTimeLeft, processVotingResults]);
+          processVotingResults();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (votingTimerRef.current) {
+        clearInterval(votingTimerRef.current);
+        votingTimerRef.current = null;
+      }
+    };
+  }, [gamePhase, processVotingResults]);
 
   // 투표 처리
   const handleVote = async (targetNickname: string) => {

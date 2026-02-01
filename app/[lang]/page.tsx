@@ -47,13 +47,9 @@ export default function Home() {
     const t1 = setTimeout(() => loadSampleProblems(), 100);
     // 3) 출석체크는 idle 후 실행
     const t2 = setTimeout(() => checkTodayCheckIn(), 300);
-    const cleanupInterval = setInterval(() => {
-      fetch('/api/rooms/cleanup', { method: 'POST' }).catch(() => {});
-    }, 10 * 60 * 1000);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
-      clearInterval(cleanupInterval);
     };
   }, [user, lang, isRedirecting]);
 

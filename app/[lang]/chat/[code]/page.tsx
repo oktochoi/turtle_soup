@@ -120,16 +120,13 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
         setRoomPassword(room.password);
         setHostUserId(room.host_user_id || null);
 
-        // 관리자 권한 확인
-        if (user) {
-          const { data: gameUser } = await supabase
-            .from('game_users')
-            .select('is_admin')
-            .eq('id', user.id)
-            .maybeSingle();
-          
-          setIsAdmin(gameUser?.is_admin || false);
-        }
+        // 관리자 권한 및 닉네임: game_users 우선, 없으면 users
+        const { data: gameUser } = await supabase
+          .from('game_users')
+          .select('is_admin, nickname')
+          .eq('auth_user_id', user.id)
+          .maybeSingle();
+        setIsAdmin(gameUser?.is_admin || false);
 
         // 비밀번호가 있으면 입력 요청
         if (room.password) {
@@ -138,14 +135,15 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
           return;
         }
 
-        // 사용자 닉네임 가져오기
-        const { data: userData } = await supabase
-          .from('users')
-          .select('nickname')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        const userNickname = userData?.nickname || user.email?.split('@')[0] || 'User';
+        let userNickname = gameUser?.nickname;
+        if (!userNickname) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('nickname')
+            .eq('id', user.id)
+            .maybeSingle();
+          userNickname = userData?.nickname || user.email?.split('@')[0] || 'User';
+        }
         setNickname(userNickname);
 
         // 멤버 확인 및 추가 (upsert 사용하여 중복 방지)

@@ -40,11 +40,14 @@ export default function MafiaRoomPage({ params }: { params: Promise<{ lang: stri
 
     const loadUserNickname = async () => {
       try {
-        // 관리자 권한 확인
-        const { data: gameUser } = await supabase
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabaseClient = createClient();
+
+        // 관리자 권한 확인 (auth_user_id 사용)
+        const { data: gameUser } = await supabaseClient
           .from('game_users')
-          .select('is_admin')
-          .eq('id', user.id)
+          .select('is_admin, nickname')
+          .eq('auth_user_id', user.id)
           .maybeSingle();
         
         setIsAdmin(gameUser?.is_admin || false);
@@ -56,18 +59,19 @@ export default function MafiaRoomPage({ params }: { params: Promise<{ lang: stri
           .eq('code', roomCode)
           .single();
         
-        // users 테이블에서 닉네임 가져오기
-        const { createClient } = await import('@/lib/supabase/client');
-        const supabaseClient = createClient();
-        const { data: userData } = await supabaseClient
-          .from('users')
-          .select('nickname')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        const userNickname = roomData?.host_user_id === user.id
-          ? (roomData.host_nickname || userData?.nickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User'))
-          : (userData?.nickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User'));
+        // 닉네임: game_users 우선, 없으면 users
+        let userNickname = gameUser?.nickname;
+        if (!userNickname) {
+          const { data: userData } = await supabaseClient
+            .from('users')
+            .select('nickname')
+            .eq('id', user.id)
+            .maybeSingle();
+          userNickname = userData?.nickname;
+        }
+        userNickname = roomData?.host_user_id === user.id
+          ? (roomData.host_nickname || userNickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User'))
+          : (userNickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User'));
 
         if (roomData?.host_user_id === user.id) {
           setIsHost(true);
