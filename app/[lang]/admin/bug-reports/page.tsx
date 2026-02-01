@@ -394,20 +394,17 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
 
   if (isLoading && reports.length === 0) {
     return (
-      <div className="min-h-screen bg-slate-900 text-white p-4 sm:p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-20">
-            <i className="ri-loader-4-line text-4xl animate-spin text-teal-400"></i>
-            <p className="mt-4 text-slate-400">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
-          </div>
+      <div className="max-w-7xl">
+        <div className="text-center py-20">
+          <i className="ri-loader-4-line text-4xl animate-spin text-teal-400"></i>
+          <p className="mt-4 text-slate-400">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-4 sm:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl">
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
             {lang === 'ko' ? 'AI 버그 리포트 검수' : 'AI Bug Reports Review'}
@@ -869,7 +866,6 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 }

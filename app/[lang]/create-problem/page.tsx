@@ -218,6 +218,9 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         if (validHints.length > 0) {
           insertData.hints = validHints;
         }
+        if (explanation.trim()) {
+          insertData.explanation = explanation.trim();
+        }
       } else if (quizType === 'balance') {
         // 밸런스 게임은 content 필드가 필수이므로 title을 content로 사용
         insertData.content = title.trim();
@@ -593,10 +596,12 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
                 story={content}
                 truth={answer}
                 hints={hints}
+                explanation={explanation}
                 originalAuthor={originalAuthor}
                 onStoryChange={setContent}
                 onTruthChange={setAnswer}
                 onHintsChange={setHints}
+                onExplanationChange={setExplanation}
                 onOriginalAuthorChange={setOriginalAuthor}
                 lang={currentLang}
               />

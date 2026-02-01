@@ -9,6 +9,7 @@ import { handleError } from '@/lib/error-handler';
 type DashboardStats = {
   users: {
     total: number;
+    registered: number;
     active_today: number;
     active_week: number;
     active_month: number;
@@ -63,6 +64,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -102,10 +104,12 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
   const loadStats = async () => {
     try {
       setIsLoading(true);
+      setLoadError(null);
 
-      // 사용자 통계
-      const [usersTotal, usersToday, usersWeek, usersMonth] = await Promise.all([
+      // 사용자 통계 (game_users: 게임 참여자, users: 등록 사용자)
+      const [usersTotal, usersRegistered, usersToday, usersWeek, usersMonth] = await Promise.all([
         supabase.from('game_users').select('id', { count: 'exact', head: true }),
+        supabase.from('users').select('id', { count: 'exact', head: true }),
         supabase
           .from('game_users')
           .select('id', { count: 'exact', head: true })
@@ -120,10 +124,10 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
           .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
       ]);
 
-      // 방 통계
+      // 방 통계 (활성 = active, LOBBY, PLAYING)
       const [roomsTotal, roomsActive, roomsToday, roomsWeek] = await Promise.all([
         supabase.from('rooms').select('id', { count: 'exact', head: true }),
-        supabase.from('rooms').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('rooms').select('id', { count: 'exact', head: true }).in('status', ['active', 'LOBBY', 'PLAYING']),
         supabase
           .from('rooms')
           .select('id', { count: 'exact', head: true })
@@ -369,10 +373,11 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
 
       setStats({
         users: {
-          total: usersTotal.count || 0,
-          active_today: usersToday.count || 0,
-          active_week: usersWeek.count || 0,
-          active_month: usersMonth.count || 0,
+          total: usersTotal.count ?? 0,
+          registered: usersRegistered.count ?? 0,
+          active_today: usersToday.count ?? 0,
+          active_week: usersWeek.count ?? 0,
+          active_month: usersMonth.count ?? 0,
         },
         rooms: {
           total: roomsTotal.count || 0,
@@ -415,15 +420,16 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
         },
       });
     } catch (error) {
-      handleError(error, '통계 로드', true);
+      const err = handleError(error, '통계 로드', false);
+      setLoadError(err.userMessage || (lang === 'ko' ? '통계를 불러오지 못했습니다.' : 'Failed to load stats.'));
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (authLoading || isLoading) {
+  if (authLoading || (isLoading && !stats)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+      <div className="flex items-center justify-center py-24">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
           <p className="text-slate-400">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
@@ -434,7 +440,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+      <div className="flex items-center justify-center py-24">
         <div className="text-center">
           <p className="text-red-400 text-xl mb-4">{lang === 'ko' ? '접근 권한이 없습니다.' : 'Access Denied'}</p>
           <p className="text-slate-400">{lang === 'ko' ? '관리자만 접근할 수 있습니다.' : 'Only administrators can access this page.'}</p>
@@ -445,7 +451,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
 
   // stats가 없으면 기본값 사용
   const displayStats = stats || {
-    users: { total: 0, active_today: 0, active_week: 0, active_month: 0 },
+    users: { total: 0, registered: 0, active_today: 0, active_week: 0, active_month: 0 },
     rooms: { total: 0, active: 0, created_today: 0, created_week: 0 },
     problems: { total: 0, created_today: 0, created_week: 0, total_likes: 0, total_views: 0 },
     events: { total: 0, today: 0, week: 0, conversion_rate: 0 },
@@ -455,11 +461,32 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl">
-        <h1 className="text-3xl sm:text-4xl font-bold mb-8">
+    <div className="max-w-5xl">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold">
           {lang === 'ko' ? '관리자 대시보드' : 'Admin Dashboard'}
         </h1>
+        <button
+          onClick={() => loadStats()}
+          disabled={isLoading}
+          className="flex items-center gap-2 px-4 py-2 bg-teal-500/20 text-teal-400 border border-teal-500/50 rounded-lg hover:bg-teal-500/30 disabled:opacity-50 transition-colors text-sm font-medium"
+        >
+          <i className={`ri-refresh-line ${isLoading ? 'animate-spin' : ''}`}></i>
+          {lang === 'ko' ? '새로고침' : 'Refresh'}
+        </button>
+      </div>
+
+      {loadError && (
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center justify-between gap-4">
+          <p className="text-red-400 text-sm">{loadError}</p>
+          <button
+            onClick={() => loadStats()}
+            className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 text-sm font-medium"
+          >
+            {lang === 'ko' ? '재시도' : 'Retry'}
+          </button>
+        </div>
+      )}
 
         {/* 통계 카드 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
@@ -471,11 +498,15 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
             </h2>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '전체' : 'Total'}</span>
+                <span className="text-slate-400">{lang === 'ko' ? '게임 참여자' : 'Game Users'}</span>
                 <span className="text-2xl font-bold">{displayStats.users.total.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '오늘 가입' : 'Today'}</span>
+                <span className="text-slate-400">{lang === 'ko' ? '등록 사용자' : 'Registered'}</span>
+                <span className="text-xl font-semibold text-cyan-400">{displayStats.users.registered.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">{lang === 'ko' ? '오늘 참여' : 'Today'}</span>
                 <span className="text-xl font-semibold">{displayStats.users.active_today.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
@@ -744,7 +775,6 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
             </a>
           </div>
         </div>
-      </div>
     </div>
   );
 }

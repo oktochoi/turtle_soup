@@ -6,11 +6,13 @@ interface QuizFormSoupProps {
   story: string;
   truth: string;
   hints: string[];
+  explanation?: string;
   imageUrl?: string;
   originalAuthor?: string;
   onStoryChange: (value: string) => void;
   onTruthChange: (value: string) => void;
   onHintsChange: (hints: string[]) => void;
+  onExplanationChange?: (value: string) => void;
   onImageChange?: (file: File | null) => void;
   onImageUrlChange?: (url: string) => void;
   onOriginalAuthorChange?: (value: string) => void;
@@ -21,11 +23,13 @@ export default function QuizFormSoup({
   story,
   truth,
   hints,
+  explanation = '',
   imageUrl,
   originalAuthor = '',
   onStoryChange,
   onTruthChange,
   onHintsChange,
+  onExplanationChange,
   onImageChange,
   onImageUrlChange,
   onOriginalAuthorChange,
@@ -78,6 +82,26 @@ export default function QuizFormSoup({
           {truth.length} / 500
         </div>
       </div>
+
+      {/* 자세한 해설 (선택사항) */}
+      {onExplanationChange && (
+        <div>
+          <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+            <i className="ri-information-line mr-1 text-cyan-400"></i>
+            {lang === 'ko' ? '자세한 해설 (선택사항)' : 'Detailed Explanation (Optional)'}
+          </label>
+          <textarea
+            value={explanation}
+            onChange={(e) => onExplanationChange(e.target.value)}
+            placeholder={lang === 'ko' ? '정답의 배경, 추리 포인트, 관련 지식 등을 설명해주세요 (300~500단어 권장)' : 'Explain the background, deduction points, related knowledge (300~500 words recommended)'}
+            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-32 resize-none text-sm"
+            maxLength={2000}
+          />
+          <div className="text-right text-xs text-slate-500 mt-1">
+            {explanation.length} / 2000
+          </div>
+        </div>
+      )}
 
       {/* 힌트 */}
       <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-700/50">

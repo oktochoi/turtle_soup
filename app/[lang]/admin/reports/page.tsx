@@ -212,7 +212,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+      <div className="flex items-center justify-center py-24">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
           <p className="text-slate-400">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
@@ -222,9 +222,8 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl">
-        <div className="mb-6">
+    <div className="max-w-7xl">
+      <div className="mb-6">
           <button
             onClick={() => router.push(`/${lang}`)}
             className="text-slate-400 hover:text-white transition-colors text-sm mb-4"
