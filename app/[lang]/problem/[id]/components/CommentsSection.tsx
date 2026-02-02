@@ -11,6 +11,8 @@ interface CommentsSectionProps {
   comments: ProblemComment[];
   commentText: string;
   isSpoiler: boolean;
+  replyingToId: string | null;
+  replyText: string;
   editingCommentId: string | null;
   editCommentText: string;
   editCommentIsSpoiler: boolean;
@@ -19,7 +21,9 @@ interface CommentsSectionProps {
   commentProfileImages: Map<string, string | null>;
   onCommentTextChange: (value: string) => void;
   onSpoilerChange: (value: boolean) => void;
-  onSubmitComment: () => void;
+  onReplyToChange: (commentId: string | null) => void;
+  onReplyTextChange: (value: string) => void;
+  onSubmitComment: (parentId?: string | null) => void;
   onEditComment: (comment: ProblemComment) => void;
   onEditCommentTextChange: (value: string) => void;
   onEditCommentSpoilerChange: (value: boolean) => void;
@@ -36,6 +40,8 @@ export default function CommentsSection({
   comments,
   commentText,
   isSpoiler,
+  replyingToId,
+  replyText,
   editingCommentId,
   editCommentText,
   editCommentIsSpoiler,
@@ -44,6 +50,8 @@ export default function CommentsSection({
   commentProfileImages,
   onCommentTextChange,
   onSpoilerChange,
+  onReplyToChange,
+  onReplyTextChange,
   onSubmitComment,
   onEditComment,
   onEditCommentTextChange,
@@ -95,7 +103,7 @@ export default function CommentsSection({
           </label>
         </div>
         <button
-          onClick={onSubmitComment}
+          onClick={() => onSubmitComment()}
           disabled={!commentText.trim() || !user}
           className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2.5 sm:py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base touch-manipulation"
         >
@@ -109,9 +117,13 @@ export default function CommentsSection({
           <p className="text-slate-400 text-xs sm:text-sm">{t.problem.noComments}</p>
         ) : (
           <>
-            {comments.map((comment) => {
+            {comments
+              .filter((c) => !c.parent_id)
+              .map((comment) => {
               const isCommentOwner = user && comment.user_id === user.id;
               const isEditingThis = editingCommentId === comment.id;
+              const isReplying = replyingToId === comment.id;
+              const replies = comments.filter((c) => c.parent_id === comment.id);
               
               return (
                 <React.Fragment key={comment.id}>
@@ -167,24 +179,35 @@ export default function CommentsSection({
                               </>
                             )}
                           </div>
-                          {isCommentOwner && !isEditingThis && (
-                            <div className="flex items-center gap-1 flex-shrink-0">
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {user && !isEditingThis && (
                               <button
-                                onClick={() => onEditComment(comment)}
+                                onClick={() => onReplyToChange(isReplying ? null : comment.id)}
                                 className="text-xs text-slate-400 hover:text-teal-400 transition-colors p-1"
-                                title={t.common.edit}
+                                title={t.problem.replyToComment}
                               >
-                                <i className="ri-edit-line"></i>
+                                <i className="ri-chat-3-line"></i>
                               </button>
-                              <button
-                                onClick={() => onDeleteComment(comment.id)}
-                                className="text-xs text-slate-400 hover:text-red-400 transition-colors p-1"
-                                title={t.common.delete}
-                              >
-                                <i className="ri-delete-bin-line"></i>
-                              </button>
-                            </div>
-                          )}
+                            )}
+                            {isCommentOwner && !isEditingThis && (
+                              <>
+                                <button
+                                  onClick={() => onEditComment(comment)}
+                                  className="text-xs text-slate-400 hover:text-teal-400 transition-colors p-1"
+                                  title={t.common.edit}
+                                >
+                                  <i className="ri-edit-line"></i>
+                                </button>
+                                <button
+                                  onClick={() => onDeleteComment(comment.id)}
+                                  className="text-xs text-slate-400 hover:text-red-400 transition-colors p-1"
+                                  title={t.common.delete}
+                                >
+                                  <i className="ri-delete-bin-line"></i>
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                         {isEditingThis ? (
                       <div className="space-y-2">
@@ -259,6 +282,88 @@ export default function CommentsSection({
                       </div>
                     </div>
                   </div>
+
+                  {/* 답글 입력 */}
+                  {isReplying && (
+                    <div className="ml-6 sm:ml-8 mt-2 pl-4 border-l-2 border-slate-700">
+                      <textarea
+                        value={replyText}
+                        onChange={(e) => onReplyTextChange(e.target.value)}
+                        placeholder={t.problem.replyPlaceholder}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm resize-none"
+                        rows={2}
+                        maxLength={500}
+                      />
+                      <div className="flex justify-end gap-2 mt-2">
+                        <button
+                          onClick={() => { onReplyToChange(null); onReplyTextChange(''); }}
+                          className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold"
+                        >
+                          {t.common.cancel}
+                        </button>
+                        <button
+                          onClick={() => onSubmitComment(comment.id)}
+                          disabled={!replyText.trim()}
+                          className="px-3 py-1.5 bg-teal-500 hover:bg-teal-600 disabled:opacity-50 text-white rounded-lg text-xs font-semibold"
+                        >
+                          {t.problem.writeReply}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 대댓글 목록 */}
+                  {replies.length > 0 && (
+                    <div className="ml-6 sm:ml-8 space-y-2 border-l-2 border-slate-700 pl-4">
+                      {replies.map((reply) => {
+                        const isReplyOwner = user && reply.user_id === user.id;
+                        const isEditingReply = editingCommentId === reply.id;
+                        return (
+                          <div key={reply.id} className="bg-slate-800/50 rounded-lg p-2 sm:p-3 border border-slate-700/50">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                  {commentGameUserIds.get(reply.id) ? (
+                                    <Link href={`/${lang}/profile/${commentGameUserIds.get(reply.id)}`} className="hover:opacity-80">
+                                      <span className="text-xs font-semibold text-cyan-400">{reply.nickname}</span>
+                                    </Link>
+                                  ) : (
+                                    <span className="text-xs font-semibold text-cyan-400">{reply.nickname}</span>
+                                  )}
+                                  <span className="text-xs text-slate-500">
+                                    {new Date(reply.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
+                                  </span>
+                                </div>
+                                {isEditingReply ? (
+                                  <div className="space-y-2">
+                                    <textarea
+                                      value={editCommentText}
+                                      onChange={(e) => onEditCommentTextChange(e.target.value)}
+                                      className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs resize-none"
+                                      rows={2}
+                                      maxLength={500}
+                                    />
+                                    <div className="flex gap-2">
+                                      <button onClick={onCancelEditComment} className="px-2 py-1 bg-slate-700 rounded text-xs">{t.common.cancel}</button>
+                                      <button onClick={onSaveEditComment} disabled={!editCommentText.trim()} className="px-2 py-1 bg-teal-500 rounded text-xs">{t.common.save}</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-slate-300 break-words whitespace-pre-wrap">{reply.text}</p>
+                                )}
+                              </div>
+                              {isReplyOwner && !isEditingReply && (
+                                <div className="flex gap-1">
+                                  <button onClick={() => onEditComment(reply)} className="text-xs text-slate-400 hover:text-teal-400 p-1"><i className="ri-edit-line"></i></button>
+                                  <button onClick={() => onDeleteComment(reply.id)} className="text-xs text-slate-400 hover:text-red-400 p-1"><i className="ri-delete-bin-line"></i></button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </React.Fragment>
               );
             })}

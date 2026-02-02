@@ -161,7 +161,16 @@
     "instagramLinkCopied": "인스타그램에 공유하려면 링크가 복사되었습니다. 인스타그램 앱에서 붙여넣어주세요.",
     "instagramCopyLink": "인스타그램에 공유하려면 아래 링크를 복사하세요:",
     "linkCopiedInstagram": "링크가 복사되었습니다. 인스타그램에 붙여넣어 공유하세요.",
-    "copyLinkFail": "링크 복사에 실패했습니다. 수동으로 복사해주세요."
+    "copyLinkFail": "링크 복사에 실패했습니다. 수동으로 복사해주세요.",
+    "userAnswersTitle": "다른 사람들의 답변",
+    "noUserAnswers": "아직 제출된 답변이 없습니다",
+    "replyToAnswer": "답글",
+    "writeReply": "답글 작성",
+    "replyPlaceholder": "답글을 입력하세요...",
+    "loginToLikeReply": "좋아요와 답글은 로그인 후 이용 가능합니다",
+    "answerSaveFail": "답변 저장에 실패했습니다",
+    "replySubmitFail": "답글 작성에 실패했습니다",
+    "replyToComment": "답글"
   },
   "community": {
     "title": "커뮤니티",

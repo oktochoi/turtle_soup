@@ -88,5 +88,28 @@ export type ProblemComment = {
   updated_at?: string;
   user_id?: string;
   is_spoiler?: boolean;
+  parent_id?: string | null;
+};
+
+export type ProblemUserAnswer = {
+  id: string;
+  problem_id: string;
+  user_id: string | null;
+  nickname: string;
+  answer_text: string;
+  similarity_score: number | null;
+  like_count: number;
+  reply_count: number;
+  created_at: string;
+};
+
+export type ProblemAnswerReply = {
+  id: string;
+  answer_id: string;
+  parent_reply_id: string | null;
+  user_id: string | null;
+  nickname: string;
+  text: string;
+  created_at: string;
 };
 

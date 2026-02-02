@@ -161,7 +161,16 @@
     "instagramLinkCopied": "Link copied. Please paste it in the Instagram app.",
     "instagramCopyLink": "Please copy the link below to share on Instagram:",
     "linkCopiedInstagram": "Link copied. Paste it in Instagram to share.",
-    "copyLinkFail": "Failed to copy link. Please copy manually."
+    "copyLinkFail": "Failed to copy link. Please copy manually.",
+    "userAnswersTitle": "Others' Answers",
+    "noUserAnswers": "No answers submitted yet",
+    "replyToAnswer": "Reply",
+    "writeReply": "Write Reply",
+    "replyPlaceholder": "Enter your reply...",
+    "loginToLikeReply": "Login to like or reply",
+    "answerSaveFail": "Failed to save answer",
+    "replySubmitFail": "Failed to post reply",
+    "replyToComment": "Reply"
   },
   "community": {
     "title": "Community",

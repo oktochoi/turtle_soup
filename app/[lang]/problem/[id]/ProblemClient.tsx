@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import type { Problem, ProblemQuestion, ProblemComment } from '@/lib/types';
+import type { Problem, ProblemQuestion, ProblemComment, ProblemUserAnswer, ProblemAnswerReply } from '@/lib/types';
 import { buildProblemKnowledge, analyzeQuestionV8, calculateAnswerSimilarity, initializeModel, type ProblemKnowledge } from '@/lib/ai-analyzer';
 import { buildProblemKnowledge as buildProblemKnowledgeEn, analyzeQuestionV8 as analyzeQuestionV8En, calculateAnswerSimilarityEn, initializeModel as initializeModelEn, type ProblemKnowledge as ProblemKnowledgeEn } from '@/lib/ai-analyzer-en';
 import ProblemAdminButtons from './ProblemAdminButtons';
@@ -27,6 +27,7 @@ import BugReportModal from './components/BugReportModal';
 import ProblemCTABar from './components/ProblemCTABar';
 import QuestionInputSection from './components/QuestionInputSection';
 import AnswerInputSection from './components/AnswerInputSection';
+import UserAnswersFeed from './components/UserAnswersFeed';
 import AdminQuestionList from './components/AdminQuestionList';
 
 type ProblemClientProps = {
@@ -86,6 +87,8 @@ export default function ProblemClient({
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
   const [editCommentIsSpoiler, setEditCommentIsSpoiler] = useState(false);
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
   const [problemKnowledge, setProblemKnowledge] = useState<ProblemKnowledge | ProblemKnowledgeEn | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [hasSubmittedAnswer, setHasSubmittedAnswer] = useState(false);
@@ -93,6 +96,11 @@ export default function ProblemClient({
   const [authorProfileImage, setAuthorProfileImage] = useState<string | null>(null);
   const [commentGameUserIds, setCommentGameUserIds] = useState<Map<string, string>>(new Map());
   const [commentProfileImages, setCommentProfileImages] = useState<Map<string, string | null>>(new Map());
+  const [userAnswers, setUserAnswers] = useState<ProblemUserAnswer[]>([]);
+  const [answerLikes, setAnswerLikes] = useState<Map<string, boolean>>(new Map());
+  const [answerReplies, setAnswerReplies] = useState<Map<string, ProblemAnswerReply[]>>(new Map());
+  const [answerGameUserIds, setAnswerGameUserIds] = useState<Map<string, string>>(new Map());
+  const [answerProfileImages, setAnswerProfileImages] = useState<Map<string, string | null>>(new Map());
   const [showHints, setShowHints] = useState<boolean[]>([false, false, false]); // 힌트 1, 2, 3 표시 여부
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [nextProblem, setNextProblem] = useState<Problem | null>(null);
@@ -523,6 +531,7 @@ export default function ProblemClient({
     loadProblemSupplement(initialProblem);
     loadQuestions();
     loadComments();
+    loadUserAnswers();
     checkLike();
     loadLocalQuestions();
     loadRating();
@@ -855,6 +864,172 @@ export default function ProblemClient({
     }
   };
 
+  const loadUserAnswers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('problem_user_answers')
+        .select('*')
+        .eq('problem_id', problemId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setUserAnswers((data || []) as ProblemUserAnswer[]);
+
+      // 각 답변 작성자의 game_user_id, 프로필 이미지, 좋아요 여부, 대댓글 로드
+      const userIds = new Map<string, string>();
+      const profileImages = new Map<string, string | null>();
+      const likesMap = new Map<string, boolean>();
+      const repliesMap = new Map<string, ProblemAnswerReply[]>();
+
+      for (const answer of data || []) {
+        if (answer.user_id) {
+          const { data: gameUser } = await supabase
+            .from('game_users')
+            .select('id, profile_image_url')
+            .eq('auth_user_id', answer.user_id)
+            .maybeSingle();
+          if (gameUser) {
+            userIds.set(answer.id, gameUser.id);
+            profileImages.set(answer.id, gameUser.profile_image_url);
+          }
+        }
+      }
+
+      const answerIds = (data || []).map((a: any) => a.id);
+      if (user && answerIds.length > 0) {
+        const { data: likes } = await supabase
+          .from('problem_answer_likes')
+          .select('answer_id')
+          .eq('user_id', user.id)
+          .in('answer_id', answerIds);
+        for (const like of likes || []) {
+          likesMap.set(like.answer_id, true);
+        }
+      }
+
+      if (answerIds.length > 0) {
+        const { data: replies } = await supabase
+          .from('problem_answer_replies')
+          .select('*')
+          .in('answer_id', answerIds)
+          .order('created_at', { ascending: true });
+        for (const reply of replies || []) {
+          const list = repliesMap.get(reply.answer_id) || [];
+          list.push(reply as ProblemAnswerReply);
+          repliesMap.set(reply.answer_id, list);
+        }
+      }
+
+      setAnswerGameUserIds(userIds);
+      setAnswerProfileImages(profileImages);
+      setAnswerLikes(likesMap);
+      setAnswerReplies(repliesMap);
+    } catch (error) {
+      console.error('사용자 답변 로드 오류:', error);
+    }
+  };
+
+  const handleSaveUserAnswer = async (answerText: string, similarity: number) => {
+    if (!user) return;
+    try {
+      const { data: gameUser } = await supabase
+        .from('game_users')
+        .select('nickname')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+      const { data: userData } = await supabase
+        .from('users')
+        .select('nickname')
+        .eq('id', user.id)
+        .maybeSingle();
+      const nickname = userData?.nickname || gameUser?.nickname || t.common.anonymous;
+
+      const { error } = await supabase
+        .from('problem_user_answers')
+        .insert({
+          problem_id: problemId,
+          user_id: user.id,
+          nickname,
+          answer_text: answerText,
+          similarity_score: Math.round(similarity),
+        });
+
+      if (error) throw error;
+      await loadUserAnswers();
+    } catch (error) {
+      console.error('답변 저장 오류:', error);
+      showToast(t.problem.answerSaveFail, 'error');
+    }
+  };
+
+  const handleLikeAnswer = async (answerId: string) => {
+    if (!user) return;
+    try {
+      const isLiked = answerLikes.get(answerId);
+      if (isLiked) {
+        await supabase
+          .from('problem_answer_likes')
+          .delete()
+          .eq('answer_id', answerId)
+          .eq('user_id', user.id);
+        setAnswerLikes((prev) => {
+          const next = new Map(prev);
+          next.set(answerId, false);
+          return next;
+        });
+      } else {
+        await supabase
+          .from('problem_answer_likes')
+          .insert({ answer_id: answerId, user_id: user.id });
+        setAnswerLikes((prev) => {
+          const next = new Map(prev);
+          next.set(answerId, true);
+          return next;
+        });
+      }
+      await loadUserAnswers();
+    } catch (error) {
+      console.error('답변 좋아요 오류:', error);
+    }
+  };
+
+  const handleSubmitAnswerReply = async (answerId: string, text: string) => {
+    if (!user) return;
+    try {
+      const { data: gameUser } = await supabase
+        .from('game_users')
+        .select('nickname')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+      const { data: userData } = await supabase
+        .from('users')
+        .select('nickname')
+        .eq('id', user.id)
+        .maybeSingle();
+      const nickname = userData?.nickname || gameUser?.nickname || t.common.anonymous;
+
+      const { error } = await supabase
+        .from('problem_answer_replies')
+        .insert({
+          answer_id: answerId,
+          user_id: user.id,
+          nickname,
+          text,
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('답글 작성 오류:', error);
+      throw error;
+    }
+  };
+
+  const getSimilarityColor = (score: number) => {
+    if (score >= 80) return 'bg-green-500/20 text-green-400';
+    if (score >= 60) return 'bg-yellow-500/20 text-yellow-400';
+    return 'bg-red-500/20 text-red-400';
+  };
+
   const checkLike = async () => {
     try {
       if (!user) {
@@ -1108,14 +1283,15 @@ export default function ProblemClient({
     }
   };
 
-  const handleSubmitComment = async () => {
+  const handleSubmitComment = async (parentId?: string | null) => {
     if (!user) {
       showToast(t.problem.loginRequired, 'warning');
       router.push(`/${lang}/auth/login`);
       return;
     }
 
-    if (!commentText.trim()) {
+    const textToSubmit = parentId ? replyText.trim() : commentText.trim();
+    if (!textToSubmit) {
       showToast(t.problem.enterCommentAlert, 'warning');
       return;
     }
@@ -1137,24 +1313,32 @@ export default function ProblemClient({
       
       const nickname = userData?.nickname || gameUser?.nickname || t.common.anonymous;
 
+      const insertData: any = {
+        problem_id: problemId,
+        nickname,
+        text: textToSubmit,
+        user_id: user.id,
+        is_spoiler: parentId ? false : isSpoiler,
+      };
+      if (parentId) insertData.parent_id = parentId;
+
       const { error } = await supabase
         .from('problem_comments')
-        .insert({
-          problem_id: problemId,
-          nickname: nickname,
-          text: commentText.trim(),
-          user_id: user.id,
-          is_spoiler: isSpoiler,
-        });
+        .insert(insertData);
 
       if (error) throw error;
 
-      setCommentText('');
-      setIsSpoiler(false);
+      if (parentId) {
+        setReplyText('');
+        setReplyingToId(null);
+      } else {
+        setCommentText('');
+        setIsSpoiler(false);
+      }
       loadComments();
 
-      // 문제 작성자에게 알림 생성
-      if (problem && problem.user_id && problem.user_id !== user.id) {
+      // 문제 작성자에게 알림 생성 (대댓글 제외)
+      if (!parentId && problem && problem.user_id && problem.user_id !== user.id) {
         const problemTitle = problem.title || (lang === 'ko' ? '문제' : 'Problem');
         await createNotification({
           userId: problem.user_id,
@@ -1163,8 +1347,8 @@ export default function ProblemClient({
             ? `"${problemTitle}"에 댓글이 달렸습니다`
             : `New comment on "${problemTitle}"`,
           message: lang === 'ko'
-            ? `${nickname}님이 댓글을 남겼습니다: ${commentText.trim().substring(0, 50)}${commentText.trim().length > 50 ? '...' : ''}`
-            : `${nickname} commented: ${commentText.trim().substring(0, 50)}${commentText.trim().length > 50 ? '...' : ''}`,
+            ? `${nickname}님이 댓글을 남겼습니다: ${textToSubmit.substring(0, 50)}${textToSubmit.length > 50 ? '...' : ''}`
+            : `${nickname} commented: ${textToSubmit.substring(0, 50)}${textToSubmit.length > 50 ? '...' : ''}`,
           link: `/${lang}/problem/${problemId}`,
         });
       }
@@ -1861,6 +2045,11 @@ export default function ProblemClient({
                   setSimilarityScore(similarity);
                   setHasSubmittedAnswer(true);
 
+                  // ✅ 사용자 답변 DB 저장 (다른 사람들이 볼 수 있게)
+                  if (user) {
+                    await handleSaveUserAnswer(userGuess.trim(), similarity);
+                  }
+
                   // ✅ 맞춘 기록 저장
                   if (similarity >= 80 && user) {
                     try {
@@ -1905,6 +2094,21 @@ export default function ProblemClient({
               showToast={showToast}
               t={t}
             />
+            <UserAnswersFeed
+              lang={lang}
+              problemId={problemId}
+              user={user}
+              answers={userAnswers}
+              answerLikes={answerLikes}
+              answerReplies={answerReplies}
+              answerGameUserIds={answerGameUserIds}
+              answerProfileImages={answerProfileImages}
+              onLoadAnswers={loadUserAnswers}
+              onLikeAnswer={handleLikeAnswer}
+              onSubmitReply={handleSubmitAnswerReply}
+              getSimilarityColor={getSimilarityColor}
+              t={t}
+            />
           </>
         )}
   
@@ -1928,6 +2132,8 @@ export default function ProblemClient({
           comments={comments}
           commentText={commentText}
           isSpoiler={isSpoiler}
+          replyingToId={replyingToId}
+          replyText={replyText}
           editingCommentId={editingCommentId}
           editCommentText={editCommentText}
           editCommentIsSpoiler={editCommentIsSpoiler}
@@ -1936,6 +2142,8 @@ export default function ProblemClient({
           commentProfileImages={commentProfileImages}
           onCommentTextChange={setCommentText}
           onSpoilerChange={setIsSpoiler}
+          onReplyToChange={setReplyingToId}
+          onReplyTextChange={setReplyText}
           onSubmitComment={handleSubmitComment}
           onEditComment={handleEditComment}
           onEditCommentTextChange={setEditCommentText}
