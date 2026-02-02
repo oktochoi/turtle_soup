@@ -33,13 +33,16 @@ export default function EditPostPage({
   const resolvedParams = use(params);
   const lang = resolvedParams.lang || 'ko';
   const postId = resolvedParams.id;
+
   const router = useRouter();
   const { user } = useAuth();
   const t = useTranslations();
+
   const [post, setPost] = useState<Post | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [category, setCategory] = useState<string>('free');
+  const [category, setCategory] = useState('free');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -95,7 +98,7 @@ export default function EditPostPage({
         setTitle(data.title);
         setContent(data.content);
         setCategory(data.category);
-        setIsAdmin(admin ?? false);
+        setIsAdmin(admin);
       } catch (error) {
         console.error('게시글 로드 오류:', error);
         router.push(`/${lang}/community`);
@@ -112,12 +115,14 @@ export default function EditPostPage({
     if (!post || !title.trim() || !content.trim()) return;
 
     const isNotice = category === 'notice';
+
     if (isNotice && !isAdmin) {
       alert(lang === 'ko' ? '공지사항은 관리자만 수정할 수 있습니다.' : 'Only admins can edit notice posts.');
       return;
     }
 
     setIsSubmitting(true);
+
     try {
       const { error } = await supabase
         .from('posts')
@@ -133,9 +138,9 @@ export default function EditPostPage({
       if (error) throw error;
 
       router.push(`/${lang}/community/${postId}`);
-    } catch (error: any) {
+    } catch (error) {
       console.error('게시글 수정 오류:', error);
-      alert(t.community.updatePostFail || (lang === 'ko' ? '수정에 실패했습니다.' : 'Failed to update post.'));
+      alert(lang === 'ko' ? '수정에 실패했습니다.' : 'Failed to update post.');
     } finally {
       setIsSubmitting(false);
     }
@@ -146,22 +151,23 @@ export default function EditPostPage({
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
         <div className="text-center">
           <i className="ri-loader-4-line text-4xl animate-spin text-teal-400"></i>
-          <p className="mt-4 text-slate-400">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
+          <p className="mt-4 text-slate-400">
+            {lang === 'ko' ? '로딩 중...' : 'Loading...'}
+          </p>
         </div>
       </div>
     );
   }
 
-  if (!user || !post) {
-    return null;
-  }
+  if (!user || !post) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-4xl">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+
         <div className="mb-6">
           <Link href={`/${lang}/community/${postId}`}>
-            <button className="text-slate-400 hover:text-white transition-colors text-sm">
+            <button className="text-slate-400 hover:text-white text-sm transition">
               <i className="ri-arrow-left-line mr-2"></i>
               {t.community.backToList}
             </button>
@@ -173,28 +179,28 @@ export default function EditPostPage({
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+
           <div>
-            <label className="block text-sm font-medium mb-2 text-slate-300">
+            <label className="block mb-2 text-slate-300 text-sm">
               {t.community.postTitle}
             </label>
             <input
-              type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"
               maxLength={200}
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 text-slate-300">
+            <label className="block mb-2 text-slate-300 text-sm">
               {t.community.postContent}
             </label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 h-64 resize-none"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 h-64 resize-none focus:ring-2 focus:ring-blue-500 outline-none"
               maxLength={5000}
               required
             />
@@ -204,28 +210,32 @@ export default function EditPostPage({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-3 text-slate-300">
+            <label className="block mb-3 text-slate-300 text-sm">
               {t.community.selectCategoryLabel}
             </label>
+
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {CATEGORIES.map((cat) => {
                 const isNotice = cat.id === 'notice';
-                const isDisabled = isNotice && !isAdmin;
+                const disabled = isNotice && !isAdmin;
+
                 return (
                   <button
                     key={cat.id}
                     type="button"
-                    onClick={() => !isDisabled && setCategory(cat.id)}
-                    disabled={isDisabled}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      category === cat.id
-                        ? `border-blue-500 bg-gradient-to-r ${cat.color} text-white`
-                        : isDisabled
-                        ? 'border-slate-800 bg-slate-900 text-slate-600 cursor-not-allowed opacity-50'
-                        : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600'
-                    }`}
+                    disabled={disabled}
+                    onClick={() => !disabled && setCategory(cat.id)}
+                    className={`p-4 rounded-lg border-2 transition-all
+                      ${
+                        category === cat.id
+                          ? `border-blue-500 bg-gradient-to-r ${cat.color} text-white`
+                          : disabled
+                          ? 'border-slate-800 bg-slate-900 text-slate-600 opacity-50 cursor-not-allowed'
+                          : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600'
+                      }
+                    `}
                   >
-                    <i className={`${cat.icon} text-2xl mb-2 block`}></i>
+                    <i className={`${cat.icon} text-2xl mb-2 block`} />
                     <span className="text-sm font-semibold">{cat.label}</span>
                   </button>
                 );
@@ -234,21 +244,26 @@ export default function EditPostPage({
           </div>
 
           <div className="flex gap-4">
+
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition disabled:opacity-50"
             >
-              {isSubmitting ? (lang === 'ko' ? '수정 중...' : 'Saving...') : (t.common.save || (lang === 'ko' ? '수정' : 'Save'))}
+              {isSubmitting
+                ? lang === 'ko' ? '수정 중...' : 'Saving...'
+                : t.common.save || (lang === 'ko' ? '수정' : 'Save')}
             </button>
+
             <Link href={`/${lang}/community/${postId}`}>
               <button
                 type="button"
-                className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg transition-all"
+                className="px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-lg transition"
               >
                 {t.common.cancel}
               </button>
             </Link>
+
           </div>
         </form>
       </div>
