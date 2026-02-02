@@ -115,6 +115,39 @@ export default function ProblemClient({
   const [quizShowAnswer, setQuizShowAnswer] = useState(false); // 정답 표시 여부
   const [balanceVoteStats, setBalanceVoteStats] = useState<number[]>([]); // 밸런스 게임 투표 통계
   const [hasVoted, setHasVoted] = useState(false); // 이미 투표했는지 여부 (밸런스 게임, 투표)
+  const [answerCooldownUntil, setAnswerCooldownUntil] = useState<number>(0);
+  const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
+
+  // 문제 변경 시 localStorage에서 쿨다운 복원
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = localStorage.getItem(`answer_cooldown_${problemId}`);
+    if (saved) {
+      const until = parseInt(saved, 10);
+      if (until > Date.now()) setAnswerCooldownUntil(until);
+    }
+  }, [problemId]);
+
+  // 1분 쿨다운 타이머
+  useEffect(() => {
+    if (answerCooldownUntil <= Date.now()) {
+      setCooldownRemaining(0);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(`answer_cooldown_${problemId}`);
+      }
+      return;
+    }
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((answerCooldownUntil - Date.now()) / 1000));
+      setCooldownRemaining(remaining);
+      if (remaining <= 0 && typeof window !== 'undefined') {
+        localStorage.removeItem(`answer_cooldown_${problemId}`);
+      }
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [answerCooldownUntil, problemId]);
 
   const generateRoomCode = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -868,8 +901,9 @@ export default function ProblemClient({
     try {
       const { data, error } = await supabase
         .from('problem_user_answers')
-        .select('*')
+        .select('id, problem_id, user_id, nickname, answer_text, similarity_score, like_count, reply_count, created_at')
         .eq('problem_id', problemId)
+        .not('user_id', 'is', null) // 로그인한 사용자 답변만 표시
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -964,32 +998,93 @@ export default function ProblemClient({
 
   const handleLikeAnswer = async (answerId: string) => {
     if (!user) return;
+    const isLiked = answerLikes.get(answerId);
+    const delta = isLiked ? -1 : 1;
+    // 낙관적 UI: 즉시 하트 개수 반영
+    setUserAnswers((prev) =>
+      prev.map((a) =>
+        a.id === answerId
+          ? { ...a, like_count: Math.max(0, (a.like_count ?? 0) + delta) }
+          : a
+      )
+    );
+    setAnswerLikes((prev) => {
+      const next = new Map(prev);
+      next.set(answerId, !isLiked);
+      return next;
+    });
     try {
-      const isLiked = answerLikes.get(answerId);
       if (isLiked) {
         await supabase
           .from('problem_answer_likes')
           .delete()
           .eq('answer_id', answerId)
           .eq('user_id', user.id);
-        setAnswerLikes((prev) => {
-          const next = new Map(prev);
-          next.set(answerId, false);
-          return next;
-        });
       } else {
         await supabase
           .from('problem_answer_likes')
           .insert({ answer_id: answerId, user_id: user.id });
-        setAnswerLikes((prev) => {
-          const next = new Map(prev);
-          next.set(answerId, true);
-          return next;
-        });
       }
       await loadUserAnswers();
     } catch (error) {
       console.error('답변 좋아요 오류:', error);
+      // 실패 시 롤백
+      setUserAnswers((prev) =>
+        prev.map((a) =>
+          a.id === answerId
+            ? { ...a, like_count: Math.max(0, (a.like_count ?? 0) - delta) }
+            : a
+        )
+      );
+      setAnswerLikes((prev) => {
+        const next = new Map(prev);
+        next.set(answerId, isLiked);
+        return next;
+      });
+      await loadUserAnswers();
+    }
+  };
+
+  const handleDeleteAnswer = async (answerId: string) => {
+    if (!user) return;
+    if (!confirm(t.problem.deleteAnswerConfirm)) return;
+    try {
+      const { error } = await supabase
+        .from('problem_user_answers')
+        .delete()
+        .eq('id', answerId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      await loadUserAnswers();
+    } catch (error) {
+      console.error('답변 삭제 오류:', error);
+      showToast(t.problem.deleteAnswerFail, 'error');
+    }
+  };
+
+  const handleReportAnswer = async (answerId: string, reportType: string) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('problem_answer_reports')
+        .insert({
+          answer_id: answerId,
+          reporter_user_id: user.id,
+          report_type: reportType,
+        });
+
+      if (error) {
+        if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+          showToast(t.problem.reportAlreadySubmitted, 'info');
+          return;
+        }
+        throw error;
+      }
+      showToast(t.problem.reportSuccess, 'success');
+    } catch (error) {
+      console.error('답변 신고 오류:', error);
+      showToast(t.problem.reportFail, 'error');
     }
   };
 
@@ -2016,6 +2111,7 @@ export default function ProblemClient({
               showAnswer={showAnswer}
               showHints={showHints}
               hints={(problem as any)?.hints}
+              cooldownRemaining={cooldownRemaining}
               onUserGuessChange={(guess) => {
                 setUserGuess(guess);
                 setSimilarityScore(null);
@@ -2044,6 +2140,11 @@ export default function ProblemClient({
 
                   setSimilarityScore(similarity);
                   setHasSubmittedAnswer(true);
+                  const cooldownEnd = Date.now() + 60000; // 1분 쿨다운
+                  setAnswerCooldownUntil(cooldownEnd);
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem(`answer_cooldown_${problemId}`, String(cooldownEnd));
+                  }
 
                   // ✅ 사용자 답변 DB 저장 (다른 사람들이 볼 수 있게)
                   if (user) {
@@ -2105,8 +2206,20 @@ export default function ProblemClient({
               answerProfileImages={answerProfileImages}
               onLoadAnswers={loadUserAnswers}
               onLikeAnswer={handleLikeAnswer}
-              onSubmitReply={handleSubmitAnswerReply}
+              onDeleteAnswer={handleDeleteAnswer}
+              onReportAnswer={handleReportAnswer}
+              onSubmitReply={async (answerId, text) => {
+                await handleSubmitAnswerReply(answerId, text);
+                setUserAnswers((prev) =>
+                  prev.map((a) =>
+                    a.id === answerId
+                      ? { ...a, reply_count: (a.reply_count ?? 0) + 1 }
+                      : a
+                  )
+                );
+              }}
               getSimilarityColor={getSimilarityColor}
+              showToast={showToast}
               t={t}
             />
           </>

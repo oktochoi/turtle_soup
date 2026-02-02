@@ -13,6 +13,7 @@ interface AnswerInputSectionProps {
   showAnswer: boolean;
   showHints: boolean[];
   hints: string[] | null | undefined;
+  cooldownRemaining: number; // 0이면 제출 가능, >0이면 남은 초
   onUserGuessChange: (guess: string) => void;
   onSubmitAnswer: () => Promise<void>;
   onShowAnswerToggle: () => void;
@@ -32,6 +33,7 @@ export default function AnswerInputSection({
   showAnswer,
   showHints,
   hints,
+  cooldownRemaining,
   onUserGuessChange,
   onSubmitAnswer,
   onShowAnswerToggle,
@@ -40,6 +42,7 @@ export default function AnswerInputSection({
   showToast,
   t,
 }: AnswerInputSectionProps) {
+  const isCooldown = cooldownRemaining > 0;
   return (
     <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
       <div className="flex items-center justify-between mb-3 sm:mb-4">
@@ -90,13 +93,18 @@ export default function AnswerInputSection({
 
           <button
             onClick={onSubmitAnswer}
-            disabled={!userGuess.trim() || isCalculatingSimilarity}
+            disabled={!userGuess.trim() || isCalculatingSimilarity || isCooldown}
             className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 sm:px-6 py-2 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm whitespace-nowrap touch-manipulation"
           >
             {isCalculatingSimilarity ? (
               <>
                 <i className="ri-loader-4-line animate-spin mr-1"></i>
                 {t.problem.calculating}
+              </>
+            ) : isCooldown ? (
+              <>
+                <i className="ri-time-line mr-1"></i>
+                {t.problem.answerCooldownRemaining.replace('{seconds}', String(cooldownRemaining))}
               </>
             ) : (
               <>

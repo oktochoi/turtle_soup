@@ -4,6 +4,10 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import type { ProblemUserAnswer, ProblemAnswerReply } from '@/lib/types';
 
+type AnswerSortOption = 'latest' | 'popular' | 'accuracy';
+
+type ReportType = 'spam' | 'harassment' | 'inappropriate_content' | 'other';
+
 interface UserAnswersFeedProps {
   lang: string;
   problemId: string;
@@ -15,8 +19,11 @@ interface UserAnswersFeedProps {
   answerProfileImages: Map<string, string | null>;
   onLoadAnswers: () => Promise<void>;
   onLikeAnswer: (answerId: string) => Promise<void>;
+  onDeleteAnswer: (answerId: string) => Promise<void>;
+  onReportAnswer: (answerId: string, reportType: ReportType) => Promise<void>;
   onSubmitReply: (answerId: string, text: string) => Promise<void>;
   getSimilarityColor: (score: number) => string;
+  showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
   t: any;
 }
 
@@ -31,14 +38,32 @@ export default function UserAnswersFeed({
   answerProfileImages,
   onLoadAnswers,
   onLikeAnswer,
+  onDeleteAnswer,
+  onReportAnswer,
   onSubmitReply,
   getSimilarityColor,
+  showToast,
   t,
 }: UserAnswersFeedProps) {
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
+  const [sortOption, setSortOption] = useState<AnswerSortOption>('latest');
+  const [reportingAnswerId, setReportingAnswerId] = useState<string | null>(null);
+
+  const sortedAnswers = [...answers].sort((a, b) => {
+    switch (sortOption) {
+      case 'popular':
+        return (b.like_count || 0) - (a.like_count || 0);
+      case 'accuracy':
+        const scoreA = a.similarity_score ?? -1;
+        const scoreB = b.similarity_score ?? -1;
+        return scoreB - scoreA;
+      default: // latest
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+  });
 
   const handleSubmitReply = async (answerId: string) => {
     if (!replyText.trim() || !user) return;
@@ -66,17 +91,35 @@ export default function UserAnswersFeed({
 
   return (
     <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
-      <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
-        <i className="ri-group-line text-cyan-400"></i>
-        {t.problem.userAnswersTitle}
-      </h3>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3 sm:mb-4">
+        <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
+          <i className="ri-group-line text-cyan-400"></i>
+          {t.problem.userAnswersTitle}
+        </h3>
+        <div className="flex gap-1">
+          {(['latest', 'popular', 'accuracy'] as const).map((opt) => (
+            <button
+              key={opt}
+              onClick={() => setSortOption(opt)}
+              className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
+                sortOption === opt
+                  ? 'bg-teal-500/30 text-teal-400 border border-teal-500/50'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-300 border border-slate-700'
+              }`}
+            >
+              {opt === 'latest' ? t.problem.sortLatest : opt === 'popular' ? t.problem.sortPopular : t.problem.sortAccuracy}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="space-y-3 sm:space-y-4">
-        {answers.map((answer) => {
+        {sortedAnswers.map((answer) => {
           const isLiked = answerLikes.get(answer.id) ?? false;
           const replies = answerReplies.get(answer.id) || [];
           const hasReplies = replies.length > 0;
           const isExpanded = expandedReplies.has(answer.id);
           const isReplying = replyingToId === answer.id;
+          const isOwnAnswer = user && answer.user_id === user.id;
 
           return (
             <div
@@ -127,6 +170,26 @@ export default function UserAnswersFeed({
                     {answer.answer_text}
                   </p>
                   <div className="flex items-center gap-3">
+                    {isOwnAnswer && (
+                      <button
+                        onClick={() => onDeleteAnswer(answer.id)}
+                        className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-400 transition-colors"
+                        title={t.problem.deleteAnswer}
+                      >
+                        <i className="ri-delete-bin-line"></i>
+                        <span>{t.problem.deleteAnswer}</span>
+                      </button>
+                    )}
+                    {user && !isOwnAnswer && (
+                      <button
+                        onClick={() => setReportingAnswerId(reportingAnswerId === answer.id ? null : answer.id)}
+                        className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-400 transition-colors"
+                        title={t.problem.reportAnswer}
+                      >
+                        <i className="ri-flag-line"></i>
+                        <span>{t.problem.reportAnswer}</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => user ? onLikeAnswer(answer.id) : null}
                       disabled={!user}
@@ -140,7 +203,7 @@ export default function UserAnswersFeed({
                       title={!user ? t.problem.loginToLikeReply : ''}
                     >
                       <i className={`ri-heart-${isLiked ? 'fill' : 'line'}`}></i>
-                      <span>{answer.like_count}</span>
+                      <span>{answer.like_count ?? 0}</span>
                     </button>
                     <button
                       onClick={() => user ? (isReplying ? setReplyingToId(null) : setReplyingToId(answer.id)) : null}
@@ -151,9 +214,39 @@ export default function UserAnswersFeed({
                       title={!user ? t.problem.loginToLikeReply : ''}
                     >
                       <i className="ri-chat-3-line"></i>
-                      <span>{answer.reply_count}</span>
+                      <span>{Math.max(answer.reply_count ?? 0, replies.length)}</span>
                     </button>
                   </div>
+
+                  {/* 신고 모달 */}
+                  {reportingAnswerId === answer.id && (
+                    <div className="mt-3 p-3 bg-slate-900 rounded-lg border border-slate-700">
+                      <p className="text-xs font-semibold text-slate-300 mb-2">{t.problem.reportAnswerTitle}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {(['spam', 'harassment', 'inappropriate_content', 'other'] as const).map((type) => (
+                          <button
+                            key={type}
+                            onClick={async () => {
+                              await onReportAnswer(answer.id, type);
+                              setReportingAnswerId(null);
+                            }}
+                            className="px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded text-xs font-semibold"
+                          >
+                            {type === 'spam' ? t.problem.reportReasonSpam :
+                             type === 'harassment' ? t.problem.reportReasonHarassment :
+                             type === 'inappropriate_content' ? t.problem.reportReasonInappropriate :
+                             t.problem.reportReasonOther}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setReportingAnswerId(null)}
+                        className="mt-2 text-xs text-slate-400 hover:text-slate-300"
+                      >
+                        {t.common.cancel}
+                      </button>
+                    </div>
+                  )}
 
                   {/* 답글 입력 */}
                   {isReplying && (

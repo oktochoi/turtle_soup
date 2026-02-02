@@ -39,9 +39,6 @@ export default function GuessSetDetailPage() {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [userNickname, setUserNickname] = useState<string | null>(null);
   const [customTimeInput, setCustomTimeInput] = useState<string>('');
-  const [commentImage, setCommentImage] = useState<string | null>(null);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const commentImageInputRef = useRef<HTMLInputElement | null>(null);
   const viewCountUpdatedRef = useRef<string | null>(null);
   const [showCardShareModal, setShowCardShareModal] = useState<string | null>(null);
   const [showSetShareModal, setShowSetShareModal] = useState(false);
@@ -118,16 +115,17 @@ export default function GuessSetDetailPage() {
         
         const { data: gameUsersData } = await supabase
           .from('game_users')
-          .select('auth_user_id, nickname, profile_image_url')
+          .select('id, auth_user_id, nickname, profile_image_url')
           .in('auth_user_id', userIds);
         
         const usersMap = new Map(usersData?.map(u => [u.id, u.nickname]) || []);
-        const gameUsersMap = new Map(gameUsersData?.map(gu => [gu.auth_user_id, { nickname: gu.nickname, profile_image_url: gu.profile_image_url }]) || []);
+        const gameUsersMap = new Map(gameUsersData?.map(gu => [gu.auth_user_id, { id: gu.id, nickname: gu.nickname, profile_image_url: gu.profile_image_url }]) || []);
         
         const commentsWithUsers = data.map(comment => {
           const gameUser = gameUsersMap.get(comment.user_id);
           return {
             ...comment,
+            user_game_id: gameUser?.id || null,
             user_nickname: gameUser?.nickname || usersMap.get(comment.user_id) || 'User',
             user_profile_image: gameUser?.profile_image_url || null
           };
@@ -341,38 +339,6 @@ export default function GuessSetDetailPage() {
     }
   };
 
-  const handleImageUpload = async (file: File) => {
-    if (!user) return;
-    
-    setIsUploadingImage(true);
-    try {
-      const supabase = createClient();
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `comment-images/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('public')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage
-        .from('public')
-        .getPublicUrl(filePath);
-
-      setCommentImage(data.publicUrl);
-    } catch (error: any) {
-      console.error('이미지 업로드 오류:', error);
-      alert(lang === 'ko' ? `이미지 업로드 실패: ${error?.message}` : `Image upload failed: ${error?.message}`);
-    } finally {
-      setIsUploadingImage(false);
-    }
-  };
-
   const handleEditRequest = async (cardId: string, currentQuestion: string, currentAnswer: string) => {
     if (!user) {
       alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Please log in.');
@@ -423,7 +389,7 @@ export default function GuessSetDetailPage() {
   };
 
   const handleSubmitComment = async () => {
-    if (!user || !setId || (!newComment.trim() && !commentImage)) return;
+    if (!user || !setId || !newComment.trim()) return;
 
     setIsSubmittingComment(true);
     try {
@@ -433,13 +399,11 @@ export default function GuessSetDetailPage() {
         .insert({
           set_id: setId,
           user_id: user.id,
-          content: newComment.trim() || '',
-          image_url: commentImage,
+          content: newComment.trim(),
         });
 
       if (error) throw error;
       setNewComment('');
-      setCommentImage(null);
       await loadComments();
     } catch (error: any) {
       console.error('댓글 작성 오류:', error);
@@ -653,37 +617,6 @@ export default function GuessSetDetailPage() {
           </button>
         </div>
 
-        {/* 카드 목록: details/summary로 HTML에 포함 (AdSense/크롤러 인덱싱) */}
-        {cards.length > 0 && (
-          <div className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-700 mb-6">
-            <h2 className="text-lg font-semibold mb-4">
-              {lang === 'ko' ? '카드 목록' : 'Card List'} ({cards.length})
-            </h2>
-            <div className="space-y-2">
-              {cards.map((card, index) => (
-                <details key={card.id} className="group">
-                  <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
-                    <div className="bg-slate-900/50 rounded-lg border border-slate-700 hover:border-teal-500/30 transition-colors px-4 py-3 flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-200 line-clamp-1">
-                        {index + 1}. {card.question}
-                      </span>
-                      <i className="ri-arrow-down-s-line text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0 ml-2"></i>
-                    </div>
-                  </summary>
-                  <div className="px-4 pb-3 pt-2 border border-slate-700 border-t-0 rounded-b-lg bg-slate-900/50">
-                    {card.answers && Array.isArray(card.answers) && card.answers.length > 0 && (
-                      <p className="text-xs sm:text-sm text-slate-300">
-                        <span className="font-semibold text-teal-400">{lang === 'ko' ? '정답' : 'Answer'}: </span>
-                        {card.answers.join(', ')}
-                      </p>
-                    )}
-                  </div>
-                </details>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* 댓글 섹션 */}
         <div className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-700">
           <h2 className="text-lg font-semibold mb-4">{lang === 'ko' ? '댓글' : 'Comments'}</h2>
@@ -694,63 +627,15 @@ export default function GuessSetDetailPage() {
               <textarea
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                placeholder={lang === 'ko' ? '댓글을 입력하세요...' : 'Write a comment...'}
+                placeholder={lang === 'ko' ? '댓글을 입력하세요 (텍스트만 가능)' : 'Write a comment (text only)'}
                 rows={3}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none text-sm"
                 maxLength={500}
               />
               
-              {/* 이미지 업로드 */}
-              <div className="mt-2 flex items-center gap-2">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      if (file.size > 5 * 1024 * 1024) {
-                        alert(lang === 'ko' ? '이미지 크기는 5MB 이하여야 합니다.' : 'Image size must be 5MB or less.');
-                        return;
-                      }
-                      handleImageUpload(file);
-                    }
-                  }}
-                  className="hidden"
-                  ref={commentImageInputRef}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (commentImageInputRef.current) {
-                      commentImageInputRef.current.click();
-                    }
-                  }}
-                  disabled={isUploadingImage}
-                  className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition-colors disabled:opacity-50"
-                  title={lang === 'ko' ? '이미지' : 'Image'}
-                >
-                  <i className="ri-image-line"></i>
-                </button>
-                {commentImage && (
-                  <div className="flex items-center gap-2">
-                    <img src={commentImage} alt="Preview" className="w-12 h-12 object-cover rounded" />
-                    <button
-                      type="button"
-                      onClick={() => setCommentImage(null)}
-                      className="text-red-400 hover:text-red-300"
-                    >
-                      <i className="ri-close-line"></i>
-                    </button>
-                  </div>
-                )}
-                {isUploadingImage && (
-                  <span className="text-xs text-slate-400">{lang === 'ko' ? '업로드 중...' : 'Uploading...'}</span>
-                )}
-              </div>
-              
               <button
                 onClick={handleSubmitComment}
-                disabled={(!newComment.trim() && !commentImage) || isSubmittingComment}
+                disabled={!newComment.trim() || isSubmittingComment}
                 className="mt-2 bg-teal-500 hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-lg transition-all text-sm"
               >
                 {isSubmittingComment ? (lang === 'ko' ? '작성 중...' : 'Submitting...') : (lang === 'ko' ? '댓글 작성' : 'Post Comment')}
@@ -770,77 +655,68 @@ export default function GuessSetDetailPage() {
                 return (
                   <div 
                     key={comment.id} 
-                    className={`bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700`}
+                    className="bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700"
                   >
-                    <div className="flex items-start gap-3 mb-2">
-                      {comment.user_id ? (
-                        <Link 
-                          href={`/${lang}/profile/${comment.user_id}`}
-                          className="hover:opacity-80 transition-opacity flex-shrink-0"
-                        >
-                          {comment.user_profile_image ? (
+                    <div className="flex items-start gap-3">
+                      {/* 프로필 사진 */}
+                      <div className="flex-shrink-0">
+                        {comment.user_game_id ? (
+                          <Link 
+                            href={`/${lang}/profile/${comment.user_game_id}`}
+                            className="hover:opacity-80 transition-opacity block"
+                          >
+                            {comment.user_profile_image ? (
+                              <img
+                                src={comment.user_profile_image}
+                                alt={comment.user_nickname || 'User'}
+                                className="w-10 h-10 rounded-full object-cover border border-slate-600"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm border border-slate-600">
+                                {(comment.user_nickname || 'U').charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </Link>
+                        ) : (
+                          comment.user_profile_image ? (
                             <img
                               src={comment.user_profile_image}
                               alt={comment.user_nickname || 'User'}
-                              className="w-10 h-10 rounded-full object-cover"
+                              className="w-10 h-10 rounded-full object-cover border border-slate-600"
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm border border-slate-600">
                               {(comment.user_nickname || 'U').charAt(0).toUpperCase()}
                             </div>
-                          )}
-                        </Link>
-                      ) : (
-                        <>
-                          {comment.user_profile_image ? (
-                            <img
-                              src={comment.user_profile_image}
-                              alt={comment.user_nickname || 'User'}
-                              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                              {(comment.user_nickname || 'U').charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                        </>
-                      )}
+                          )
+                        )}
+                      </div>
+                      {/* 댓글 내용 */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          {comment.user_id ? (
+                          {comment.user_game_id ? (
                             <Link 
-                              href={`/${lang}/profile/${comment.user_id}`}
-                              className={`text-sm font-semibold hover:opacity-80 transition-opacity cursor-pointer ${
+                              href={`/${lang}/profile/${comment.user_game_id}`}
+                              className={`text-sm font-semibold hover:opacity-80 transition-opacity ${
                                 isOwnComment ? 'text-cyan-400' : 'text-teal-400'
                               }`}
                             >
-                              {comment.user_nickname || (comment.user_id?.substring(0, 8) || 'User')}
-                              {isOwnComment && userNickname && ` (${userNickname})`}
+                              {comment.user_nickname || 'User'}
                             </Link>
                           ) : (
                             <span className={`text-sm font-semibold ${
                               isOwnComment ? 'text-cyan-400' : 'text-teal-400'
                             }`}>
-                              {comment.user_nickname || (comment.user_id?.substring(0, 8) || 'User')}
-                              {isOwnComment && userNickname && ` (${userNickname})`}
+                              {comment.user_nickname || 'User'}
                             </span>
                           )}
                           <span className="text-xs text-slate-500">
                             {new Date(comment.created_at).toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US')}
                           </span>
                         </div>
-                        <p className={`text-sm whitespace-pre-wrap mb-2 ${
+                        <p className={`text-sm whitespace-pre-wrap ${
                           isOwnComment ? 'text-cyan-200' : 'text-slate-300'
                         }`}>{comment.content}</p>
-                        {comment.image_url && (
-                          <div className="mt-2">
-                            <img
-                              src={comment.image_url}
-                              alt="Comment image"
-                              className="max-w-full max-h-64 object-contain rounded-lg border border-slate-700"
-                            />
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
