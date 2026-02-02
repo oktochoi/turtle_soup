@@ -222,6 +222,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
   }
 
   return (
+    <>
     <div className="max-w-7xl">
       <div className="mb-6">
           <button
@@ -422,7 +423,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
