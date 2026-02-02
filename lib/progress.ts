@@ -225,6 +225,10 @@ function calculateXPGain(
       xp = Math.min(10, remainingPostXP);
       break;
     
+    case 'create_problem':
+      xp = 10;
+      break;
+    
     default:
       xp = 0;
   }
@@ -585,6 +589,10 @@ export async function applyEvent(
       case 'post':
         updateData.total_posts = freshProgress.total_posts + 1;
         updateData.daily_post_xp = freshProgress.daily_post_xp + gainedXP;
+        break;
+      
+      case 'create_problem':
+        // 문제 생성 XP (별도 통계 없음)
         break;
     }
 

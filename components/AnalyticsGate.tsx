@@ -3,7 +3,8 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/react';
-import { trackPageView } from '@/lib/analytics';
+import { trackPageView, getPathType } from '@/lib/analytics';
+import { trackSupabaseEvent } from '@/lib/supabase-events';
 
 /**
  * 조건부 Analytics 컴포넌트
@@ -20,6 +21,15 @@ export function AnalyticsGate() {
     // 우리가 원하는 경로에서만 추가로 커스텀 이벤트를 기록합니다
     if (pathname) {
       trackPageView(pathname);
+
+      // Supabase events 테이블 (대시보드 통계용)
+      const pathType = getPathType(pathname);
+      if (pathType === 'problem') {
+        trackSupabaseEvent('view_problem', {
+          pagePath: pathname,
+          lang: pathname.split('/')[1] || 'ko',
+        });
+      }
     }
   }, [pathname]);
 

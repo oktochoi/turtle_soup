@@ -68,6 +68,7 @@ export default function PostClient({ initialPost, lang, postId }: PostClientProp
   const [editingCommentText, setEditingCommentText] = useState('');
   const [recentPosts, setRecentPosts] = useState<ListPost[]>([]);
   const [commentSort, setCommentSort] = useState<'oldest' | 'newest'>('oldest');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const hasIncrementedView = useRef(false);
 
@@ -81,6 +82,26 @@ export default function PostClient({ initialPost, lang, postId }: PostClientProp
     funny: { label: t.community.funny, icon: 'ri-emotion-laugh-line', color: 'from-pink-500 to-rose-500' },
     social: { label: t.community.social, icon: 'ri-group-line', color: 'from-teal-500 to-cyan-500' },
   };
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+      try {
+        const { data } = await supabase
+          .from('users')
+          .select('is_admin')
+          .eq('id', user.id)
+          .maybeSingle();
+        setIsAdmin(data?.is_admin === true);
+      } catch {
+        setIsAdmin(false);
+      }
+    };
+    checkAdmin();
+  }, [user]);
 
   useEffect(() => {
     loadPost();
@@ -514,6 +535,23 @@ export default function PostClient({ initialPost, lang, postId }: PostClientProp
     setEditingCommentText('');
   };
 
+  const handleDeletePost = async () => {
+    if (!confirm(lang === 'ko' ? '게시글을 삭제하시겠습니까?' : 'Are you sure you want to delete this post?')) return;
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postId);
+
+      if (error) throw error;
+
+      router.push(`/${lang}/community`);
+    } catch (error) {
+      console.error('게시글 삭제 오류:', error);
+      alert(lang === 'ko' ? '게시글 삭제에 실패했습니다.' : 'Failed to delete post.');
+    }
+  };
+
   const handleUpdateComment = async (commentId: string) => {
     if (!editingCommentText.trim()) {
       alert(t.community.enterCommentContent);
@@ -680,13 +718,22 @@ export default function PostClient({ initialPost, lang, postId }: PostClientProp
               <i className="ri-share-line"></i>
               {lang === 'ko' ? '공유' : 'Share'}
             </button>
-            {isAuthor && (
+            {(isAuthor || isAdmin) && (
               <Link href={`/${lang}/community/${postId}/edit`}>
                 <button className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm bg-slate-700 text-slate-300 hover:bg-slate-600">
                   <i className="ri-edit-line"></i>
                   {t.community.edit}
                 </button>
               </Link>
+            )}
+            {(isAuthor || isAdmin) && (
+              <button
+                onClick={handleDeletePost}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/50"
+              >
+                <i className="ri-delete-bin-line"></i>
+                {t.common.delete}
+              </button>
             )}
           </div>
         </div>
@@ -775,7 +822,16 @@ export default function PostClient({ initialPost, lang, postId }: PostClientProp
                           <i className={`ri-pushpin-${isPinned ? 'fill' : 'line'}`}></i>
                         </button>
                       )}
-                      {isAuthor && !isEditing && (
+                      {isCommentAuthor && !isEditing && (
+                        <button
+                          onClick={() => handleStartEdit(comment)}
+                          className="text-xs text-slate-400 hover:text-blue-400 transition-colors"
+                          title={t.common.edit}
+                        >
+                          <i className="ri-edit-line"></i>
+                        </button>
+                      )}
+                      {(isAuthor || isAdmin || isCommentAuthor) && !isEditing && (
                         <button
                           onClick={() => handleDeleteComment(comment.id)}
                           className="text-xs text-slate-400 hover:text-red-400 transition-colors"
@@ -783,24 +839,6 @@ export default function PostClient({ initialPost, lang, postId }: PostClientProp
                         >
                           <i className="ri-delete-bin-line"></i>
                         </button>
-                      )}
-                      {isCommentAuthor && !isEditing && !isAuthor && (
-                        <>
-                          <button
-                            onClick={() => handleStartEdit(comment)}
-                            className="text-xs text-slate-400 hover:text-blue-400 transition-colors"
-                            title={t.common.edit}
-                          >
-                            <i className="ri-edit-line"></i>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteComment(comment.id)}
-                            className="text-xs text-slate-400 hover:text-red-400 transition-colors"
-                            title={t.common.delete}
-                          >
-                            <i className="ri-delete-bin-line"></i>
-                          </button>
-                        </>
                       )}
                     </div>
                   </div>

@@ -4,6 +4,7 @@ import { use, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { trackSupabaseEvent } from '@/lib/supabase-events';
 import type { Question, Guess, Room } from '@/lib/types';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useTranslations } from '@/hooks/useTranslations';
@@ -301,6 +302,12 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
         console.error('플레이어 추가 오류:', playerError);
         return;
       }
+
+      // 이벤트 추적 (대시보드 통계용)
+      trackSupabaseEvent('join_room', {
+        meta: { roomCode },
+        lang,
+      });
 
       // 5. rooms 테이블의 user_nicknames 배열에 닉네임 추가
       // 기존 배열에 없으면 추가
@@ -895,6 +902,12 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
 
       if (error) throw error;
 
+      // 이벤트 추적 (대시보드 통계용)
+      trackSupabaseEvent('submit_question', {
+        meta: { roomCode },
+        lang,
+      });
+
       // 실제 ID로 업데이트 (Realtime이 중복 추가하는 것을 방지)
       if (data) {
         console.log('✅ 질문 제출 성공, ID 업데이트:', data.id);
@@ -970,6 +983,12 @@ export default function TurtleRoomPage({ params }: { params: Promise<{ lang: str
         .single();
 
       if (error) throw error;
+
+      // 이벤트 추적 (대시보드 통계용)
+      trackSupabaseEvent('submit_guess', {
+        meta: { roomCode },
+        lang,
+      });
 
       // 실제 ID로 업데이트 (Realtime이 중복 추가하는 것을 방지)
       if (data) {

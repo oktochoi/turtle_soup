@@ -12,6 +12,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import UserLabel from '@/components/UserLabel';
 import { useTranslations } from '@/hooks/useTranslations';
 import { createNotification } from '@/lib/notifications';
+import { trackSupabaseEvent } from '@/lib/supabase-events';
 import { checkIfLearnedError } from '@/lib/check-learned-error';
 import JsonLd from '@/components/JsonLd';
 import QuizPlayMCQ from '@/components/quiz/QuizPlayMCQ';
@@ -365,12 +366,13 @@ export default function ProblemClient({
               is_host: true,
             });
 
-          // 이벤트 로깅
-          if (typeof window !== 'undefined') {
-            console.log('problem_cta_create_room_click', { problemId, roomCode });
-          }
+      // 이벤트 로깅 (대시보드 통계용)
+      trackSupabaseEvent('create_room', {
+        meta: { problemId, roomCode },
+        lang,
+      });
 
-          router.push(`/${lang}/turtle_room/${roomCode}?host=true&nickname=${encodeURIComponent(nickname)}`);
+      router.push(`/${lang}/turtle_room/${roomCode}?host=true&nickname=${encodeURIComponent(nickname)}`);
           return;
         }
         throw roomError;
@@ -385,10 +387,11 @@ export default function ProblemClient({
           is_host: true,
         });
 
-      // 이벤트 로깅
-      if (typeof window !== 'undefined') {
-        console.log('problem_cta_create_room_click', { problemId, roomCode });
-      }
+      // 이벤트 로깅 (대시보드 통계용)
+      trackSupabaseEvent('create_room', {
+        meta: { problemId, roomCode },
+        lang,
+      });
 
       router.push(`/${lang}/turtle_room/${roomCode}?host=true&nickname=${encodeURIComponent(nickname)}`);
     } catch (error: any) {
@@ -406,10 +409,11 @@ export default function ProblemClient({
   const handleCopyInviteLink = async () => {
     if (!problem) return;
 
-    // 이벤트 로깅
-    if (typeof window !== 'undefined') {
-      console.log('problem_cta_invite_copy', { problemId });
-    }
+    // 이벤트 로깅 (대시보드 통계용)
+    trackSupabaseEvent('click_cta_invite', {
+      meta: { problemId },
+      lang,
+    });
 
     const url = `${window.location.origin}/${lang}/problem/${problemId}`;
     

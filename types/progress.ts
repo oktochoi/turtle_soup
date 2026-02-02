@@ -74,6 +74,7 @@ export type XPEventType =
   | 'solve_fail'
   | 'comment'
   | 'post'
+  | 'create_problem'
   | 'nohint_solve_bonus'
   | 'under10q_bonus'
   | 'under3q_bonus';

@@ -19,6 +19,7 @@ import QuizFormBalance from '@/components/quiz/QuizFormBalance';
 import QuizFormLogic from '@/components/quiz/QuizFormLogic';
 import QuizFormFillBlank from '@/components/quiz/QuizFormFillBlank';
 import { convertImageToSvgFile } from '@/lib/utils/imageToSvg';
+import { triggerEvent } from '@/lib/progress-client';
 
 export default function CreateProblem({ params }: { params: Promise<{ lang: string }> }) {
   const resolvedParams = use(params);
@@ -384,6 +385,14 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
           console.error('퀴즈 콘텐츠 저장 오류:', contentError);
           // quiz_contents 저장 실패는 무시 (하위 호환성)
         }
+      }
+
+      // 문제 생성 시 10 XP 지급
+      try {
+        await triggerEvent(null, null, user.id, 'create_problem', {});
+      } catch (xpError) {
+        // XP 지급 실패는 무시 (문제 생성은 성공)
+        console.warn('XP 지급 오류:', xpError);
       }
 
       setIsSubmitting(false);
