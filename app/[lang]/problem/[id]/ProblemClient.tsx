@@ -1038,7 +1038,7 @@ export default function ProblemClient({
       );
       setAnswerLikes((prev) => {
         const next = new Map(prev);
-        next.set(answerId, isLiked);
+        next.set(answerId, isLiked ?? false);
         return next;
       });
       await loadUserAnswers();
