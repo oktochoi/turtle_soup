@@ -1446,15 +1446,19 @@ export async function buildProblemKnowledge(
   problemContent: string,
   problemAnswer: string,
   llmBuilder?: KnowledgeBuilderLLM,
-  hints?: string[] | null
+  hints?: string[] | null,
+  explanation?: string | null
 ): Promise<ProblemKnowledge> {
-  // 힌트가 있으면 content에 포함 (힌트는 추가 맥락 정보로 활용)
+  // 힌트·해설이 있으면 content에 포함 (질문/정답 판독 시 참조)
   let content = normalizeText(problemContent ?? "");
   if (hints && hints.length > 0) {
     const hintsText = hints.filter(h => h && h.trim()).map(h => h.trim()).join(' ');
     if (hintsText) {
       content = `${content} ${hintsText}`;
     }
+  }
+  if (explanation && explanation.trim()) {
+    content = `${content} ${normalizeText(explanation.trim())}`;
   }
   const answer = normalizeText(problemAnswer ?? "");
 
@@ -1831,11 +1835,28 @@ export type FallbackJudge = (args: {
   problemAnswer: string;
 }) => Promise<JudgeResult | null>;
 
+// 질문에 정답의 말이 들어가면 대부분 정답(yes)으로 처리 (해설은 참고용, 정답 문장/단어 우선)
+function questionContainsAnswerWording(qNorm: string, knowledge: ProblemKnowledge): boolean {
+  const a = knowledge.answer;
+  if (!a || a.length < 2) return false;
+  const aNorm = normalizeText(a).toLowerCase();
+  const qLower = qNorm.toLowerCase();
+  if (aNorm.length >= 3 && qLower.includes(aNorm)) return true;
+  const qTokenSet = new Set([...tokenizeKo(qNorm), ...tokenizeEn(qNorm)].map(t => toCanonical(t)));
+  const aTokens = knowledge.answerTokens.filter(t => t.length >= 2);
+  if (!aTokens.length) return false;
+  let matched = 0;
+  for (const t of aTokens) {
+    if (qTokenSet.has(toCanonical(t))) matched++;
+  }
+  return matched / aTokens.length >= 0.6;
+}
+
 // -------------------------
 // V8.7 main judge (question + knowledge)
 // 목표: ProblemKnowledge를 재사용하여 안정적이고 빠른 질문 판정
+// - 정답 문장/단어가 질문에 들어가면 yes 우선 (해설은 참고만)
 // - 반의어 감지, 온톨로지 기반 NO 강제, 수량 불일치 검사
-// - (옵션) 애매 + 모순 의심 구간에서만 fallbackJudge 호출
 // -------------------------
 export async function analyzeQuestionV8(
   questionRaw: string,
@@ -1855,6 +1876,11 @@ export async function analyzeQuestionV8(
 
     // 0) negation normalize
     const { normalized: q, invert } = normalizeNegationQuestion(qCut);
+
+    // 0-1) 질문에 정답의 말이 들어가면 대부분 정답으로 처리 (해설은 참고용)
+    if (knowledge.answer && questionContainsAnswerWording(q, knowledge)) {
+      return invert ? "no" : "yes";
+    }
 
     // 1) concepts - (C) Exact vs Expanded 분리
     const { qConceptsExact, qConceptsExpanded } = await extractQuestionConceptsV9(q, knowledge);

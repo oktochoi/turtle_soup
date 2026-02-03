@@ -849,7 +849,8 @@ export async function buildProblemKnowledge(
   problemContent: string,
   problemAnswer: string,
   llmBuilder?: KnowledgeBuilderLLM,
-  hints?: string[] | null
+  hints?: string[] | null,
+  explanation?: string | null
 ): Promise<ProblemKnowledge> {
   let content = normalizeText(problemContent ?? "");
   if (hints && hints.length > 0) {
@@ -857,6 +858,9 @@ export async function buildProblemKnowledge(
     if (hintsText) {
       content = `${content} ${hintsText}`;
     }
+  }
+  if (explanation && explanation.trim()) {
+    content = `${content} ${normalizeText(explanation.trim())}`;
   }
   const answer = normalizeText(problemAnswer ?? "");
 
@@ -1273,6 +1277,23 @@ export type FallbackJudge = (args: {
   problemAnswer: string;
 }) => Promise<JudgeResult | null>;
 
+// 질문에 정답의 말이 들어가면 대부분 정답(yes)으로 처리 (해설은 참고용)
+function questionContainsAnswerWordingEn(qNorm: string, knowledge: ProblemKnowledge): boolean {
+  const a = knowledge.answer;
+  if (!a || a.length < 2) return false;
+  const aNorm = normalizeText(a).toLowerCase();
+  const qLower = qNorm.toLowerCase();
+  if (aNorm.length >= 3 && qLower.includes(aNorm)) return true;
+  const qTokenSet = new Set(tokenizeEn(qNorm).map(t => t.toLowerCase()));
+  const aTokens = knowledge.answerTokens.filter(t => t.length >= 2);
+  if (!aTokens.length) return false;
+  let matched = 0;
+  for (const t of aTokens) {
+    if (qTokenSet.has(t.toLowerCase())) matched++;
+  }
+  return matched / aTokens.length >= 0.6;
+}
+
 // -------------------------
 // Main judge (English V9)
 // -------------------------
@@ -1293,6 +1314,10 @@ export async function analyzeQuestionV9(
     if (!knowledge.content && !knowledge.answer) return "irrelevant";
 
     const { normalized: q, invert } = normalizeNegationQuestion(qCut);
+
+    if (knowledge.answer && questionContainsAnswerWordingEn(q, knowledge)) {
+      return invert ? "no" : "yes";
+    }
 
     const qConcepts = await extractQuestionConceptsV9(q, knowledge);
     const aConcepts = extractAnswerConceptsV9(knowledge);

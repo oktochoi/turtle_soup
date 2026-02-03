@@ -9,6 +9,7 @@ interface AnswerInputSectionProps {
   userGuess: string;
   similarityScore: number | null;
   isCalculatingSimilarity: boolean;
+  loadingMessage?: string;
   hasSubmittedAnswer: boolean;
   showAnswer: boolean;
   showHints: boolean[];
@@ -29,6 +30,7 @@ export default function AnswerInputSection({
   userGuess,
   similarityScore,
   isCalculatingSimilarity,
+  loadingMessage,
   hasSubmittedAnswer,
   showAnswer,
   showHints,
@@ -99,7 +101,7 @@ export default function AnswerInputSection({
             {isCalculatingSimilarity ? (
               <>
                 <i className="ri-loader-4-line animate-spin mr-1"></i>
-                {t.problem.calculating}
+                {loadingMessage || t.problem.calculating}
               </>
             ) : isCooldown ? (
               <>

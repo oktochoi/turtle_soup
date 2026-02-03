@@ -104,6 +104,8 @@ export default function ProblemClient({
   const [answerProfileImages, setAnswerProfileImages] = useState<Map<string, string | null>>(new Map());
   const [showHints, setShowHints] = useState<boolean[]>([false, false, false]); // 힌트 1, 2, 3 표시 여부
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [loadingPageMessageIndex, setLoadingPageMessageIndex] = useState(0);
   const [nextProblem, setNextProblem] = useState<Problem | null>(null);
   const [previousProblem, setPreviousProblem] = useState<Problem | null>(null);
   const [showBugReportModal, setShowBugReportModal] = useState(false);
@@ -686,6 +688,20 @@ export default function ProblemClient({
     }
   }, [problem?.id, isLoading]); // 문제 ID가 로드될 때 한 번만 실행
 
+  // 대기 시 로딩 멘트 로테이션 (질문 분석 / 정답 유사도 계산 중)
+  useEffect(() => {
+    if (!isAnalyzing && !isCalculatingSimilarity) return;
+    const id = setInterval(() => setLoadingMessageIndex((i) => (i + 1) % 8), 2500);
+    return () => clearInterval(id);
+  }, [isAnalyzing, isCalculatingSimilarity]);
+
+  // 초기 로딩 시 로딩 멘트 로테이션
+  useEffect(() => {
+    if (!isLoading) return;
+    const id = setInterval(() => setLoadingPageMessageIndex((i) => (i + 1) % 3), 2500);
+    return () => clearInterval(id);
+  }, [isLoading]);
+
   // SSR에서 초기 데이터를 받았을 때 보조 데이터만 로드 (author, next/prev, balance, knowledge)
   const loadProblemSupplement = async (data: Problem) => {
     try {
@@ -815,10 +831,10 @@ export default function ProblemClient({
           const hints = (data as any).hints as string[] | null | undefined;
           // 영어 문제는 영어 분석기 사용, 한국어는 기존 분석기 사용
           if (lang === 'en') {
-            const knowledge = await buildProblemKnowledgeEn(data.content, data.answer, undefined, hints);
+            const knowledge = await buildProblemKnowledgeEn(data.content, data.answer, undefined, hints, (data as any).explanation);
             setProblemKnowledge(knowledge);
           } else {
-            const knowledge = await buildProblemKnowledge(data.content, data.answer, undefined, hints);
+            const knowledge = await buildProblemKnowledge(data.content, data.answer, undefined, hints, (data as any).explanation);
             setProblemKnowledge(knowledge);
           }
         } catch (err) {
@@ -1265,9 +1281,9 @@ export default function ProblemClient({
       if (!knowledge && problem.content && problem.answer) {
         const hints = (problem as any).hints as string[] | null | undefined;
         if (lang === 'en') {
-          knowledge = await buildProblemKnowledgeEn(problem.content, problem.answer, undefined, hints);
+          knowledge = await buildProblemKnowledgeEn(problem.content, problem.answer, undefined, hints, (problem as any).explanation);
         } else {
-          knowledge = await buildProblemKnowledge(problem.content, problem.answer, undefined, hints);
+          knowledge = await buildProblemKnowledge(problem.content, problem.answer, undefined, hints, (problem as any).explanation);
         }
         setProblemKnowledge(knowledge);
       }
@@ -1305,10 +1321,10 @@ export default function ProblemClient({
       let knowledge = problemKnowledge;
       if (!knowledge && problem.content && problem.answer) {
         const hints = (problem as any).hints as string[] | null | undefined;
-        knowledge = await buildProblemKnowledge(problem.content, problem.answer, undefined, hints);
+        knowledge = await buildProblemKnowledge(problem.content, problem.answer, undefined, hints, (problem as any).explanation);
         setProblemKnowledge(knowledge);
       }
-      
+
       if (knowledge) {
         aiAnswer = await analyzeQuestionV8(questionText, knowledge);
       } else {
@@ -1345,10 +1361,10 @@ export default function ProblemClient({
       let knowledge = problemKnowledge;
       if (!knowledge && problem.content && problem.answer) {
         const hints = (problem as any).hints as string[] | null | undefined;
-        knowledge = await buildProblemKnowledge(problem.content, problem.answer, undefined, hints);
+        knowledge = await buildProblemKnowledge(problem.content, problem.answer, undefined, hints, (problem as any).explanation);
         setProblemKnowledge(knowledge);
       }
-      
+
       if (knowledge) {
         // AI가 답변 제안
         aiAnswer = await analyzeQuestionV8(questionText.trim(), knowledge);
@@ -1841,6 +1857,9 @@ export default function ProblemClient({
             </svg>
           </div>
           <p className="text-slate-400">{t.problem.loadingProblems}</p>
+          <p className="text-slate-500 text-sm mt-2">
+            {(t.problem as any)[`loadingPageMessage${(loadingPageMessageIndex % 3) + 1}`]}
+          </p>
         </div>
       </div>
     );
@@ -2087,6 +2106,7 @@ export default function ProblemClient({
               questionText={questionText}
               suggestedAnswer={suggestedAnswer}
               isAnalyzing={isAnalyzing}
+              loadingMessage={isAnalyzing ? (t.problem as any)[`loadingMessage${(loadingMessageIndex % 8) + 1}`] : undefined}
               localQuestions={localQuestions}
               onQuestionTextChange={(text) => {
                 setQuestionText(text);
@@ -2111,6 +2131,7 @@ export default function ProblemClient({
               userGuess={userGuess}
               similarityScore={similarityScore}
               isCalculatingSimilarity={isCalculatingSimilarity}
+              loadingMessage={isCalculatingSimilarity ? (t.problem as any)[`loadingMessage${(loadingMessageIndex % 8) + 1}`] : undefined}
               hasSubmittedAnswer={hasSubmittedAnswer}
               showAnswer={showAnswer}
               showHints={showHints}
@@ -2128,18 +2149,19 @@ export default function ProblemClient({
 
                 setIsCalculatingSimilarity(true);
                 try {
+                  const problemContentWithExplanation = [problem.content, (problem as any).explanation].filter(Boolean).join(' ');
                   const similarity =
                     lang === 'en'
                       ? await calculateAnswerSimilarityEn(
                           userGuess.trim(),
                           problem.answer,
-                          problem.content,
+                          problemContentWithExplanation,
                           problemKnowledge as any
                         )
                       : await calculateAnswerSimilarity(
                           userGuess.trim(),
                           problem.answer,
-                          problem.content
+                          problemContentWithExplanation
                         );
 
                   setSimilarityScore(similarity);

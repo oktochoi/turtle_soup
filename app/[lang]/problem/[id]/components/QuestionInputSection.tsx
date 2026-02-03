@@ -8,6 +8,7 @@ interface QuestionInputSectionProps {
   questionText: string;
   suggestedAnswer: 'yes' | 'no' | 'irrelevant' | 'decisive' | null;
   isAnalyzing: boolean;
+  loadingMessage?: string;
   localQuestions: Array<{ question: string; answer: string; timestamp: number }>;
   onQuestionTextChange: (text: string) => void;
   onSuggestedAnswerChange: (answer: 'yes' | 'no' | 'irrelevant' | 'decisive' | null) => void;
@@ -24,6 +25,7 @@ export default function QuestionInputSection({
   questionText,
   suggestedAnswer,
   isAnalyzing,
+  loadingMessage,
   localQuestions,
   onQuestionTextChange,
   onSuggestedAnswerChange,
@@ -74,7 +76,7 @@ export default function QuestionInputSection({
               className="px-3 sm:px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap text-sm sm:text-base touch-manipulation"
               title="AI 답변 제안 받기"
             >
-              {isAnalyzing ? t.problem.analyzing : '🔧'}
+              {isAnalyzing ? (loadingMessage || t.problem.analyzing) : '🔧'}
             </button>
           )}
         </div>

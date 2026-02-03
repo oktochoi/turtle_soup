@@ -62,6 +62,8 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showSoupForm, setShowSoupForm] = useState(false);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [loadingPageIndex, setLoadingPageIndex] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -73,6 +75,20 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
       setIsLoading(false);
     }
   }, [user, authLoading, router, lang]);
+
+  // 제출 중 로딩 멘트 로테이션
+  useEffect(() => {
+    if (!isSubmitting) return;
+    const id = setInterval(() => setLoadingMessageIndex((i) => (i + 1) % 6), 2500);
+    return () => clearInterval(id);
+  }, [isSubmitting]);
+
+  // 초기 로딩 시 멘트 로테이션
+  useEffect(() => {
+    if (!isLoading) return;
+    const id = setInterval(() => setLoadingPageIndex((i) => (i + 1) % 3), 2500);
+    return () => clearInterval(id);
+  }, [isLoading]);
 
   const handleSubmit = async () => {
     if (!user) {
@@ -462,11 +478,13 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
   };
 
   if (isLoading) {
+    const pageMsg = (t.problem as any)?.[`loadingPageMessage${(loadingPageIndex % 3) + 1}`] ?? t.common.loading;
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
           <p className="text-slate-400">{t.common.loading}</p>
+          <p className="text-slate-500 text-sm mt-2">{pageMsg}</p>
         </div>
       </div>
     );
@@ -620,8 +638,10 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
                 disabled={isSubmitting}
                 className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-teal-500/50 mt-4 sm:mt-6 lg:mt-8 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base touch-manipulation"
               >
-                <i className="ri-add-circle-line mr-2"></i>
-                {isSubmitting ? (lang === 'ko' ? '문제 생성 중...' : 'Creating...') : (lang === 'ko' ? '문제 만들기' : 'Create Problem')}
+                <i className={isSubmitting ? 'ri-loader-4-line animate-spin mr-2' : 'ri-add-circle-line mr-2'}></i>
+                {isSubmitting
+                  ? ((t.problem as any)?.[`createLoadingMessage${(loadingMessageIndex % 6) + 1}`] ?? (lang === 'ko' ? '문제 생성 중...' : 'Creating...'))
+                  : (lang === 'ko' ? '문제 만들기' : 'Create Problem')}
               </button>
             </>
           )}
