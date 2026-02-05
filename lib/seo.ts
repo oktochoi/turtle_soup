@@ -17,10 +17,11 @@ const getSiteName = (locale: Locale = 'ko') => {
   return locale === 'ko' ? '바다거북스프' : 'Pelican Soup Riddle';
 };
 
+/** 기본 메타 설명 (90~155자 권장) */
 const getSiteDescription = (locale: Locale = 'ko') => {
-  return locale === 'ko' 
-    ? '추리와 질문으로 진실을 밝혀내는 게임. 멀티플레이어 모드와 오늘의 문제로 친구들과 함께 즐기세요.'
-    : 'A deduction game where you uncover the truth through questions. Play with friends in multiplayer mode and daily problems.';
+  return locale === 'ko'
+    ? '바다거북스프·추리 퀴즈·라이어 게임을 즐기세요. 멀티플레이, 오늘의 문제, 문제 만들기. 친구와 함께 실력과 랭킹을 확인하세요.'
+    : 'Play Turtle Soup, logic quizzes, Liar Game and more. Multiplayer, daily puzzles, create your own. Check your rank with friends.';
 };
 
 export type MetadataProps = {

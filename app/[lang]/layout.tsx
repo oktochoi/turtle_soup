@@ -16,20 +16,28 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang } = await params;
   const locale = isValidLocale(lang) ? lang : defaultLocale;
-  const messages = getMessages(locale);
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://turtle-soup-rust.vercel.app";
   const baseUrl = `${siteUrl}/${locale}`;
 
+  // Title: 브랜드 + 핵심 키워드, 50~60자
   const siteName = locale === "ko" ? "퀴즈 천국" : "Quiz Paradise";
-  const siteDescription =
+  const title =
     locale === "ko"
-      ? "다양한 퀴즈와 추리 게임을 즐기는 퀴즈 플랫폼. 바다거북스프, 라이어 게임, 마피아 등 다양한 게임을 친구들과 함께 플레이하세요."
-      : "A quiz platform where you can enjoy various quizzes and deduction games. Play Turtle Soup, Liar Game, Mafia and more with friends.";
+      ? "퀴즈 천국 | 바다거북스프·추리 퀴즈·라이어 게임"
+      : "Quiz Paradise | Turtle Soup·Logic Quiz·Liar Game";
+
+  // Meta Description: 90~155자
+  const description =
+    locale === "ko"
+      ? "바다거북스프, 라이어 게임, 마피아 등 추리 퀴즈를 즐기세요. 친구와 멀티플레이, 오늘의 문제, 문제 만들기. 퀴즈 천국에서 실력과 랭킹을 확인하세요."
+      : "Play Turtle Soup, Liar Game, Mafia and more. Multiplayer with friends, daily puzzles, create your own. Check your rank and skills at Quiz Paradise.";
+
+  const ogImage = `${siteUrl}/og-default.png`;
 
   return {
-    title: siteName,
-    description: siteDescription,
+    title: title.slice(0, 60),
+    description: description.slice(0, 155),
     metadataBase: new URL(siteUrl),
     alternates: {
       canonical: baseUrl,
@@ -42,11 +50,25 @@ export async function generateMetadata({
     openGraph: {
       type: "website",
       siteName,
-      title: siteName,
-      description: siteDescription,
+      title: title.slice(0, 60),
+      description: description.slice(0, 155),
       url: baseUrl,
       locale: locale === "ko" ? "ko_KR" : "en_US",
       alternateLocale: locale === "ko" ? "en_US" : "ko_KR",
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: title.slice(0, 60),
+      description: description.slice(0, 155),
+      images: [ogImage],
     },
   };
 }
