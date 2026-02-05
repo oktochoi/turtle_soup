@@ -1,9 +1,9 @@
 'use client';
 
-// 문제 카드 스켈레톤
+// 문제 카드 스켈레톤 (CLS 방지: 로딩 전후 동일 높이 유지)
 export function ProblemCardSkeleton() {
   return (
-    <div className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-700 animate-pulse">
+    <div className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-700 animate-pulse min-h-[160px]">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <div className="h-5 bg-slate-700 rounded w-3/4 mb-2"></div>
@@ -28,10 +28,10 @@ export function ProblemCardSkeleton() {
   );
 }
 
-// 방 카드 스켈레톤
+// 방 카드 스켈레톤 (CLS 방지: 로딩 전후 동일 높이 유지)
 export function RoomCardSkeleton() {
   return (
-    <div className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-700 animate-pulse">
+    <div className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-700 animate-pulse min-h-[160px]">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <div className="h-6 bg-slate-700 rounded w-24 mb-2"></div>
@@ -57,10 +57,10 @@ export function RoomCardSkeleton() {
   );
 }
 
-// 커뮤니티 게시글 카드 스켈레톤
+// 커뮤니티 게시글 카드 스켈레톤 (CLS 방지: 로딩 전후 동일 높이 유지)
 export function PostCardSkeleton() {
   return (
-    <div className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-700 animate-pulse">
+    <div className="bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-700 animate-pulse min-h-[180px]">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3 flex-1">
           <div className="h-10 w-10 bg-slate-700 rounded-full"></div>
@@ -91,10 +91,10 @@ export function PostCardSkeleton() {
   );
 }
 
-// 문제 상세 페이지 스켈레톤
+// 문제 상세 페이지 스켈레톤 (CLS 방지: 로딩 전후 동일 높이 유지)
 export function ProblemDetailSkeleton() {
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-pulse">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-pulse min-h-[400px]">
       <div className="bg-slate-800 rounded-xl p-6 sm:p-8 border border-slate-700 mb-6">
         <div className="h-8 bg-slate-700 rounded w-3/4 mb-4"></div>
         <div className="space-y-3 mb-6">

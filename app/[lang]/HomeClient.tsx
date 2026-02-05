@@ -411,14 +411,14 @@ export default function HomeClient() {
           </div>
 
           {isLoadingProblem ? (
-            <div className="bg-slate-800/60 rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 animate-pulse">
+            <div className="bg-slate-800/60 rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 animate-pulse min-h-[200px] flex flex-col justify-center">
               <div className="h-6 bg-slate-700/50 rounded w-32 mb-4"></div>
               <div className="h-4 bg-slate-700/50 rounded w-full mb-2"></div>
               <div className="h-4 bg-slate-700/50 rounded w-3/4"></div>
             </div>
           ) : todayProblem ? (
             <Link href={getLocalizedPath(`/problem/${todayProblem.id}`)}>
-              <div className="group bg-slate-800/60 rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 hover:border-teal-500/50 transition-colors duration-200 cursor-pointer">
+              <div className="group bg-slate-800/60 rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 hover:border-teal-500/50 transition-colors duration-200 cursor-pointer min-h-[200px] flex flex-col">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-lg">
@@ -459,7 +459,7 @@ export default function HomeClient() {
               </div>
             </Link>
           ) : (
-            <div className="bg-slate-800/60 rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50">
+            <div className="bg-slate-800/60 rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-700/50 min-h-[200px] flex flex-col">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-lg">
                   <i className="ri-calendar-check-line text-teal-400 text-xl sm:text-2xl"></i>
@@ -468,7 +468,7 @@ export default function HomeClient() {
                   {t.home.todayProblem}
                 </h2>
               </div>
-              <div className="text-center py-8">
+              <div className="text-center py-8 flex-1 flex flex-col items-center justify-center">
                 <i className="ri-time-line text-4xl text-slate-500 mb-3"></i>
                 <p className="text-slate-400 text-sm sm:text-base">{t.home.preparing}</p>
               </div>
@@ -483,9 +483,9 @@ export default function HomeClient() {
               {lang === 'ko' ? '샘플 문제' : 'Sample Problems'}
             </h2>
             {isLoadingSamples ? (
-              <div className="space-y-4">
+              <div className="space-y-4 min-h-[240px]">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="bg-slate-900/50 rounded-lg p-4 animate-pulse">
+                  <div key={i} className="bg-slate-900/50 rounded-lg p-4 animate-pulse min-h-[80px]">
                     <div className="h-4 bg-slate-700/50 rounded w-3/4 mb-2"></div>
                     <div className="h-3 bg-slate-700/50 rounded w-full mb-1"></div>
                     <div className="h-3 bg-slate-700/50 rounded w-5/6"></div>
@@ -493,7 +493,7 @@ export default function HomeClient() {
                 ))}
               </div>
             ) : sampleProblems.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-4 min-h-[240px]">
                 {sampleProblems.map((problem) => (
                   <Link
                     key={problem.id}
@@ -516,7 +516,9 @@ export default function HomeClient() {
                 ))}
               </div>
             ) : (
-              <p className="text-slate-400 text-sm">{lang === 'ko' ? '샘플 문제가 없습니다.' : 'No sample problems available.'}</p>
+              <div className="min-h-[240px] flex items-center">
+                <p className="text-slate-400 text-sm">{lang === 'ko' ? '샘플 문제가 없습니다.' : 'No sample problems available.'}</p>
+              </div>
             )}
             <Link
               href={getLocalizedPath('/problems')}

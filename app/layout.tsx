@@ -6,19 +6,22 @@ const pacifico = Pacifico({
   weight: '400',
   subsets: ['latin'],
   display: 'swap',
+  preload: true,
   variable: '--font-pacifico',
-})
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
   display: "swap",
+  preload: true,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
+  preload: true,
 });
 
 // 루트 레이아웃 - middleware가 /를 /ko로 리다이렉트하므로 여기는 거의 사용되지 않음

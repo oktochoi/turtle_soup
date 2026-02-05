@@ -51,6 +51,7 @@ export default function QuizPlayImage({
           src={imageUrl}
           alt={isKo ? '퀴즈 이미지' : 'Quiz Image'}
           fill
+          sizes="(max-width: 768px) 100vw, 672px"
           className="object-contain"
           unoptimized
         />

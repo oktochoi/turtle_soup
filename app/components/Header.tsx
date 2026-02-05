@@ -184,13 +184,13 @@ export default function Header() {
             {/* 알림 벨 */}
             {user && <NotificationBell lang={currentLang} />}
             
-            {/* 로그인/로그아웃 버튼 */}
+            {/* 로그인/로그아웃 버튼 (CLS 방지: 영역 높이 고정) */}
             {authLoading ? (
-              <div className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold bg-slate-800 text-slate-400 ml-2">
-                <i className="ri-loader-4-line animate-spin"></i>
+              <div className="min-h-[40px] flex items-center px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold bg-slate-800 text-slate-400 ml-2">
+                <i className="ri-loader-4-line animate-spin" aria-hidden></i>
               </div>
             ) : user ? (
-              <div className="flex items-center gap-3 ml-2">
+              <div className="min-h-[40px] flex items-center gap-3 ml-2">
                 {isAdmin && (
                   <div className="flex items-center gap-2">
                     <Link href={getLocalizedPath('/admin/dashboard')}>
@@ -231,11 +231,13 @@ export default function Header() {
                 </button>
               </div>
             ) : (
-              <Link href={getLocalizedPath('/auth/login')}>
-                <button className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600 ml-2">
-                  {t.common.login}
-                </button>
-              </Link>
+              <div className="min-h-[40px] flex items-center ml-2">
+                <Link href={getLocalizedPath('/auth/login')}>
+                  <button className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600">
+                    {t.common.login}
+                  </button>
+                </Link>
+              </div>
             )}
           </nav>
 
@@ -277,10 +279,10 @@ export default function Header() {
               ))}
               
               {/* 모바일 로그인/로그아웃 버튼 */}
-              <div className="border-t border-slate-700 pt-2 mt-2">
+              <div className="border-t border-slate-700 pt-2 mt-2 min-h-[44px]">
                 {authLoading ? (
-                  <div className="px-4 py-3 text-sm text-slate-400 text-center">
-                    <i className="ri-loader-4-line animate-spin"></i>
+                  <div className="px-4 py-3 text-sm text-slate-400 text-center min-h-[44px] flex items-center justify-center">
+                    <i className="ri-loader-4-line animate-spin" aria-hidden></i>
                   </div>
                 ) : user ? (
                   <>
