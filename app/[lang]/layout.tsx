@@ -21,17 +21,17 @@ export async function generateMetadata({
   const baseUrl = `${siteUrl}/${locale}`;
 
   // Title: 브랜드 + 핵심 키워드, 50~60자
-  const siteName = locale === "ko" ? "퀴즈 천국" : "Quiz Paradise";
+  const siteName = locale === "ko" ? "바다거북스프" : "Lateral Thinking Mystery Puzzles";
   const title =
     locale === "ko"
-      ? "퀴즈 천국 | 바다거북스프·추리 퀴즈·라이어 게임"
-      : "Quiz Paradise | Turtle Soup·Logic Quiz·Liar Game";
+      ? "바다거북스프 | 추리 퀴즈·라이어 게임"
+      : "Lateral Thinking Mystery Puzzles | Turtle Soup·Logic Quiz·Liar Game";
 
   // Meta Description: 90~155자
   const description =
     locale === "ko"
-      ? "바다거북스프, 라이어 게임, 마피아 등 추리 퀴즈를 즐기세요. 친구와 멀티플레이, 오늘의 문제, 문제 만들기. 퀴즈 천국에서 실력과 랭킹을 확인하세요."
-      : "Play Turtle Soup, Liar Game, Mafia and more. Multiplayer with friends, daily puzzles, create your own. Check your rank and skills at Quiz Paradise.";
+      ? "바다거북스프, 라이어 게임, 마피아 등 추리 퀴즈를 즐기세요. 친구와 멀티플레이, 오늘의 문제, 문제 만들기. 바다거북스프에서 실력과 랭킹을 확인하세요."
+      : "Play Turtle Soup, Liar Game, Mafia and more. Multiplayer with friends, daily puzzles, create your own. Check your rank and skills at Lateral Thinking Mystery Puzzles.";
 
   const ogImage = `${siteUrl}/og-default.png`;
 
@@ -105,7 +105,7 @@ export default async function LangLayout({
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    name: locale === "ko" ? "퀴즈 천국" : "Quiz Paradise",
+    name: locale === "ko" ? "바다거북스프" : "Lateral Thinking Mystery Puzzles",
     description:
       locale === "ko"
         ? "다양한 퀴즈와 추리 게임을 즐기는 퀴즈 플랫폼"
@@ -120,7 +120,7 @@ export default async function LangLayout({
     },
     game: {
       "@type": "VideoGame",
-      name: locale === "ko" ? "퀴즈 천국" : "Quiz Paradise",
+      name: locale === "ko" ? "바다거북스프" : "Lateral Thinking Mystery Puzzles",
       description: locale === "ko" ? "추리 게임" : "Deduction Game",
       gamePlatform: "Web Browser",
       genre: locale === "ko" ? "추리게임" : "Puzzle",

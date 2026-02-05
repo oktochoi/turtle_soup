@@ -29,7 +29,7 @@ const geistMono = Geist_Mono({
 // 하지만 Next.js는 루트 레이아웃에 <html>과 <body> 태그를 요구함
 
 export const metadata: Metadata = {
-  title: "퀴즈 천국",
+  title: "바다거북스프",
   description: "바다거북스프, 밸런스게임, 라이어, 마피아게임, 퀴즈와 추리 게임을 즐기는 퀴즈 플랫폼",
 };
 

@@ -14,7 +14,7 @@ type RobotsInfo = {
 };
 
 const getSiteName = (locale: Locale = 'ko') => {
-  return locale === 'ko' ? '바다거북스프' : 'Pelican Soup Riddle';
+  return locale === 'ko' ? '바다거북스프' : 'Lateral Thinking Mystery Puzzles';
 };
 
 /** 기본 메타 설명 (90~155자 권장) */
