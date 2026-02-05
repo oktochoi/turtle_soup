@@ -10,7 +10,7 @@ export async function generateMetadataForProblem(
   const supabase = await createClient();
   const { data: problem } = await supabase
     .from('problems')
-    .select('title, content, author, view_count, like_count, comment_count, created_at')
+    .select('title, content, author, view_count, like_count, comment_count, created_at, updated_at')
     .eq('id', problemId)
     .single();
 
