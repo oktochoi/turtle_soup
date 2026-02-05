@@ -31,6 +31,10 @@ export default function robots(): MetadataRoute.Robots {
           '/en/ranking',
           '/ko/community',
           '/en/community',
+          '/ko/tutorial',
+          '/en/tutorial',
+          '/ko/guide',
+          '/en/guide',
         ],
         disallow: [
           '/api/',

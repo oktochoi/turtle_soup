@@ -5,6 +5,14 @@ import { createServerClient } from '@supabase/ssr';
 const supportedLocales = ['ko', 'en'];
 const defaultLocale = 'ko';
 
+function detectPreferredLocale(request: NextRequest): string {
+  const header = request.headers.get('accept-language') || '';
+  const lower = header.toLowerCase();
+  if (lower.includes('ko')) return 'ko';
+  if (lower.includes('en')) return 'en';
+  return defaultLocale;
+}
+
 // Public 경로 목록 (로그인 없이 접근 가능)
 const publicPaths = [
   '/',
@@ -111,15 +119,17 @@ export async function middleware(request: NextRequest) {
 
   // 루트 경로는 기본 언어로 리다이렉트
   if (pathname === '/') {
+    const preferred = detectPreferredLocale(request);
     return NextResponse.redirect(
-      new URL(`/${defaultLocale}`, request.url)
+      new URL(`/${preferred}`, request.url)
     );
   }
 
   // 언어 코드가 없는 경우 기본 언어로 리다이렉트
   if (!pathnameHasLocale) {
     // /daily -> /ko/daily
-    const newPathname = `/${defaultLocale}${pathname}`;
+    const preferred = detectPreferredLocale(request);
+    const newPathname = `/${preferred}${pathname}`;
     return NextResponse.redirect(
       new URL(newPathname, request.url)
     );

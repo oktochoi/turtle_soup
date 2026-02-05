@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
-import { generateMetadata, truncateDescription } from '@/lib/seo';
+import { generateMetadata, truncateDescription, sanitizeTitle } from '@/lib/seo';
 import type { Locale } from '@/lib/seo';
 
 export async function generateMetadataForProblem(
@@ -30,16 +30,24 @@ export async function generateMetadataForProblem(
     155
   );
   const author = problem.author || '알 수 없음';
+  const keywords = [
+    sanitizeTitle(title),
+    lang === 'ko' ? '바다거북스프' : 'turtle soup riddle',
+    lang === 'ko' ? '추리 퀴즈' : 'logic puzzle',
+  ];
+  const lastMod = problem.updated_at || problem.created_at;
 
   return generateMetadata({
-    title,
+    title: sanitizeTitle(title),
     description: `${description} 작성자: ${author}. 조회수 ${problem.view_count || 0}, 좋아요 ${problem.like_count || 0}.`,
     path: `/${lang}/problem/${problemId}`,
     image: `/${lang}/problem/${problemId}/opengraph-image`,
     type: 'article',
     publishedTime: problem.created_at,
+    modifiedTime: lastMod,
     author,
     locale: lang as Locale,
+    keywords,
   });
 }
 

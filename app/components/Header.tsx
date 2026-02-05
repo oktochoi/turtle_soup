@@ -154,18 +154,19 @@ export default function Header() {
     <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between">
-          <Link href={getLocalizedPath('/')} className="flex items-center gap-2">
-            <i className="ri-question-line text-teal-400 text-xl sm:text-2xl"></i>
+          <Link href={getLocalizedPath('/')} className="flex items-center gap-2" aria-label={currentLang === 'ko' ? '홈으로' : 'Home'}>
+            <i className="ri-question-line text-teal-400 text-xl sm:text-2xl" aria-hidden></i>
             <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
               {currentLang === 'ko' ? '퀴즈 천국' : 'Quiz Paradise'}
             </span>
           </Link>
           
           {/* 데스크톱 네비게이션 */}
-          <nav className="hidden md:flex items-center gap-2 lg:gap-3">
+          <nav className="hidden md:flex items-center gap-2 lg:gap-3" aria-label={currentLang === 'ko' ? '메인 메뉴' : 'Main navigation'}>
             {navLinks.map((link) => (
-              <Link key={link.href} href={getLocalizedPath(link.href)}>
+              <Link key={link.href} href={getLocalizedPath(link.href)} aria-label={link.label}>
                 <button
+                  type="button"
                   className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all ${
                     isActive(link.href)
                       ? `${link.activeColor} text-white`
@@ -240,17 +241,20 @@ export default function Header() {
 
           {/* 모바일 햄버거 버튼 */}
           <button
+            type="button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="md:hidden p-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all"
-            aria-label={currentLang === 'ko' ? '메뉴 열기' : 'Open menu'}
+            aria-label={isMobileMenuOpen ? (currentLang === 'ko' ? '메뉴 닫기' : 'Close menu') : (currentLang === 'ko' ? '메뉴 열기' : 'Open menu')}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-nav"
           >
-            <i className={`ri-${isMobileMenuOpen ? 'close' : 'menu'}-line text-xl`}></i>
+            <i className={`ri-${isMobileMenuOpen ? 'close' : 'menu'}-line text-xl`} aria-hidden></i>
           </button>
         </div>
 
         {/* 모바일 메뉴 */}
         {isMobileMenuOpen && (
-          <nav className="md:hidden mt-4 pb-2 border-t border-slate-700 pt-4">
+          <nav id="mobile-nav" className="md:hidden mt-4 pb-2 border-t border-slate-700 pt-4" aria-label={currentLang === 'ko' ? '모바일 메뉴' : 'Mobile menu'}>
             <div className="flex flex-col gap-2">
               {navLinks.map((link) => (
                 <Link
@@ -259,11 +263,13 @@ export default function Header() {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <button
+                    type="button"
                     className={`w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left ${
                       isActive(link.href)
                         ? `${link.activeColor} text-white`
                         : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                     }`}
+                    aria-label={link.label}
                   >
                     {link.label}
                   </button>

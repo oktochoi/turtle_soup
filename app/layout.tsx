@@ -39,6 +39,19 @@ export default function RootLayout({
     <html lang="ko" suppressHydrationWarning={true}>
       <head>
         <meta name="google-adsense-account" content="ca-pub-4462339094246168" />
+        {/* GSC/GA4 placeholders: 실제 ID로 교체 시 측정 신호 활성화 */}
+        <meta name="google-site-verification" content="GSC_VERIFICATION_TOKEN" />
+        <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'GA_MEASUREMENT_ID');
+            `,
+          }}
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${pacifico.variable} antialiased`}

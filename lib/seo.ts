@@ -34,6 +34,7 @@ export type MetadataProps = {
   author?: string;
   noindex?: boolean;
   locale?: Locale;
+  keywords?: string[];
 };
 
 export function generateMetadata({
@@ -47,17 +48,21 @@ export function generateMetadata({
   author,
   noindex = false,
   locale = 'ko',
+  keywords = [],
 }: MetadataProps) {
   const siteName = getSiteName(locale);
   const siteDescription = getSiteDescription(locale);
-  const fullTitle = title ? `${title} - ${siteName}` : siteName;
-  const fullDescription = description || siteDescription;
+  const rawTitle = title ? `${title} - ${siteName}` : siteName;
+  const fullTitle = sanitizeTitle(rawTitle).slice(0, 60);
+  const fullDescription = truncateDescription(description || siteDescription, 155);
   const canonicalUrl = `${baseUrl}${path}`;
   const ogImage = image || `${baseUrl}/og-default.png`;
+  const keywordList = keywords.filter(Boolean);
 
   return {
     title: fullTitle,
     description: fullDescription,
+    keywords: keywordList.length ? keywordList : undefined,
     metadataBase: new URL(baseUrl),
     alternates: {
       canonical: canonicalUrl,

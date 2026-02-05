@@ -1911,9 +1911,25 @@ export default function ProblemClient({
       "@id": (typeof window !== 'undefined' ? `${window.location.origin}/${lang}/problem/${problemId}` : '')
     }
   } : null;
+
+  const faqStructuredData = problem ? {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": problem.title || (lang === 'ko' ? '문제' : 'Problem'),
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": (problem as any).explanation || problem.answer || (lang === 'ko' ? '정답은 문제 상세에서 확인하세요.' : 'Check the problem detail for the answer.')
+        }
+      }
+    ]
+  } : null;
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       {structuredData && <JsonLd data={structuredData} />}
+      {faqStructuredData && <JsonLd data={faqStructuredData} />}
   
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-3 sm:py-4 lg:py-6 xl:py-8 max-w-4xl">
         {/* 뒤로가기 */}

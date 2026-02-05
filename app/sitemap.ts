@@ -2,6 +2,7 @@ import { MetadataRoute } from 'next';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://turtle-soup-rust.vercel.app';
 
+/** 빌드/요청 시마다 실행되어 항상 최신 URL·lastModified 반환 */
 export default function sitemap(): MetadataRoute.Sitemap {
   const routes = [
     '',
