@@ -3,26 +3,32 @@ import { createClient } from '@/lib/supabase/server';
 import { generateMetadata, truncateDescription, sanitizeTitle } from '@/lib/seo';
 import type { Locale } from '@/lib/seo';
 
+/** lang은 정규화된 'ko' | 'en'. 해당 언어 문제만 메타 반환 */
 export async function generateMetadataForProblem(
   problemId: string,
-  lang: string = 'ko'
+  lang: 'ko' | 'en' = 'ko'
 ): Promise<Metadata> {
   const supabase = await createClient();
-  const { data: problem } = await supabase
+  const { data: problem, error } = await supabase
     .from('problems')
-    .select('title, content, author, view_count, like_count, comment_count, created_at, updated_at')
+    .select('title, content, author, view_count, like_count, comment_count, created_at, updated_at, lang')
     .eq('id', problemId)
     .single();
 
-  if (!problem) {
-    return generateMetadata({
-      title: '문제를 찾을 수 없습니다',
-      description: '요청하신 문제를 찾을 수 없습니다.',
+  const notFoundMeta = (): Metadata =>
+    generateMetadata({
+      title: lang === 'ko' ? '문제를 찾을 수 없습니다' : 'Problem not found',
+      description: lang === 'ko' ? '요청하신 문제를 찾을 수 없습니다.' : 'The requested problem was not found.',
       path: `/${lang}/problem/${problemId}`,
       noindex: true,
       locale: lang as Locale,
     });
-  }
+
+  if (error || !problem) return notFoundMeta();
+
+  const problemLang = (problem as any).lang ?? 'ko';
+  const problemLangNorm = problemLang === 'en' ? 'en' : 'ko';
+  if (problemLangNorm !== lang) return notFoundMeta();
 
   const title = problem.title || '바다거북스프 문제';
   const description = truncateDescription(

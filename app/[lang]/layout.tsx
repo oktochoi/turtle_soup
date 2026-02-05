@@ -25,13 +25,13 @@ export async function generateMetadata({
   const title =
     locale === "ko"
       ? "바다거북스프 | 추리 퀴즈·라이어 게임"
-      : "Lateral Thinking Mystery Puzzles | Turtle Soup·Logic Quiz·Liar Game";
+      : "Lateral Thinking Mystery Puzzles | Mystery Riddle·Logic Quiz·Liar Game";
 
   // Meta Description: 90~155자
   const description =
     locale === "ko"
       ? "바다거북스프, 라이어 게임, 마피아 등 추리 퀴즈를 즐기세요. 친구와 멀티플레이, 오늘의 문제, 문제 만들기. 바다거북스프에서 실력과 랭킹을 확인하세요."
-      : "Play Turtle Soup, Liar Game, Mafia and more. Multiplayer with friends, daily puzzles, create your own. Check your rank and skills at Lateral Thinking Mystery Puzzles.";
+      : "Play Lateral Thinking Mystery Puzzles, Liar Game, Mafia and more. Multiplayer with friends, daily puzzles, create your own. Check your rank and skills at Lateral Thinking Mystery Puzzles.";
 
   const ogImage = `${siteUrl}/og-default.png`;
 
