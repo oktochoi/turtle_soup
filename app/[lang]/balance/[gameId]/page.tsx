@@ -31,6 +31,8 @@ function getOrCreateSessionId(): string {
 type OptionRecord = { id: string; text: string; image_url?: string | null };
 type ChoiceRow = { round_number: number; match_index: number; chosen_option_id: string };
 
+type PlayRow = { id: string; shuffled_option_ids: string[]; completed_at: string | null };
+
 function getWinnersForRound(choices: ChoiceRow[], roundNumber: number): string[] {
   return choices
     .filter((c) => c.round_number === roundNumber)
@@ -162,7 +164,7 @@ export default function BalancePlayPage({ params }: { params: Promise<{ lang: st
     setOptionsMap(map);
 
     const sessionId = getOrCreateSessionId();
-    let existingPlay: { id: string; shuffled_option_ids: string[]; completed_at: string | null } | null = null;
+    let existingPlay: PlayRow | null = null;
     if (!forceNewPlay) {
       const { data } = await supabase
         .from('balance_game_plays')
@@ -172,10 +174,10 @@ export default function BalancePlayPage({ params }: { params: Promise<{ lang: st
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-      existingPlay = data as typeof existingPlay;
+      existingPlay = data as PlayRow | null;
     }
 
-    let play: { id: string; shuffled_option_ids: string[]; completed_at: string | null };
+    let play: PlayRow;
     if (existingPlay?.id && existingPlay.shuffled_option_ids?.length && !forceNewPlay) {
       play = {
         id: existingPlay.id,
@@ -290,7 +292,7 @@ export default function BalancePlayPage({ params }: { params: Promise<{ lang: st
       }
     }
     setLoading(false);
-  }, [gameId, user?.id, totalRounds, forceNewPlay]);
+  }, [gameId, user, totalRounds, forceNewPlay, lang]);
 
   const loadResultStats = useCallback(async () => {
     if (!gameId) return;

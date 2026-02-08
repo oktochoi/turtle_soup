@@ -15,6 +15,10 @@ export interface GuessSet {
   is_public: boolean;
   created_at: string;
   updated_at: string;
+  view_count?: number;
+  like_count?: number;
+  average_rating?: number;
+  rating_count?: number;
 }
 
 /**

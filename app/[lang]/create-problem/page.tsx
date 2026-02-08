@@ -179,10 +179,6 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
       let quizContent: any = {};
       
       if (quizType === 'soup') {
-        // URL 직접 입력한 경우만 insert 시 반영 (파일 업로드는 나중에 업로드 후 update)
-        if (imageUrl.trim() && !imageUrl.startsWith('data:')) {
-          insertData.image_url = imageUrl.trim();
-        }
         // 힌트 필터링 (빈 문자열 제거, 최대 3개)
         const validHints = hints.filter(h => h && h.trim()).slice(0, 3);
         quizContent = {
@@ -239,6 +235,10 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
       if (quizType === 'soup') {
         insertData.content = content.trim();
         insertData.answer = answer.trim();
+        // URL 직접 입력한 경우만 insert 시 반영 (파일 업로드는 나중에 업로드 후 update)
+        if (imageUrl.trim() && !imageUrl.startsWith('data:')) {
+          insertData.image_url = imageUrl.trim();
+        }
         const validHints = hints.filter(h => h && h.trim()).slice(0, 3);
         if (validHints.length > 0) {
           insertData.hints = validHints;
