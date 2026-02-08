@@ -113,6 +113,10 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         alert(lang === 'ko' ? '모든 필수 항목을 입력해주세요.' : 'Please fill in all required fields.');
         return;
       }
+      if (!imageFile && !imageUrl.trim()) {
+        alert(lang === 'ko' ? '썸네일(대표 이미지)을 업로드하거나 URL을 입력해주세요.' : 'Please upload a thumbnail or enter an image URL.');
+        return;
+      }
     } else if (quizType === 'nonsense') {
       if (!answer.trim()) {
         alert(lang === 'ko' ? '정답을 입력해주세요.' : 'Please enter answer.');
@@ -175,6 +179,10 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
       let quizContent: any = {};
       
       if (quizType === 'soup') {
+        // URL 직접 입력한 경우만 insert 시 반영 (파일 업로드는 나중에 업로드 후 update)
+        if (imageUrl.trim() && !imageUrl.startsWith('data:')) {
+          insertData.image_url = imageUrl.trim();
+        }
         // 힌트 필터링 (빈 문자열 제거, 최대 3개)
         const validHints = hints.filter(h => h && h.trim()).slice(0, 3);
         quizContent = {
@@ -281,9 +289,10 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         throw new Error('문제가 생성되지 않았습니다.');
       }
 
-      // 이미지 업로드 성공 여부 추적
+      // 이미지 업로드 성공 여부 추적 (썸네일 URL = problems.image_url 업데이트용)
       let imageUploadFailed = false;
       let bucketNotFound = false;
+      let uploadedThumbnailUrl: string | null = null;
 
       // 이미지 파일이 있으면 SVG로 변환 후 Supabase Storage에 업로드
       if (imageFile) {
@@ -322,6 +331,7 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
                     .getPublicUrl(filePathOriginal);
                   
                   if (publicUrl) {
+                    uploadedThumbnailUrl = publicUrl;
                     if (quizContent.image_url) {
                       quizContent.image_url = publicUrl;
                     } else if (quizType === 'image') {
@@ -340,7 +350,7 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
               .getPublicUrl(filePath);
             
             if (publicUrl) {
-              // quizContent에 이미지 URL 업데이트
+              uploadedThumbnailUrl = publicUrl;
               if (quizContent.image_url) {
                 quizContent.image_url = publicUrl;
               } else if (quizType === 'image') {
@@ -375,6 +385,7 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
                 .getPublicUrl(filePath);
               
               if (publicUrl) {
+                uploadedThumbnailUrl = publicUrl;
                 if (quizContent.image_url) {
                   quizContent.image_url = publicUrl;
                 } else if (quizType === 'image') {
@@ -386,6 +397,12 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
             console.error('이미지 재업로드 오류:', retryError);
           }
         }
+      }
+
+      // soup 타입 썸네일: 업로드된 URL로 problems.image_url 업데이트
+      if (quizType === 'soup' && (uploadedThumbnailUrl || imageUrl.trim())) {
+        const thumbnailUrl = uploadedThumbnailUrl || imageUrl.trim();
+        await supabaseClient.from('problems').update({ image_url: thumbnailUrl }).eq('id', problem.id);
       }
 
       // quiz_contents 테이블에 타입별 세부 데이터 저장
@@ -575,6 +592,27 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
             </div>
           </div>
 
+          {/* 밸런스 게임 (토너먼트) 바로가기 */}
+          <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm sm:text-base font-semibold text-white mb-1">
+                  {lang === 'ko' ? '⚖️ 밸런스 게임 만들기' : '⚖️ Create Balance Game'}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300">
+                  {lang === 'ko' 
+                    ? '둘 중 하나를 선택해 결승까지 가는 토너먼트 게임을 만들어보세요'
+                    : 'Create a tournament game where players choose one of two each round until the final'}
+                </p>
+              </div>
+              <Link href={`/${lang}/balance/create`}>
+                <button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all duration-200 touch-manipulation whitespace-nowrap">
+                  {lang === 'ko' ? '만들기' : 'Create'}
+                </button>
+              </Link>
+            </div>
+          </div>
+
           {/* 바다거북 스프 만들기 버튼 */}
           {!showSoupForm && (
             <div className="bg-gradient-to-r from-teal-500/20 to-cyan-500/20 border border-teal-500/30 rounded-xl p-4">
@@ -624,11 +662,14 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
                 truth={answer}
                 hints={hints}
                 explanation={explanation}
+                imageUrl={imageUrl}
                 originalAuthor={originalAuthor}
                 onStoryChange={setContent}
                 onTruthChange={setAnswer}
                 onHintsChange={setHints}
                 onExplanationChange={setExplanation}
+                onImageChange={setImageFile}
+                onImageUrlChange={setImageUrl}
                 onOriginalAuthorChange={setOriginalAuthor}
                 lang={currentLang}
               />

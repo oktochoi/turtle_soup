@@ -48,6 +48,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
   const lastScrollTop = useRef(0);
   const chatChannelRef = useRef<any>(null);
   const [isAdmin, setIsAdmin] = useState(false); // 관리자 여부
+  const [isSystemRoom, setIsSystemRoom] = useState(false); // 수다방 1,2,3 등 시스템 기본 방 (삭제 불가)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -119,6 +120,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
         setRoomName(room.name);
         setRoomPassword(room.password);
         setHostUserId(room.host_user_id || null);
+        setIsSystemRoom(!!(room as { is_system?: boolean }).is_system);
 
         // 관리자 권한 및 닉네임: game_users 우선, 없으면 users
         const { data: gameUser } = await supabase
@@ -496,9 +498,9 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
     }
   };
 
-  // 관리자 방 삭제 함수
+  // 관리자 방 삭제 함수 (시스템 기본 수다방 1,2,3은 삭제 불가)
   const handleDeleteRoom = async () => {
-    if (!isAdmin) return;
+    if (!isAdmin || isSystemRoom) return;
     
     if (!confirm(lang === 'ko' ? '정말 이 방을 삭제하시겠습니까? 모든 참가자가 나가게 됩니다.' : 'Are you sure you want to delete this room? All participants will be removed.')) {
       return;
@@ -508,11 +510,15 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
       const supabase = createClient();
       const { data: room } = await supabase
         .from('chat_rooms')
-        .select('id')
+        .select('id, is_system')
         .eq('code', roomCode)
         .single();
 
       if (!room) throw new Error('Room not found');
+      if ((room as { is_system?: boolean }).is_system) {
+        alert(lang === 'ko' ? '시스템 기본 방은 삭제할 수 없습니다.' : 'System default rooms cannot be deleted.');
+        return;
+      }
 
       const { error } = await supabase
         .from('chat_rooms')
@@ -603,7 +609,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ lang: strin
             </p>
           </div>
           <div className="flex gap-2">
-            {isAdmin && (
+            {isAdmin && !isSystemRoom && (
               <button
                 onClick={handleDeleteRoom}
                 className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm flex items-center gap-1"

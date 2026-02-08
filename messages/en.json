@@ -286,12 +286,15 @@
     "title": "Ranking",
     "receivedHearts": "Received Hearts",
     "problemSolves": "Problems Solved",
+    "mostFollowers": "Most Followers",
     "loading": "Loading ranking...",
-    "description": "Check the number of problems solved and hearts received",
+    "description": "Check problems solved, hearts received, and most followed",
     "noSolves": "No users have solved problems yet.",
     "noHearts": "No users have received hearts yet.",
+    "noFollowers": "No followers ranking yet.",
     "hearts": "Hearts",
-    "problems": "Problems"
+    "problems": "Problems",
+    "followers": "Followers"
   },
   "auth": {
     "login": "Login",

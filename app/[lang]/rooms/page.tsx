@@ -171,10 +171,10 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
 
         const gameRooms = roomsWithPlayerCount.map(r => ({ ...r, room_type: 'game' as const }));
         
-        // chat_rooms도 함께 조회
+        // chat_rooms도 함께 조회 (is_system: 수다방 1,2,3 등 항상 상단 노출)
         const { data: chatRoomsData, error: chatRoomsError } = await supabase
           .from('chat_rooms')
-          .select('id, code, name, host_nickname, password, max_members, is_public, created_at, updated_at')
+          .select('id, code, name, host_nickname, password, max_members, is_public, is_system, created_at, updated_at')
           .eq('is_public', true)
           .order('created_at', { ascending: false });
         
@@ -209,14 +209,20 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                 last_chat_at: lastMessage?.created_at || null,
                 room_type: 'chat' as const,
                 max_players: chatRoom.max_members || 50,
-              } as Room;
+                is_system: !!(chatRoom as { is_system?: boolean }).is_system,
+              } as Room & { is_system?: boolean };
             })
           );
           
-          // 게임방과 수다방 합치기
-          const allRooms = [...gameRooms, ...chatRoomsWithMemberCount].sort((a, b) => 
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
+          // 게임방과 수다방 합치기 (수다방 1,2,3 시스템 방을 항상 상단에)
+          const allRooms = [...gameRooms, ...chatRoomsWithMemberCount].sort((a, b) => {
+            const aSys = (a as Room & { is_system?: boolean }).is_system;
+            const bSys = (b as Room & { is_system?: boolean }).is_system;
+            if (aSys && !bSys) return -1;
+            if (!aSys && bSys) return 1;
+            if (aSys && bSys) return ((a as Room).code || '').localeCompare((b as Room).code || '');
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          });
           
           setRooms(allRooms);
           setFilteredRooms(allRooms);
@@ -258,10 +264,10 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
         })
       );
       
-        // chat_rooms도 함께 조회
+        // chat_rooms도 함께 조회 (is_system: 수다방 1,2,3 등 항상 상단 노출)
         const { data: chatRoomsData, error: chatRoomsError } = await supabase
           .from('chat_rooms')
-          .select('id, code, name, host_nickname, password, max_members, is_public, created_at, updated_at')
+          .select('id, code, name, host_nickname, password, max_members, is_public, is_system, created_at, updated_at')
           .eq('is_public', true)
           .order('created_at', { ascending: false });
         
@@ -297,14 +303,20 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
               last_chat_at: lastMessage?.created_at || null,
               room_type: 'chat' as const,
               max_players: chatRoom.max_members || 50,
-            } as Room;
+              is_system: !!(chatRoom as { is_system?: boolean }).is_system,
+            } as Room & { is_system?: boolean };
           })
         );
         
-        // 게임방과 수다방 합치기
-        const allRooms = [...roomsWithPlayerCount, ...chatRoomsWithMemberCount].sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
+        // 게임방과 수다방 합치기 (수다방 1,2,3 시스템 방을 항상 상단에)
+        const allRooms = [...roomsWithPlayerCount, ...chatRoomsWithMemberCount].sort((a, b) => {
+          const aSys = (a as Room & { is_system?: boolean }).is_system;
+          const bSys = (b as Room & { is_system?: boolean }).is_system;
+          if (aSys && !bSys) return -1;
+          if (!aSys && bSys) return 1;
+          if (aSys && bSys) return ((a as Room).code || '').localeCompare((b as Room).code || '');
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
         
         setRooms(allRooms);
         setFilteredRooms(allRooms);

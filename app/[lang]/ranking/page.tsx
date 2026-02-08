@@ -21,6 +21,13 @@ type ProblemSolveRanking = {
   solve_count: number;
 };
 
+type FollowRanking = {
+  user_id: string; // game_users.id (프로필 링크용)
+  nickname: string;
+  profile_image_url: string | null;
+  follower_count: number;
+};
+
 export default function RankingPage({ params }: { params: Promise<{ lang: string }> }) {
   const resolvedParams = use(params);
   const lang = resolvedParams.lang || 'ko';
@@ -28,10 +35,12 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
   const { user } = useAuth();
   const [problemRanking, setProblemRanking] = useState<ProblemAuthorRanking[]>([]);
   const [solveRanking, setSolveRanking] = useState<ProblemSolveRanking[]>([]);
-  const [activeTab, setActiveTab] = useState<'hearts' | 'solves'>('hearts');
+  const [followRanking, setFollowRanking] = useState<FollowRanking[]>([]);
+  const [activeTab, setActiveTab] = useState<'hearts' | 'solves' | 'follows'>('hearts');
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [myRank, setMyRank] = useState<{ rank: number; data: ProblemAuthorRanking | ProblemSolveRanking | null } | null>(null);
+  const [myFollowRank, setMyFollowRank] = useState<{ rank: number; data: FollowRanking | null } | null>(null);
   const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
@@ -244,6 +253,85 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
         setProblemRanking([]);
         setMyRank(null);
       }
+
+      // 팔로워 수 랭킹 (game_user_follows에서 following_id별 개수 → game_users와 조인)
+      try {
+        const { data: followsData, error: followsError } = await supabase
+          .from('game_user_follows')
+          .select('following_id');
+
+        if (followsError) {
+          console.error('팔로워 랭킹 로드 오류:', followsError);
+          setFollowRanking([]);
+          setMyFollowRank(null);
+        } else if (followsData && followsData.length > 0) {
+          const countByFollowing = new Map<string, number>();
+          followsData.forEach((row: { following_id: string }) => {
+            const id = row.following_id;
+            countByFollowing.set(id, (countByFollowing.get(id) || 0) + 1);
+          });
+          const sortedIds = Array.from(countByFollowing.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 100)
+            .map(([id]) => id);
+
+          if (sortedIds.length > 0) {
+            const { data: gameUsersData, error: guError } = await supabase
+              .from('game_users')
+              .select('id, nickname, profile_image_url')
+              .in('id', sortedIds);
+
+            if (!guError && gameUsersData) {
+              const userMap = new Map(gameUsersData.map(u => [u.id, u]));
+              const ranking: FollowRanking[] = sortedIds
+                .map(id => {
+                  const u = userMap.get(id);
+                  return u ? {
+                    user_id: u.id,
+                    nickname: u.nickname || '알 수 없음',
+                    profile_image_url: u.profile_image_url || null,
+                    follower_count: countByFollowing.get(id) || 0,
+                  } : null;
+                })
+                .filter((r): r is FollowRanking => r !== null);
+              setFollowRanking(ranking);
+
+              if (user) {
+                const { data: myGameUser } = await supabase
+                  .from('game_users')
+                  .select('id')
+                  .eq('auth_user_id', user.id)
+                  .maybeSingle();
+                if (myGameUser) {
+                  const idx = ranking.findIndex(r => r.user_id === myGameUser.id);
+                  if (idx !== -1) {
+                    setMyFollowRank({ rank: idx + 1, data: ranking[idx] });
+                  } else {
+                    setMyFollowRank(null);
+                  }
+                } else {
+                  setMyFollowRank(null);
+                }
+              } else {
+                setMyFollowRank(null);
+              }
+            } else {
+              setFollowRanking([]);
+              setMyFollowRank(null);
+            }
+          } else {
+            setFollowRanking([]);
+            setMyFollowRank(null);
+          }
+        } else {
+          setFollowRanking([]);
+          setMyFollowRank(null);
+        }
+      } catch (error) {
+        console.error('팔로워 랭킹 로드 오류:', error);
+        setFollowRanking([]);
+        setMyFollowRank(null);
+      }
     } catch (error) {
       console.error('랭킹 로드 오류:', error);
     } finally {
@@ -310,19 +398,19 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
         </div>
 
         {/* 탭 */}
-        <div className="flex gap-2 mb-6 bg-slate-800/50 rounded-lg p-1 border border-slate-700">
+        <div className="flex flex-wrap gap-2 mb-6 bg-slate-800/50 rounded-lg p-1 border border-slate-700">
           <button
             onClick={() => {
               setActiveTab('solves');
               setCurrentPage(1);
             }}
-            className={`flex-1 py-2 px-4 rounded-md transition-all font-medium ${
+            className={`flex-1 min-w-0 py-2 px-3 sm:px-4 rounded-md transition-all font-medium text-sm sm:text-base ${
               activeTab === 'solves'
                 ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-lg'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <i className="ri-checkbox-circle-line mr-2"></i>
+            <i className="ri-checkbox-circle-line mr-1 sm:mr-2"></i>
             {t.ranking.problemSolves}
           </button>
           <button
@@ -330,14 +418,28 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
               setActiveTab('hearts');
               setCurrentPage(1);
             }}
-            className={`flex-1 py-2 px-4 rounded-md transition-all font-medium ${
+            className={`flex-1 min-w-0 py-2 px-3 sm:px-4 rounded-md transition-all font-medium text-sm sm:text-base ${
               activeTab === 'hearts'
                 ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <i className="ri-heart-line mr-2"></i>
+            <i className="ri-heart-line mr-1 sm:mr-2"></i>
             {t.ranking.receivedHearts}
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('follows');
+              setCurrentPage(1);
+            }}
+            className={`flex-1 min-w-0 py-2 px-3 sm:px-4 rounded-md transition-all font-medium text-sm sm:text-base ${
+              activeTab === 'follows'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <i className="ri-user-follow-line mr-1 sm:mr-2"></i>
+            {t.ranking.mostFollowers}
           </button>
         </div>
 
@@ -510,6 +612,109 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
                     <button
                       onClick={() => setCurrentPage(prev => Math.min(Math.ceil(problemRanking.length / ITEMS_PER_PAGE), prev + 1))}
                       disabled={currentPage >= Math.ceil(problemRanking.length / ITEMS_PER_PAGE)}
+                      className="px-4 py-2 bg-slate-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-all"
+                    >
+                      <i className="ri-arrow-right-line"></i>
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* 팔로워 수 랭킹 */}
+        {activeTab === 'follows' && (
+          <div className="space-y-3">
+            {myFollowRank && myFollowRank.data && (
+              <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-xl p-4 border border-amber-500/50 backdrop-blur-sm mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className="text-2xl font-bold text-white min-w-[3rem] text-center">
+                      {getRankIcon(myFollowRank.rank)}
+                    </span>
+                    <Link href={`/${lang}/profile/${myFollowRank.data.user_id}`} className="flex items-center gap-3 hover:opacity-90">
+                      {myFollowRank.data.profile_image_url ? (
+                        <img src={myFollowRank.data.profile_image_url} alt="" className="w-10 h-10 rounded-full object-cover bg-slate-700" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center text-white font-bold">
+                          {myFollowRank.data.nickname.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-lg font-semibold text-white flex items-center gap-2">
+                          {myFollowRank.data.nickname}
+                          <span className="text-xs bg-amber-500/30 text-amber-300 px-2 py-0.5 rounded">나</span>
+                        </p>
+                        <p className="text-sm text-slate-400">
+                          <i className="ri-user-follow-line mr-1"></i>
+                          {myFollowRank.data.follower_count} {t.ranking.followers}
+                        </p>
+                      </div>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
+            {followRanking.length === 0 ? (
+              <div className="text-center py-12 bg-slate-800/50 rounded-xl border border-slate-700">
+                <i className="ri-user-follow-line text-4xl text-slate-600 mb-4"></i>
+                <p className="text-slate-400">{t.ranking.noFollowers}</p>
+              </div>
+            ) : (
+              <>
+                {followRanking
+                  .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+                  .map((item, index) => {
+                    const globalIndex = (currentPage - 1) * ITEMS_PER_PAGE + index;
+                    const rank = globalIndex + 1;
+                    const isMyRank = myFollowRank?.data?.user_id === item.user_id;
+                    return (
+                      <Link
+                        key={item.user_id}
+                        href={`/${lang}/profile/${item.user_id}`}
+                        className={`block bg-gradient-to-r ${getRankColor(rank)} rounded-xl p-4 border backdrop-blur-sm hover:opacity-95 transition-opacity ${isMyRank ? 'ring-2 ring-amber-500/50' : ''}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <span className="text-2xl font-bold text-white min-w-[3rem] text-center">
+                              {getRankIcon(rank)}
+                            </span>
+                            {item.profile_image_url ? (
+                              <img src={item.profile_image_url} alt="" className="w-10 h-10 rounded-full object-cover bg-slate-700" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center text-white font-bold">
+                                {item.nickname.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-lg font-semibold text-white">{item.nickname}</p>
+                              <p className="text-sm text-slate-400">
+                                <i className="ri-user-follow-line mr-1"></i>
+                                {item.follower_count} {t.ranking.followers}
+                              </p>
+                            </div>
+                          </div>
+                          <i className="ri-arrow-right-s-line text-slate-400 text-xl"></i>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                {followRanking.length > ITEMS_PER_PAGE && (
+                  <div className="flex items-center justify-center gap-2 mt-6">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 bg-slate-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-all"
+                    >
+                      <i className="ri-arrow-left-line"></i>
+                    </button>
+                    <span className="text-slate-400 px-4">
+                      {currentPage} / {Math.ceil(followRanking.length / ITEMS_PER_PAGE)}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(Math.ceil(followRanking.length / ITEMS_PER_PAGE), prev + 1))}
+                      disabled={currentPage >= Math.ceil(followRanking.length / ITEMS_PER_PAGE)}
                       className="px-4 py-2 bg-slate-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-all"
                     >
                       <i className="ri-arrow-right-line"></i>

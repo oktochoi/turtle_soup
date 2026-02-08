@@ -44,6 +44,7 @@ export default function QuizFormSoup({
           onImageChange={onImageChange}
           onImageUrlChange={onImageUrlChange}
           lang={lang}
+          required
         />
       )}
 

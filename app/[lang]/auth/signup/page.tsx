@@ -186,17 +186,9 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
           }
         }
 
-        // 회원가입 성공 시 이메일 인증 안내 또는 홈으로 리디렉션
-        if (data.user.email_confirmed_at) {
-          // 이미 인증된 경우 바로 홈으로
-          router.push(`/${lang}`);
-          router.refresh();
-        } else {
-          // 이메일 인증 필요 안내 - 재전송 버튼 표시
-          setError(null);
-          setShowResendEmail(true);
-          setIsLoading(false);
-        }
+        // 회원가입 성공 시 이메일 인증 없이 바로 홈으로 이동
+        router.push(`/${lang}?signedup=1`);
+        router.refresh();
       }
     } catch (error: any) {
       console.error('회원가입 오류:', error);

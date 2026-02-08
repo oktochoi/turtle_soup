@@ -81,6 +81,21 @@
   animation: gradient 3s ease infinite;
 }
 
+/* 밸런스 게임: 라운드 전환 시 슬라이드 + 페이드 */
+@keyframes balanceRoundIn {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.balance-round-enter {
+  animation: balanceRoundIn 0.35s ease-out forwards;
+}
+
 /* 광고 컨테이너 스타일 - UI를 막지 않도록 제한 */
 .ad-banner-300x250,
 .ad-native-banner,

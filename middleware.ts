@@ -31,6 +31,7 @@ const publicPaths = [
   '/community', // 커뮤니티는 Public
   '/tutorial', // 튜토리얼은 Public
   '/guide', // 가이드는 Public
+  '/balance', // 밸런스 게임 목록·플레이 (생성은 페이지에서 로그인 유도)
 ];
 
 // 인증이 필요한 경로 (로그인 필수)

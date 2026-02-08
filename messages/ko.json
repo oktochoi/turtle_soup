@@ -286,12 +286,15 @@
     "title": "랭킹",
     "receivedHearts": "받은 하트",
     "problemSolves": "문제 맞춘 수",
+    "mostFollowers": "팔로워 수",
     "loading": "랭킹을 불러오는 중...",
-    "description": "문제 맞춘 수와 받은 하트를 확인하세요",
+    "description": "문제 맞춘 수, 받은 하트, 팔로워 수를 확인하세요",
     "noSolves": "아직 문제를 맞춘 사용자가 없습니다.",
     "noHearts": "아직 하트를 받은 사용자가 없습니다.",
+    "noFollowers": "아직 팔로워 랭킹이 없습니다.",
     "hearts": "하트",
-    "problems": "문제"
+    "problems": "문제",
+    "followers": "팔로워"
   },
   "auth": {
     "login": "로그인",

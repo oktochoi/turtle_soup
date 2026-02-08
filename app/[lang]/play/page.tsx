@@ -70,6 +70,29 @@ export default function PlaySelectPage() {
               </div>
             </div>
           </Link>
+
+          {/* 밸런스 게임 */}
+          <Link href={`/${lang}/balance`}>
+            <div className="group relative bg-slate-800 rounded-2xl p-6 sm:p-8 border-2 border-slate-700 hover:border-amber-500 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/20 cursor-pointer h-full">
+              <div className="text-center">
+                <div className="text-4xl sm:text-5xl mb-4 text-amber-400 group-hover:scale-110 transition-transform flex items-center justify-center">
+                  <i className="ri-scales-line" />
+                </div>
+                <h2 className="text-xl sm:text-2xl font-bold mb-2 text-white">
+                  {lang === 'ko' ? '밸런스 게임' : 'Balance Game'}
+                </h2>
+                <p className="text-sm sm:text-base text-slate-400 mb-4">
+                  {lang === 'ko' 
+                    ? '둘 중 하나를 선택해 결승까지 가는 토너먼트'
+                    : 'Choose one of two each round until the final'}
+                </p>
+                <div className="flex items-center justify-center gap-2 text-amber-400 text-sm">
+                  <span>{lang === 'ko' ? '플레이하기' : 'Play'}</span>
+                  <i className="ri-arrow-right-line"></i>
+                </div>
+              </div>
+            </div>
+          </Link>
         </div>
 
         <div className="mt-8 text-center">
