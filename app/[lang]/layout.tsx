@@ -33,7 +33,7 @@ export async function generateMetadata({
       ? "바다거북스프, 라이어 게임, 마피아 등 추리 퀴즈를 즐기세요. 친구와 멀티플레이, 오늘의 문제, 문제 만들기. 바다거북스프에서 실력과 랭킹을 확인하세요."
       : "Play Lateral Thinking Mystery Puzzles, Liar Game, Mafia and more. Multiplayer with friends, daily puzzles, create your own. Check your rank and skills at Lateral Thinking Mystery Puzzles.";
 
-  const ogImage = `${siteUrl}/og-default.png`;
+  const ogImage = `${siteUrl}/og.png`;
 
   return {
     title: title.slice(0, 60),
