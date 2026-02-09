@@ -2,8 +2,27 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
-const supportedLocales = ['ko', 'en'];
+const supportedLocales = ['ko', 'en'] as const;
 const defaultLocale = 'ko';
+
+/** SEO·사이트 검증용 정적 파일 — middleware 로직 없이 즉시 통과 (matcher에서도 제외) */
+const STATIC_SEO_PATHS = [
+  '/ads.txt',
+  '/robots.txt',
+  '/sitemap.xml',
+  '/favicon.ico',
+  '/apple-touch-icon.png',
+  '/icon.png',
+  '/og.png',
+] as const;
+
+const SITEMAP_PREFIX = '/sitemap-';
+
+function shouldSkipMiddleware(pathname: string): boolean {
+  if (STATIC_SEO_PATHS.some((p) => pathname === p)) return true;
+  if (pathname.startsWith(SITEMAP_PREFIX) && pathname.endsWith('.xml')) return true;
+  return false;
+}
 
 function detectPreferredLocale(request: NextRequest): string {
   const header = request.headers.get('accept-language') || '';
@@ -21,8 +40,6 @@ const publicPaths = [
   '/privacy',
   '/terms',
   '/contact',
-  '/sitemap.xml',
-  '/robots.txt',
   '/auth', // 인증 관련 페이지는 Public
   '/problems', // 문제 목록은 Public
   '/problem', // 개별 문제 상세는 Public
@@ -99,15 +116,17 @@ function isProtectedPath(pathname: string): boolean {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
+
+  // SEO·사이트 검증 정적 파일 — locale/auth/redirect 적용 없이 즉시 통과
+  if (shouldSkipMiddleware(pathname)) {
+    return NextResponse.next();
+  }
+
   // 정적 파일과 API 라우트는 건너뛰기
-  // sitemap.xml과 robots.txt는 SEO를 위해 루트에 유지
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
     pathname.startsWith('/static') ||
-    pathname === '/sitemap.xml' ||
-    pathname === '/robots.txt' ||
     pathname.match(/\.(ico|png|jpg|jpeg|svg|gif|webp|woff|woff2|ttf|eot)$/)
   ) {
     return NextResponse.next();
@@ -165,15 +184,12 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - sitemap.xml (sitemap file)
-     * - robots.txt (robots file)
+     * SEO·정적 파일은 제외 — middleware 실행 자체를 스킵
+     * - api, _next/static, _next/image
+     * - ads.txt, robots.txt, sitemap.xml, sitemap-*.xml
+     * - favicon.ico, apple-touch-icon.png, icon.png, og.png
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
+    '/((?!api|_next/static|_next/image|ads\\.txt|robots\\.txt|sitemap\\.xml|sitemap-|favicon\\.ico|apple-touch-icon\\.png|icon\\.png|og\\.png).*)',
   ],
 };
 
