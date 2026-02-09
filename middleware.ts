@@ -3,7 +3,12 @@ import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 const supportedLocales = ['ko', 'en'] as const;
-const defaultLocale = 'ko';
+type SupportedLocale = (typeof supportedLocales)[number];
+const defaultLocale: SupportedLocale = 'ko';
+
+function isSupportedLocale(s: string): s is SupportedLocale {
+  return (supportedLocales as readonly string[]).includes(s);
+}
 
 /** SEO·사이트 검증용 정적 파일 — middleware 로직 없이 즉시 통과 (matcher에서도 제외) */
 const STATIC_SEO_PATHS = [
@@ -157,7 +162,7 @@ export async function middleware(request: NextRequest) {
 
   // 잘못된 언어 코드는 기본 언어로 리다이렉트
   const pathSegments = pathname.split('/').filter(Boolean);
-  if (pathSegments.length > 0 && !supportedLocales.includes(pathSegments[0])) {
+  if (pathSegments.length > 0 && !isSupportedLocale(pathSegments[0])) {
     const restOfPath = pathSegments.slice(1).join('/');
     const newPathname = restOfPath ? `/${defaultLocale}/${restOfPath}` : `/${defaultLocale}`;
     return NextResponse.redirect(
