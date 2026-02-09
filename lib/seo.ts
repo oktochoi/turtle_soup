@@ -57,7 +57,7 @@ export function generateMetadata({
   const fullTitle = sanitizeTitle(rawTitle).slice(0, 60);
   const fullDescription = truncateDescription(description || siteDescription, 155);
   const canonicalUrl = `${baseUrl}${path}`;
-  const ogImage = image || `${baseUrl}/og-default.png`;
+  const ogImage = image || `${baseUrl}/og.png`;
   const keywordList = keywords.filter(Boolean);
 
   return {
