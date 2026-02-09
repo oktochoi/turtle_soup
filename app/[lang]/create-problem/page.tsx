@@ -113,10 +113,6 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         alert(lang === 'ko' ? '모든 필수 항목을 입력해주세요.' : 'Please fill in all required fields.');
         return;
       }
-      if (!imageFile && !imageUrl.trim()) {
-        alert(lang === 'ko' ? '썸네일(대표 이미지)을 업로드하거나 URL을 입력해주세요.' : 'Please upload a thumbnail or enter an image URL.');
-        return;
-      }
     } else if (quizType === 'nonsense') {
       if (!answer.trim()) {
         alert(lang === 'ko' ? '정답을 입력해주세요.' : 'Please enter answer.');
@@ -235,10 +231,7 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
       if (quizType === 'soup') {
         insertData.content = content.trim();
         insertData.answer = answer.trim();
-        // URL 직접 입력한 경우만 insert 시 반영 (파일 업로드는 나중에 업로드 후 update)
-        if (imageUrl.trim() && !imageUrl.startsWith('data:')) {
-          insertData.image_url = imageUrl.trim();
-        }
+        // 바다거북스프는 썸네일 없음
         const validHints = hints.filter(h => h && h.trim()).slice(0, 3);
         if (validHints.length > 0) {
           insertData.hints = validHints;
@@ -397,12 +390,6 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
             console.error('이미지 재업로드 오류:', retryError);
           }
         }
-      }
-
-      // soup 타입 썸네일: 업로드된 URL로 problems.image_url 업데이트
-      if (quizType === 'soup' && (uploadedThumbnailUrl || imageUrl.trim())) {
-        const thumbnailUrl = uploadedThumbnailUrl || imageUrl.trim();
-        await supabaseClient.from('problems').update({ image_url: thumbnailUrl }).eq('id', problem.id);
       }
 
       // quiz_contents 테이블에 타입별 세부 데이터 저장
@@ -662,14 +649,11 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
                 truth={answer}
                 hints={hints}
                 explanation={explanation}
-                imageUrl={imageUrl}
                 originalAuthor={originalAuthor}
                 onStoryChange={setContent}
                 onTruthChange={setAnswer}
                 onHintsChange={setHints}
                 onExplanationChange={setExplanation}
-                onImageChange={setImageFile}
-                onImageUrlChange={setImageUrl}
                 onOriginalAuthorChange={setOriginalAuthor}
                 lang={currentLang}
               />

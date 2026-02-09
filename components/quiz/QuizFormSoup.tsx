@@ -1,20 +1,15 @@
 'use client';
 
-import ImageUpload from './ImageUpload';
-
 interface QuizFormSoupProps {
   story: string;
   truth: string;
   hints: string[];
   explanation?: string;
-  imageUrl?: string;
   originalAuthor?: string;
   onStoryChange: (value: string) => void;
   onTruthChange: (value: string) => void;
   onHintsChange: (hints: string[]) => void;
   onExplanationChange?: (value: string) => void;
-  onImageChange?: (file: File | null) => void;
-  onImageUrlChange?: (url: string) => void;
   onOriginalAuthorChange?: (value: string) => void;
   lang?: 'ko' | 'en';
 }
@@ -24,30 +19,16 @@ export default function QuizFormSoup({
   truth,
   hints,
   explanation = '',
-  imageUrl,
   originalAuthor = '',
   onStoryChange,
   onTruthChange,
   onHintsChange,
   onExplanationChange,
-  onImageChange,
-  onImageUrlChange,
   onOriginalAuthorChange,
   lang = 'ko',
 }: QuizFormSoupProps) {
   return (
     <>
-      {/* 이미지 업로드 */}
-      {onImageChange && (
-        <ImageUpload
-          imageUrl={imageUrl}
-          onImageChange={onImageChange}
-          onImageUrlChange={onImageUrlChange}
-          lang={lang}
-          required
-        />
-      )}
-
       {/* 표면 이야기 */}
       <div>
         <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
