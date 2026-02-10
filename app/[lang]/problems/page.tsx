@@ -657,7 +657,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                       </span>
                       {averageRating > 0 && (
                         <span className="text-xs text-slate-400">
-                          ⭐ {averageRating.toFixed(1)} ({ratingCount})
+                          ⭐ {averageRating.toFixed(1)}
                         </span>
                       )}
                     </div>

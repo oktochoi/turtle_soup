@@ -509,7 +509,7 @@ export default function GuessSetDetailPage() {
               </div>
               {averageRating > 0 && (
                 <span className="text-slate-300 text-xs">
-                  {averageRating.toFixed(1)} ({ratingCount})
+                  {averageRating.toFixed(1)}
                 </span>
               )}
             </div>

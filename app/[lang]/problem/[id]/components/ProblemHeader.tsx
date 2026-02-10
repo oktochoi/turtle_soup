@@ -90,7 +90,7 @@ export default function ProblemHeader({
               </span>
               {averageRating > 0 && (
                 <span className="text-xs">
-                  ⭐ {averageRating.toFixed(1)} ({ratingCount}명)
+                  ⭐ {averageRating.toFixed(1)}
                 </span>
               )}
             </div>
@@ -189,9 +189,7 @@ export default function ProblemHeader({
             </div>
             {averageRating > 0 && (
               <span className="text-xs sm:text-sm text-slate-400">
-                {lang === 'ko' 
-                  ? `${t.problem.average} ⭐ ${averageRating.toFixed(1)} (${ratingCount}${t.problem.ratings})`
-                  : `${t.problem.average} ⭐ ${averageRating.toFixed(1)} (${ratingCount} ${t.problem.ratings})`}
+                {t.problem.average} ⭐ {averageRating.toFixed(1)}
               </span>
             )}
             {averageRating === 0 && (
