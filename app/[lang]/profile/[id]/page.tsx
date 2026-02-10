@@ -1054,16 +1054,8 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                       )}
                       <div className="flex items-center gap-4 text-xs sm:text-sm text-slate-400">
                         <span className="flex items-center gap-1">
-                          <i className="ri-heart-line"></i>
-                          {problem.like_count || 0}
-                        </span>
-                        <span className="flex items-center gap-1">
                           <i className="ri-chat-3-line"></i>
                           {problem.comment_count || 0}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <i className="ri-eye-line"></i>
-                          {problem.view_count || 0}
                         </span>
                         <span className="text-slate-500">
                           {new Date(problem.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}

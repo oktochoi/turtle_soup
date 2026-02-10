@@ -85,18 +85,6 @@ export default function ProblemHeader({
           )}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-400">
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              <span className="flex items-center gap-1 hover:text-slate-300 transition-colors">
-                <i className="ri-eye-line"></i>
-                {problem.view_count || 0}
-              </span>
-              <span className="flex items-center gap-1 hover:text-slate-300 transition-colors">
-                <i className="ri-heart-line"></i>
-                {problem.like_count || 0}
-              </span>
-              <span className="flex items-center gap-1 hover:text-slate-300 transition-colors">
-                <i className="ri-chat-3-line"></i>
-                {problem.comment_count || 0}
-              </span>
               <span className="flex items-center gap-1">
                 {difficultyBadge.emoji} {difficultyBadge.text}
               </span>
@@ -156,7 +144,6 @@ export default function ProblemHeader({
             }`}
           >
             <i className={`ri-heart-${isLiked ? 'fill' : 'line'}`}></i>
-            <span>{problem.like_count}</span>
           </button>
           <button
             onClick={onShareClick}

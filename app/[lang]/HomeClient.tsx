@@ -413,23 +413,6 @@ export default function HomeClient() {
                       <i className="ri-arrow-right-line text-base transition-transform group-hover:translate-x-0.5" />
                     </button>
                   </Link>
-
-                  {!isLoadingProblem && todayProblem && (
-                    <div className="flex flex-wrap gap-4 text-xs sm:text-sm text-slate-300/80">
-                      <span className="inline-flex items-center gap-1.5">
-                        <i className="ri-eye-line text-cyan-300" />
-                        {todayProblem.view_count || 0}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5">
-                        <i className="ri-heart-3-line text-cyan-300" />
-                        {todayProblem.like_count || 0}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5">
-                        <i className="ri-chat-3-line text-cyan-300" />
-                        {todayProblem.comment_count || 0}
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -521,16 +504,7 @@ export default function HomeClient() {
                     <p className="mb-3 line-clamp-2 text-xs sm:text-sm text-slate-400">
                       {problem.content}
                     </p>
-                    <div className="mt-auto flex items-center gap-3 text-[0.7rem] sm:text-xs text-slate-400">
-                      <span className="inline-flex items-center gap-1.5">
-                        <i className="ri-eye-line text-cyan-300" />
-                        {problem.view_count || 0}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5">
-                        <i className="ri-heart-3-line text-cyan-300" />
-                        {problem.like_count || 0}
-                      </span>
-                    </div>
+                    <div className="mt-auto h-1" />
                   </Link>
                 ))
               ) : (

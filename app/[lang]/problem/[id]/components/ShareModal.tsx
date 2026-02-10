@@ -52,20 +52,7 @@ export default function ShareModal({
           <p className="text-sm text-slate-300 line-clamp-3 mb-3">
             {problem.content}
           </p>
-          <div className="flex items-center gap-3 text-xs text-slate-400">
-            <span className="flex items-center gap-1">
-              <i className="ri-eye-line"></i>
-              {problem.view_count || 0}
-            </span>
-            <span className="flex items-center gap-1">
-              <i className="ri-heart-line"></i>
-              {problem.like_count || 0}
-            </span>
-            <span className="flex items-center gap-1">
-              <i className="ri-chat-3-line"></i>
-              {problem.comment_count || 0}
-            </span>
-          </div>
+          <div className="flex items-center gap-3 text-xs text-slate-400" />
         </div>
 
         {/* 공유 옵션 */}

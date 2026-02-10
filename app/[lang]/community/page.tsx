@@ -465,8 +465,6 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
                 <span>{lang === 'ko' ? '제목' : 'Title'}</span>
                 <span className="w-20 sm:w-24 truncate">{lang === 'ko' ? '글쓴이' : 'Author'}</span>
                 <span className="w-16 sm:w-20">{lang === 'ko' ? '작성일' : 'Date'}</span>
-                <span className="w-12 text-center">{lang === 'ko' ? '조회' : 'Views'}</span>
-                <span className="w-12 text-center">{lang === 'ko' ? '추천' : 'Likes'}</span>
               </div>
               {/* 게시글 행 */}
               {paginatedPosts.map((post, index) => {
@@ -519,12 +517,6 @@ export default function CommunityPage({ params }: { params: Promise<{ lang: stri
                         <span className="text-slate-300 truncate max-w-[80px] sm:max-w-[96px] sm:w-24">{post.author}</span>
                       )}
                       <span className="whitespace-nowrap sm:w-20">{formatDate(post.created_at)}</span>
-                      <span className="hidden sm:block w-12 text-center">{post.view_count}</span>
-                      <span className="hidden sm:block w-12 text-center">{post.like_count}</span>
-                      <span className="sm:hidden flex gap-3 ml-auto">
-                        <span><i className="ri-eye-line"></i> {post.view_count}</span>
-                        <span><i className="ri-heart-line"></i> {post.like_count}</span>
-                      </span>
                     </div>
                   </div>
                 );

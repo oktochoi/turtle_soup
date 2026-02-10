@@ -673,12 +673,6 @@ export default function PostClient({ initialPost, lang, postId }: PostClientProp
             )}
             <span>{formatDateShort(post.created_at)}</span>
             <span className="flex items-center gap-1">
-              {lang === 'ko' ? '조회' : 'Views'} {post.view_count}
-            </span>
-            <span className="flex items-center gap-1">
-              {lang === 'ko' ? '추천' : 'Likes'} {post.like_count}
-            </span>
-            <span className="flex items-center gap-1">
               {lang === 'ko' ? '댓글' : 'Comments'} {post.comment_count}
             </span>
           </div>
@@ -701,7 +695,7 @@ export default function PostClient({ initialPost, lang, postId }: PostClientProp
               }`}
             >
               <i className={`ri-heart-${isLiked ? 'fill' : 'line'}`}></i>
-              {lang === 'ko' ? '추천' : 'Like'} {post.like_count}
+              {lang === 'ko' ? '추천' : 'Like'}
             </button>
             <button
               onClick={async () => {
@@ -919,14 +913,12 @@ export default function PostClient({ initialPost, lang, postId }: PostClientProp
             <h2 className="px-4 py-3 bg-slate-800/80 border-b border-slate-700 text-sm font-semibold text-slate-300">
               {lang === 'ko' ? '커뮤니티 리스트' : 'Community List'}
             </h2>
-            <div className="hidden sm:grid sm:grid-cols-[auto_auto_1fr_auto_auto_auto_auto] gap-2 sm:gap-4 px-4 py-2 bg-slate-800/60 border-b border-slate-700 text-xs font-semibold text-slate-400">
+            <div className="hidden sm:grid sm:grid-cols-[auto_auto_1fr_auto_auto_auto] gap-2 sm:gap-4 px-4 py-2 bg-slate-800/60 border-b border-slate-700 text-xs font-semibold text-slate-400">
               <span className="w-10 text-center">{lang === 'ko' ? '번호' : '#'}</span>
               <span className="w-16">{lang === 'ko' ? '말머리' : 'Cat'}</span>
               <span>{lang === 'ko' ? '제목' : 'Title'}</span>
               <span className="w-20 truncate">{lang === 'ko' ? '글쓴이' : 'Author'}</span>
               <span className="w-16">{lang === 'ko' ? '작성일' : 'Date'}</span>
-              <span className="w-12 text-center">{lang === 'ko' ? '조회' : 'Views'}</span>
-              <span className="w-12 text-center">{lang === 'ko' ? '추천' : 'Likes'}</span>
             </div>
             {recentPosts.slice(0, 15).map((p, idx) => {
               const catInfo = getCategoryInfo(p.category);
@@ -948,12 +940,6 @@ export default function PostClient({ initialPost, lang, postId }: PostClientProp
                   </span>
                   <span className="text-xs text-slate-400 truncate max-w-[80px]">{p.author}</span>
                   <span className="text-xs text-slate-500 whitespace-nowrap">{formatDateShort(p.created_at).split(' ')[0]}</span>
-                  <span className="hidden sm:block text-xs text-slate-500 text-center">{p.view_count}</span>
-                  <span className="hidden sm:block text-xs text-slate-500 text-center">{p.like_count}</span>
-                  <span className="sm:hidden flex gap-2 text-xs text-slate-500 mt-1">
-                    <span><i className="ri-eye-line"></i> {p.view_count}</span>
-                    <span><i className="ri-heart-line"></i> {p.like_count}</span>
-                  </span>
                 </Link>
               );
             })}

@@ -482,12 +482,6 @@ export default function GuessSetDetailPage() {
             </button>
           </div>
 
-          {/* 조회수 */}
-          <div className="mb-4 flex items-center gap-2 text-sm text-slate-400">
-            <i className="ri-eye-line"></i>
-            <span>{lang === 'ko' ? '조회수' : 'Views'}: {(guessSet as any)?.view_count || 0}</span>
-          </div>
-          
           <div className="flex items-center flex-wrap gap-4 text-sm">
             <span className="text-slate-400">
               <i className="ri-file-list-line mr-1"></i>

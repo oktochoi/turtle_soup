@@ -128,8 +128,6 @@ export default function BalanceListPage({ params }: { params: Promise<{ lang: st
                   <div className="font-semibold text-white text-sm line-clamp-2">{g.title}</div>
                   <div className="text-xs text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
                     <span>{g.tournament_size}{lang === 'ko' ? '강' : ''}</span>
-                    <span className="flex items-center gap-0.5"><i className="ri-eye-line" /> {g.view_count ?? 0}</span>
-                    <span className="flex items-center gap-0.5"><i className="ri-heart-line" /> {g.like_count ?? 0}</span>
                     <span className="flex items-center gap-0.5"><i className="ri-chat-3-line" /> {g.comment_count ?? 0}</span>
                   </div>
                 </div>

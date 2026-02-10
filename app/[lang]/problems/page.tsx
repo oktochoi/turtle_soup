@@ -667,22 +667,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                     {truncateText(problem.content, 100)}
                   </p>
 
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3 sm:mb-4 text-xs sm:text-sm text-slate-400">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <span className="flex items-center gap-1">
-                        <i className="ri-eye-line"></i>
-                        {problem.view_count || 0}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <i className="ri-heart-line"></i>
-                        {problem.like_count || 0}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <i className="ri-chat-3-line"></i>
-                        {problem.comment_count || 0}
-                      </span>
-                    </div>
-                  </div>
+                  <div className="mb-3 sm:mb-4" />
 
                   <Link href={`/${lang}/problem/${problem.id}`}>
                     <button className="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 sm:py-3 rounded-lg transition-all duration-200 text-sm sm:text-base touch-manipulation">

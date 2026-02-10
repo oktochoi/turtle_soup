@@ -440,23 +440,8 @@ export default function GuessSetsPage() {
                         )}
                       </div>
 
-                      {/* 통계 정보 */}
-                      <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-slate-700/50 text-xs sm:text-sm text-slate-400">
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <span className="flex items-center gap-1">
-                            <i className="ri-eye-line"></i>
-                            {set.view_count || 0}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <i className="ri-heart-line"></i>
-                            {set.like_count || 0}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <i className="ri-chat-3-line"></i>
-                            {set.comment_count || 0}
-                          </span>
-                        </div>
-                      </div>
+                      {/* 통계 정보 (숫자는 숨기고 기록만 유지) */}
+                      <div className="pt-3 sm:pt-4 border-t border-slate-700/50 text-xs sm:text-sm text-slate-400" />
                     </div>
                   </Link>
                 );
