@@ -30,6 +30,7 @@ import QuestionInputSection from './components/QuestionInputSection';
 import AnswerInputSection from './components/AnswerInputSection';
 import UserAnswersFeed from './components/UserAnswersFeed';
 import AdminQuestionList from './components/AdminQuestionList';
+import { AdNativeBarContainer } from '@/components/AdUnits';
 
 type ProblemClientProps = {
   initialProblem: Problem;
@@ -2113,7 +2114,12 @@ export default function ProblemClient({
           hasVoted={hasVoted}
           t={t}
         />
-  
+
+        {/* Native Banner (문제 상세 중간) */}
+        <div className="my-6 flex justify-center">
+          <AdNativeBarContainer />
+        </div>
+
         {/* 질문하기 섹션 (Soup 타입만) */}
         {quizType === 'soup' && (
           <>

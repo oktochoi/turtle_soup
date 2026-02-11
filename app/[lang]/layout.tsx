@@ -5,7 +5,7 @@ import ToastContainer from "@/components/Toast";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AnalyticsGate } from "@/components/AnalyticsGate";
 import SocialBottomBar from "@/components/SocialBottomBar";
-import { AdScripts, AdBannerSlot, AdNativeBarContainer } from "@/components/AdUnits";
+import { AdScripts } from "@/components/AdUnits";
 import { getMessages, type Locale, isValidLocale, defaultLocale } from "@/lib/i18n";
 import { notFound } from "next/navigation";
 import { measurePageLoad, monitorMemoryUsage } from "@/lib/performance-monitor";
@@ -145,11 +145,6 @@ export default async function LangLayout({
       <div className="flex flex-col min-h-screen">
         <Header />
         <main className="flex-1">{children}</main>
-        {/* 모바일만: 메인 아래 배너 */}
-        <div className="lg:hidden flex justify-center py-3 px-2">
-          <AdBannerSlot />
-        </div>
-        <AdNativeBarContainer />
         <SocialBottomBar />
       </div>
 
