@@ -5,7 +5,6 @@ import ToastContainer from "@/components/Toast";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AnalyticsGate } from "@/components/AnalyticsGate";
 import SocialBottomBar from "@/components/SocialBottomBar";
-import { AdScripts } from "@/components/AdUnits";
 import { getMessages, type Locale, isValidLocale, defaultLocale } from "@/lib/i18n";
 import { notFound } from "next/navigation";
 import { measurePageLoad, monitorMemoryUsage } from "@/lib/performance-monitor";
@@ -148,7 +147,6 @@ export default async function LangLayout({
         <SocialBottomBar />
       </div>
 
-      <AdScripts />
       <ToastContainer />
       <AnalyticsGate />
       <PerformanceMonitor />
