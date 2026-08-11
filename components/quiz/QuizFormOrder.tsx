@@ -66,7 +66,7 @@ export default function QuizFormOrder({
       {/* 이미지 업로드 */}
       {onImageChange && (
         <div>
-          <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+          <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
             <i className="ri-image-line mr-1"></i>
             {lang === 'ko' ? '이미지 (선택사항)' : 'Image (Optional)'}
           </label>
@@ -75,10 +75,10 @@ export default function QuizFormOrder({
               type="file"
               accept="image/*"
               onChange={handleImageUpload}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-teal-500 file:text-white hover:file:bg-teal-600"
+              className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brass file:text-white hover:file:bg-teal-600"
             />
             {imageUrl && (
-              <div className="relative w-full h-48 bg-slate-900 rounded-xl overflow-hidden">
+              <div className="relative w-full h-48 bg-ink-800 rounded-xl overflow-hidden">
                 <img src={imageUrl} alt="Preview" className="w-full h-full object-contain" />
               </div>
             )}
@@ -89,14 +89,14 @@ export default function QuizFormOrder({
       {/* 항목들 */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-xs sm:text-sm font-medium text-slate-300">
+          <label className="block text-xs sm:text-sm font-medium text-fog">
             <i className="ri-list-ordered mr-1"></i>
             {lang === 'ko' ? '항목들 (최소 2개)' : 'Items (Minimum 2)'}
           </label>
           <button
             type="button"
             onClick={handleAddItem}
-            className="text-xs bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 rounded-lg transition-colors"
+            className="text-xs bg-brass hover:bg-brass-600 text-white px-3 py-1 rounded-lg transition-colors"
           >
             <i className="ri-add-line mr-1"></i>
             {lang === 'ko' ? '추가' : 'Add'}
@@ -105,13 +105,13 @@ export default function QuizFormOrder({
         <div className="space-y-2">
           {items.map((item, index) => (
             <div key={index} className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 w-8">{index + 1}.</span>
+              <span className="text-xs text-fog w-8">{index + 1}.</span>
               <input
                 type="text"
                 value={item}
                 onChange={(e) => handleItemChange(index, e.target.value)}
                 placeholder={lang === 'ko' ? `항목 ${index + 1}` : `Item ${index + 1}`}
-                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                className="flex-1 bg-ink-700 border border-brass/20 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
                 maxLength={200}
               />
               <input
@@ -126,7 +126,7 @@ export default function QuizFormOrder({
                   }
                 }}
                 placeholder="순서"
-                className="w-16 bg-slate-800 border border-slate-700 rounded-lg px-2 py-2.5 text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-16 bg-ink-700 border border-brass/20 rounded-lg px-2 py-2.5 text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
               {items.length > 2 && (
                 <button
@@ -140,7 +140,7 @@ export default function QuizFormOrder({
             </div>
           ))}
         </div>
-        <p className="text-xs text-slate-400 mt-2">
+        <p className="text-xs text-fog mt-2">
           {lang === 'ko' 
             ? '각 항목의 올바른 순서를 숫자로 입력하세요 (1부터 시작)'
             : 'Enter the correct order for each item as a number (starting from 1)'}
@@ -150,7 +150,7 @@ export default function QuizFormOrder({
       {/* 설명 */}
       {onExplanationChange && (
         <div>
-          <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+          <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
             <i className="ri-information-line mr-1"></i>
             {lang === 'ko' ? '설명 (선택사항)' : 'Explanation (Optional)'}
           </label>
@@ -158,7 +158,7 @@ export default function QuizFormOrder({
             value={explanation}
             onChange={(e) => onExplanationChange(e.target.value)}
             placeholder={lang === 'ko' ? '순서의 이유와 설명을 입력하세요' : 'Enter the explanation for the order'}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
+            className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
             maxLength={300}
           />
         </div>

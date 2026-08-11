@@ -35,10 +35,10 @@ export default function AdminQuestionList({
             return (
               <div
                 key={q.id}
-                className={`bg-slate-900 rounded-lg p-4 border transition-all ${
+                className={`bg-ink-800 rounded-lg p-4 border transition-all ${
                   selectedQuestionId === q.id
                     ? 'border-purple-500 bg-purple-500/10'
-                    : 'border-slate-700'
+                    : 'border-brass/20'
                 } ${!q.answer ? 'cursor-pointer hover:border-purple-500/50' : ''}`}
                 onClick={() => {
                   if (!q.answer) {
@@ -47,7 +47,7 @@ export default function AdminQuestionList({
                 }}
               >
                 <div className="flex items-start justify-between mb-2">
-                  <span className="text-sm font-semibold text-cyan-400">{q.nickname}</span>
+                  <span className="text-sm font-semibold text-brass">{q.nickname}</span>
                   {badge && (
                     <span className={`px-2 py-1 rounded text-xs font-semibold border ${badge.color}`}>
                       {badge.text}

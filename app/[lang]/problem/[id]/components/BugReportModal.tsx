@@ -46,7 +46,7 @@ export default function BugReportModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-800 rounded-xl p-4 sm:p-6 max-w-md w-full border border-slate-700 shadow-2xl">
+      <div className="bg-ink-700 rounded-xl p-4 sm:p-6 max-w-md w-full border border-brass/20 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg sm:text-xl font-bold text-red-400 flex items-center gap-2">
             <i className="ri-bug-line"></i>
@@ -54,7 +54,7 @@ export default function BugReportModal({
           </h3>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors touch-manipulation"
+            className="text-fog hover:text-white transition-colors touch-manipulation"
           >
             <i className="ri-close-line text-xl"></i>
           </button>
@@ -62,13 +62,13 @@ export default function BugReportModal({
 
         <div className="space-y-4">
           <div>
-            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+            <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
               {lang === 'ko' ? '버그 유형' : 'Bug Type'}
             </label>
             <select
               value={bugReportType}
               onChange={(e) => onBugReportTypeChange(e.target.value as any)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full bg-ink-800 border border-brass/20 rounded-lg px-3 sm:px-4 py-2 text-white text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-red-500"
             >
               <option value="wrong_yes_no">{lang === 'ko' ? '예/아니요 오류 (예여야 하는데 아니요로 판단)' : 'Yes/No Error (Should be Yes but got No)'}</option>
               <option value="wrong_answer">{lang === 'ko' ? '정답 오류 (정답인데 오답으로 판단)' : 'Answer Error (Correct but marked wrong)'}</option>
@@ -79,20 +79,20 @@ export default function BugReportModal({
           </div>
 
           <div>
-            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+            <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
               {lang === 'ko' ? '문제 ID' : 'Problem ID'}
             </label>
-            <div className="bg-slate-900 rounded-lg px-3 sm:px-4 py-2 text-sm text-slate-300 border border-slate-700">
+            <div className="bg-ink-800 rounded-lg px-3 sm:px-4 py-2 text-sm text-fog border border-brass/20">
               {problemId}
             </div>
           </div>
 
           {bugReportType !== 'wrong_similarity' && (bugReportQuestion || questionText) && (
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+              <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
                 {lang === 'ko' ? '질문' : 'Question'}
               </label>
-              <div className="bg-slate-900 rounded-lg px-3 sm:px-4 py-2 text-sm text-slate-300 border border-slate-700">
+              <div className="bg-ink-800 rounded-lg px-3 sm:px-4 py-2 text-sm text-fog border border-brass/20">
                 {bugReportQuestion || questionText}
               </div>
             </div>
@@ -100,10 +100,10 @@ export default function BugReportModal({
 
           {bugReportType !== 'wrong_similarity' && (bugReportAnswer || suggestedAnswer) && (
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+              <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
                 {lang === 'ko' ? 'AI 제안 답변' : 'AI Suggested Answer'}
               </label>
-              <div className="bg-slate-900 rounded-lg px-3 sm:px-4 py-2 text-sm text-slate-300 border border-slate-700">
+              <div className="bg-ink-800 rounded-lg px-3 sm:px-4 py-2 text-sm text-fog border border-brass/20">
                 {(() => {
                   const answer = bugReportAnswer || suggestedAnswer;
                   return answer === 'yes' ? (lang === 'ko' ? '예' : 'Yes') :
@@ -117,10 +117,10 @@ export default function BugReportModal({
 
           {bugReportType === 'wrong_similarity' && userGuess && (
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+              <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
                 {lang === 'ko' ? '제출한 정답' : 'Submitted Answer'}
               </label>
-              <div className="bg-slate-900 rounded-lg px-3 sm:px-4 py-2 text-sm text-slate-300 border border-slate-700">
+              <div className="bg-ink-800 rounded-lg px-3 sm:px-4 py-2 text-sm text-fog border border-brass/20">
                 {userGuess}
               </div>
             </div>
@@ -128,17 +128,17 @@ export default function BugReportModal({
 
           {bugReportType === 'wrong_similarity' && similarityScore !== null && (
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+              <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
                 {lang === 'ko' ? '계산된 유사도' : 'Calculated Similarity'}
               </label>
-              <div className="bg-slate-900 rounded-lg px-3 sm:px-4 py-2 text-sm text-slate-300 border border-slate-700">
+              <div className="bg-ink-800 rounded-lg px-3 sm:px-4 py-2 text-sm text-fog border border-brass/20">
                 {similarityScore}%
               </div>
             </div>
           )}
 
           <div>
-            <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+            <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
               {lang === 'ko' ? '기대한 답변' : 'Expected Answer'}
               <span className="text-red-400 ml-1">*</span>
             </label>
@@ -148,9 +148,9 @@ export default function BugReportModal({
               onChange={(e) => onBugReportExpectedChange(e.target.value)}
               placeholder={lang === 'ko' ? '예: 예, 아니요, 무관 등' : 'e.g., Yes, No, Irrelevant'}
               required
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
+              className="w-full bg-ink-800 border border-brass/20 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm sm:text-base"
             />
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-fog mt-1">
               {lang === 'ko' 
                 ? 'AI가 어떤 답변을 해야 했는지 입력해주세요.' 
                 : 'Please enter what answer the AI should have given.'}
@@ -160,7 +160,7 @@ export default function BugReportModal({
           <div className="flex gap-3 pt-2">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all font-semibold text-sm sm:text-base touch-manipulation"
+              className="flex-1 px-4 py-2.5 bg-ink-600 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all font-semibold text-sm sm:text-base touch-manipulation"
             >
               {lang === 'ko' ? '취소' : 'Cancel'}
             </button>

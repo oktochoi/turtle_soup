@@ -122,13 +122,13 @@ export default async function FAQPage({
   ];
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <main className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 max-w-4xl">
-        <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 lg:p-10 border border-slate-700 shadow-xl">
-          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+        <div className="bg-ink-700/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 lg:p-10 border border-brass/20 shadow-xl">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-brass-300 to-brass bg-clip-text text-transparent">
             {isKo ? '자주 묻는 질문' : 'Frequently Asked Questions'}
           </h1>
-          <p className="text-slate-400 text-sm mb-8">
+          <p className="text-fog text-sm mb-8">
             {isKo ? '게임 이용 중 궁금한 점을 확인하세요' : 'Find answers to your questions about using the game'}
           </p>
 
@@ -136,26 +136,26 @@ export default async function FAQPage({
             {faqs.map((faq, index) => (
               <div
                 key={index}
-                className="bg-slate-900/50 rounded-lg p-5 border border-slate-700/50 hover:border-teal-500/50 transition-colors"
+                className="bg-ink-800/50 rounded-lg p-5 border border-brass/20 hover:border-brass/50 transition-colors"
               >
-                <h2 className="text-xl font-semibold text-teal-300 mb-3 flex items-start">
-                  <span className="mr-2 text-teal-400">Q{index + 1}.</span>
+                <h2 className="text-xl font-semibold text-brass-300 mb-3 flex items-start">
+                  <span className="mr-2 text-brass">Q{index + 1}.</span>
                   {faq.question}
                 </h2>
-                <p className="text-slate-300 leading-relaxed pl-8">{faq.answer}</p>
+                <p className="text-fog leading-relaxed pl-8">{faq.answer}</p>
               </div>
             ))}
           </div>
 
-          <div className="mt-8 p-4 bg-teal-500/10 border border-teal-500/30 rounded-lg">
-            <p className="text-slate-300 mb-3">
+          <div className="mt-8 p-4 bg-brass/10 border border-brass/30 rounded-lg">
+            <p className="text-fog mb-3">
               {isKo
                 ? '더 궁금한 점이 있으신가요? 문의하기 페이지를 통해 질문해 주세요.'
                 : 'Have more questions? Please ask through the contact page.'}
             </p>
             <Link
               href={`/${locale}/contact`}
-              className="inline-flex items-center gap-2 text-teal-400 hover:text-teal-300 transition-colors font-semibold"
+              className="inline-flex items-center gap-2 text-brass hover:text-brass-300 transition-colors font-semibold"
             >
               <i className="ri-mail-line"></i>
               <span>{isKo ? '문의하기' : 'Contact Us'}</span>

@@ -39,13 +39,13 @@ export default function QuizPlayMCQ({
           const isCorrect = showAnswer && index === content.correct;
           const isWrong = showAnswer && isSelected && index !== content.correct;
 
-          let bgColor = 'bg-slate-700 hover:bg-slate-600';
+          let bgColor = 'bg-ink-600 hover:bg-slate-600';
           if (showAnswer) {
             if (isCorrect) bgColor = 'bg-green-600';
             else if (isWrong) bgColor = 'bg-red-600';
-            else bgColor = 'bg-slate-700';
+            else bgColor = 'bg-ink-600';
           } else if (isSelected) {
-            bgColor = 'bg-teal-600 hover:bg-teal-500';
+            bgColor = 'bg-teal-600 hover:bg-brass';
           }
 
           return (
@@ -80,15 +80,15 @@ export default function QuizPlayMCQ({
       {content.explanation && (
         <details className="mt-4 group">
           <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
-            <div className="bg-slate-800 rounded-lg border border-slate-600 hover:border-teal-500/30 transition-colors px-4 py-2.5 flex items-center justify-between">
-              <span className="text-sm font-semibold text-teal-400">
+            <div className="bg-ink-700 rounded-lg border border-brass/25 hover:border-brass/30 transition-colors px-4 py-2.5 flex items-center justify-between">
+              <span className="text-sm font-semibold text-brass">
                 {isKo ? '해설 보기' : 'View Explanation'}
               </span>
-              <i className="ri-arrow-down-s-line text-slate-400 group-open:rotate-180 transition-transform"></i>
+              <i className="ri-arrow-down-s-line text-fog group-open:rotate-180 transition-transform"></i>
             </div>
           </summary>
-          <div className="mt-2 p-4 bg-slate-800 rounded-lg border border-slate-600 border-t-0 rounded-t-none">
-            <div className="text-sm text-slate-300">{content.explanation}</div>
+          <div className="mt-2 p-4 bg-ink-700 rounded-lg border border-brass/25 border-t-0 rounded-t-none">
+            <div className="text-sm text-fog">{content.explanation}</div>
           </div>
         </details>
       )}

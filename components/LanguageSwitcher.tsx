@@ -27,8 +27,8 @@ export default function LanguageSwitcher() {
           onClick={() => switchLanguage(lang)}
           className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
             currentLang === lang
-              ? 'bg-teal-500 text-white'
-              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              ? 'bg-brass text-white'
+              : 'bg-ink-600 text-fog hover:bg-slate-600'
           }`}
         >
           {lang.toUpperCase()}

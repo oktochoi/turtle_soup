@@ -51,19 +51,19 @@ export default async function PrivacyPage({
   const lastUpdated = '2025-01-17';
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <main className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 max-w-4xl">
-        <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 lg:p-10 border border-slate-700 shadow-xl">
-          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+        <div className="bg-ink-700/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 lg:p-10 border border-brass/20 shadow-xl">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-brass-300 to-brass bg-clip-text text-transparent">
             {isKo ? '개인정보처리방침' : 'Privacy Policy'}
           </h1>
-          <p className="text-slate-400 text-sm mb-8">
+          <p className="text-fog text-sm mb-8">
             {isKo ? '최종 업데이트' : 'Last updated'}: {lastUpdated}
           </p>
 
-          <div className="prose prose-invert max-w-none space-y-8 text-slate-300">
+          <div className="prose prose-invert max-w-none space-y-8 text-fog">
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '1. 개인정보의 처리 목적' : '1. Purpose of Personal Information Processing'}
               </h2>
               <p className="mb-4">
@@ -91,7 +91,7 @@ export default async function PrivacyPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '2. 개인정보의 처리 및 보유기간' : '2. Processing and Retention Period of Personal Information'}
               </h2>
               <p className="mb-4">
@@ -119,7 +119,7 @@ export default async function PrivacyPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '3. 처리하는 개인정보의 항목' : '3. Items of Personal Information Processed'}
               </h2>
               <p className="mb-4">
@@ -127,8 +127,8 @@ export default async function PrivacyPage({
                   ? '서비스는 다음의 개인정보 항목을 처리하고 있습니다.'
                   : 'The Service processes the following personal information items.'}
               </p>
-              <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
-                <h3 className="font-semibold text-teal-300 mb-2">
+              <div className="bg-ink-800/50 rounded-lg p-4 mb-4">
+                <h3 className="font-semibold text-brass-300 mb-2">
                   {isKo ? '필수항목' : 'Required Items'}
                 </h3>
                 <ul className="list-disc pl-6 space-y-1 text-sm">
@@ -137,8 +137,8 @@ export default async function PrivacyPage({
                   <li>{isKo ? '게임 사용자 ID' : 'Game user ID'}</li>
                 </ul>
               </div>
-              <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
-                <h3 className="font-semibold text-teal-300 mb-2">
+              <div className="bg-ink-800/50 rounded-lg p-4 mb-4">
+                <h3 className="font-semibold text-brass-300 mb-2">
                   {isKo ? '자동 수집 항목' : 'Automatically Collected Items'}
                 </h3>
                 <ul className="list-disc pl-6 space-y-1 text-sm">
@@ -149,7 +149,7 @@ export default async function PrivacyPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '4. 개인정보의 제3자 제공' : '4. Provision of Personal Information to Third Parties'}
               </h2>
               <p className="mb-4">
@@ -172,7 +172,7 @@ export default async function PrivacyPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '5. 개인정보처리의 위탁' : '5. Entrustment of Personal Information Processing'}
               </h2>
               <p className="mb-4">
@@ -180,20 +180,20 @@ export default async function PrivacyPage({
                   ? '서비스는 원활한 개인정보 업무처리를 위하여 다음과 같이 개인정보 처리업무를 위탁하고 있습니다.'
                   : 'The Service entrusts personal information processing tasks as follows for smooth personal information processing.'}
               </p>
-              <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
+              <div className="bg-ink-800/50 rounded-lg p-4 mb-4">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-700">
-                      <th className="text-left py-2 px-2 text-teal-300">{isKo ? '수탁업체' : 'Consignee'}</th>
-                      <th className="text-left py-2 px-2 text-teal-300">{isKo ? '위탁업무 내용' : 'Entrusted Tasks'}</th>
+                    <tr className="border-b border-brass/20">
+                      <th className="text-left py-2 px-2 text-brass-300">{isKo ? '수탁업체' : 'Consignee'}</th>
+                      <th className="text-left py-2 px-2 text-brass-300">{isKo ? '위탁업무 내용' : 'Entrusted Tasks'}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-slate-700/50">
+                    <tr className="border-b border-brass/20">
                       <td className="py-2 px-2">Supabase</td>
                       <td className="py-2 px-2">{isKo ? '데이터베이스 및 인증 서비스 제공' : 'Database and authentication service provision'}</td>
                     </tr>
-                    <tr className="border-b border-slate-700/50">
+                    <tr className="border-b border-brass/20">
                       <td className="py-2 px-2">Vercel</td>
                       <td className="py-2 px-2">{isKo ? '웹 호스팅 서비스 제공' : 'Web hosting service provision'}</td>
                     </tr>
@@ -207,7 +207,7 @@ export default async function PrivacyPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '6. 정보주체의 권리·의무 및 행사방법' : '6. Rights and Obligations of Information Subjects and How to Exercise Them'}
               </h2>
               <p className="mb-4">
@@ -229,7 +229,7 @@ export default async function PrivacyPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '7. 쿠키 및 광고 관련 정책' : '7. Cookie and Advertising Policy'}
               </h2>
               <p className="mb-4">
@@ -237,7 +237,7 @@ export default async function PrivacyPage({
                   ? '서비스는 이용자에게 개인화된 맞춤 서비스를 제공하기 위해 쿠키를 사용합니다.'
                   : 'The Service uses cookies to provide users with personalized customized services.'}
               </p>
-              <h3 className="text-xl font-semibold text-teal-300 mb-3 mt-6">
+              <h3 className="text-xl font-semibold text-brass-300 mb-3 mt-6">
                 {isKo ? '쿠키의 사용 목적' : 'Purpose of Cookie Use'}
               </h3>
               <ul className="list-disc pl-6 space-y-2">
@@ -257,7 +257,7 @@ export default async function PrivacyPage({
                     : 'Personalized advertising: Provides relevant ads to users through Google AdSense.'}
                 </li>
               </ul>
-              <h3 className="text-xl font-semibold text-teal-300 mb-3 mt-6">
+              <h3 className="text-xl font-semibold text-brass-300 mb-3 mt-6">
                 {isKo ? '쿠키 설정 거부 방법' : 'How to Refuse Cookie Settings'}
               </h3>
               <p className="mb-4">
@@ -282,7 +282,7 @@ export default async function PrivacyPage({
                     : 'Firefox: Options &gt; Privacy &gt; Cookies and site data'}
                 </li>
               </ul>
-              <h3 className="text-xl font-semibold text-teal-300 mb-3 mt-6">
+              <h3 className="text-xl font-semibold text-brass-300 mb-3 mt-6">
                 {isKo ? 'Google AdSense 및 맞춤형 광고' : 'Google AdSense and Personalized Advertising'}
               </h3>
               <p className="mb-4">
@@ -298,7 +298,7 @@ export default async function PrivacyPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '8. 개인정보의 파기' : '8. Destruction of Personal Information'}
               </h2>
               <p className="mb-4">
@@ -306,7 +306,7 @@ export default async function PrivacyPage({
                   ? '서비스는 개인정보 보유기간의 경과, 처리목적 달성 등 개인정보가 불필요하게 되었을 때에는 지체없이 해당 개인정보를 파기합니다.'
                   : 'The Service destroys personal information without delay when it becomes unnecessary, such as when the retention period of personal information has elapsed or the processing purpose has been achieved.'}
               </p>
-              <h3 className="text-xl font-semibold text-teal-300 mb-3 mt-6">
+              <h3 className="text-xl font-semibold text-brass-300 mb-3 mt-6">
                 {isKo ? '파기 방법' : 'Destruction Method'}
               </h3>
               <ul className="list-disc pl-6 space-y-2">
@@ -324,7 +324,7 @@ export default async function PrivacyPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '9. 개인정보 보호책임자' : '9. Personal Information Protection Officer'}
               </h2>
               <p className="mb-4">
@@ -332,17 +332,17 @@ export default async function PrivacyPage({
                   ? '서비스는 개인정보 처리에 관한 업무를 총괄해서 책임지고, 개인정보 처리와 관련한 정보주체의 불만처리 및 피해구제 등을 위하여 아래와 같이 개인정보 보호책임자를 지정하고 있습니다.'
                   : 'The Service is responsible for overseeing all matters related to personal information processing, and has designated a personal information protection officer as follows to handle complaints and damage relief related to personal information processing.'}
               </p>
-              <div className="bg-slate-900/50 rounded-lg p-4">
+              <div className="bg-ink-800/50 rounded-lg p-4">
                 <ul className="space-y-2 text-sm">
                   <li>
-                    <strong className="text-teal-300">{isKo ? '이메일' : 'Email'}:</strong>{' '}
-                    <a href={`mailto:${contactEmail}`} className="text-cyan-400 hover:underline">
+                    <strong className="text-brass-300">{isKo ? '이메일' : 'Email'}:</strong>{' '}
+                    <a href={`mailto:${contactEmail}`} className="text-brass hover:underline">
                       {contactEmail}
                     </a>
                   </li>
                   <li>
-                    <strong className="text-teal-300">{isKo ? '문의' : 'Inquiry'}:</strong>{' '}
-                    <a href={`/${locale}/contact`} className="text-cyan-400 hover:underline">
+                    <strong className="text-brass-300">{isKo ? '문의' : 'Inquiry'}:</strong>{' '}
+                    <a href={`/${locale}/contact`} className="text-brass hover:underline">
                       {isKo ? '문의하기 페이지' : 'Contact Page'}
                     </a>
                   </li>
@@ -351,7 +351,7 @@ export default async function PrivacyPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '10. 개인정보 처리방침 변경' : '10. Changes to Privacy Policy'}
               </h2>
               <p className="mb-4">

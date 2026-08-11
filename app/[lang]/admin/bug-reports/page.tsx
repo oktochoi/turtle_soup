@@ -396,8 +396,8 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
     return (
       <div className="max-w-7xl">
         <div className="text-center py-20">
-          <i className="ri-loader-4-line text-4xl animate-spin text-teal-400"></i>
-          <p className="mt-4 text-slate-400">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
+          <i className="ri-loader-4-line text-4xl animate-spin text-brass"></i>
+          <p className="mt-4 text-fog">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
         </div>
       </div>
     );
@@ -406,10 +406,10 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
   return (
     <div className="max-w-7xl">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-brass-300 to-brass bg-clip-text text-transparent">
             {lang === 'ko' ? 'AI 버그 리포트 검수' : 'AI Bug Reports Review'}
           </h1>
-          <p className="text-slate-400">
+          <p className="text-fog">
             {lang === 'ko' 
               ? '버그 리포트를 검토하고 학습 포함/제외를 설정하세요.'
               : 'Review bug reports and set learning inclusion/exclusion.'}
@@ -417,21 +417,21 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
         </div>
 
         {/* 통계 및 학습 실행 */}
-        <div className="bg-slate-800 rounded-lg p-4 mb-6 border border-slate-700">
+        <div className="bg-ink-700 rounded-lg p-4 mb-6 border border-brass/20">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap gap-4">
               <div className="text-sm">
-                <span className="text-slate-400">{lang === 'ko' ? '전체 리포트:' : 'Total Reports:'} </span>
-                <span className="font-bold text-teal-400">{reports.length}</span>
+                <span className="text-fog">{lang === 'ko' ? '전체 리포트:' : 'Total Reports:'} </span>
+                <span className="font-bold text-brass">{reports.length}</span>
               </div>
               <div className="text-sm">
-                <span className="text-slate-400">{lang === 'ko' ? '학습 가능 리포트:' : 'Valid for Learning:'} </span>
+                <span className="text-fog">{lang === 'ko' ? '학습 가능 리포트:' : 'Valid for Learning:'} </span>
                 <span className="font-bold text-green-400">
                   {validReportsCount}
                 </span>
               </div>
               <div className="text-sm">
-                <span className="text-slate-400">{lang === 'ko' ? '학습 제외:' : 'Excluded:'} </span>
+                <span className="text-fog">{lang === 'ko' ? '학습 제외:' : 'Excluded:'} </span>
                 <span className="font-bold text-red-400">
                   {reports.filter(r => r.ignore_for_learning).length}
                 </span>
@@ -495,7 +495,7 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
                 <button
                   onClick={runLearningCycle}
                   disabled={isRunningLearning}
-                  className="px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg font-semibold hover:from-teal-600 hover:to-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="px-4 py-2 bg-gradient-to-r from-brass to-brass-600 text-white rounded-lg font-semibold hover:from-brass-600 hover:to-brass-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   title={lang === 'ko' 
                     ? `학습 가능한 리포트: ${validReportsCount}개` 
                     : `Valid reports for learning: ${validReportsCount}`}
@@ -514,7 +514,7 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
                 </button>
               )}
               {!canRunLearning && (
-                <div className="px-4 py-2 bg-slate-700/50 text-slate-400 rounded-lg font-semibold border border-slate-600">
+                <div className="px-4 py-2 bg-ink-600/50 text-fog rounded-lg font-semibold border border-brass/25">
                   <i className="ri-information-line mr-2"></i>
                   {lang === 'ko' ? '학습 가능한 리포트가 없습니다' : 'No reports available for learning'}
                 </div>
@@ -522,8 +522,8 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
             </div>
           </div>
           {learningResult && (
-            <div className="mt-4 p-3 bg-slate-700 rounded border border-teal-500/50">
-              <p className="text-sm text-teal-400">
+            <div className="mt-4 p-3 bg-ink-600 rounded border border-brass/50">
+              <p className="text-sm text-brass">
                 {lang === 'ko' 
                   ? `✅ 학습 완료: ${learningResult.patterns_found || 0}개 패턴 발견, ${learningResult.patterns_applied || 0}개 적용됨`
                   : `✅ Learning complete: ${learningResult.patterns_found || 0} patterns found, ${learningResult.patterns_applied || 0} applied`}
@@ -531,7 +531,7 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
             </div>
           )}
           {autoFilterResult && (
-            <div className="mt-4 p-3 bg-slate-700 rounded border border-purple-500/50">
+            <div className="mt-4 p-3 bg-ink-600 rounded border border-purple-500/50">
               <p className="text-sm text-purple-400">
                 {lang === 'ko' 
                   ? `✅ 자동 필터링 완료: ${autoFilterResult.filtered_count || 0}개 리포트가 학습에서 제외되었습니다.`
@@ -542,16 +542,16 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
         </div>
 
         {/* 필터 */}
-        <div className="bg-slate-800 rounded-lg p-4 mb-6 border border-slate-700">
+        <div className="bg-ink-700 rounded-lg p-4 mb-6 border border-brass/20">
           <div className="flex flex-wrap gap-4">
             <div>
-              <label className="block text-sm text-slate-400 mb-2">
+              <label className="block text-sm text-fog mb-2">
                 {lang === 'ko' ? '상태' : 'Status'}
               </label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-teal-500 focus:outline-none"
+                className="bg-ink-600 text-white px-4 py-2 rounded-lg border border-brass/25 focus:border-brass focus:outline-none"
               >
                 <option value="all">{lang === 'ko' ? '전체' : 'All'}</option>
                 <option value="pending">{lang === 'ko' ? '대기중' : 'Pending'}</option>
@@ -561,13 +561,13 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
               </select>
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-2">
+              <label className="block text-sm text-fog mb-2">
                 {lang === 'ko' ? '학습 포함' : 'Learning'}
               </label>
               <select
                 value={filterLearning}
                 onChange={(e) => setFilterLearning(e.target.value)}
-                className="bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-teal-500 focus:outline-none"
+                className="bg-ink-600 text-white px-4 py-2 rounded-lg border border-brass/25 focus:border-brass focus:outline-none"
               >
                 <option value="all">{lang === 'ko' ? '전체' : 'All'}</option>
                 <option value="include">{lang === 'ko' ? '학습 포함' : 'Included'}</option>
@@ -580,9 +580,9 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
                 id="hideProcessed"
                 checked={hideProcessed}
                 onChange={(e) => setHideProcessed(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-teal-500 focus:ring-teal-500"
+                className="w-4 h-4 rounded border-brass/25 bg-ink-600 text-teal-500 focus:ring-teal-500"
               />
-              <label htmlFor="hideProcessed" className="text-sm text-slate-400 cursor-pointer">
+              <label htmlFor="hideProcessed" className="text-sm text-fog cursor-pointer">
                 {lang === 'ko' ? '학습된 리포트 숨기기' : 'Hide studied reports'}
               </label>
             </div>
@@ -592,15 +592,15 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
         {/* 리포트 목록 */}
         <div className="space-y-4">
           {reports.length === 0 ? (
-            <div className="bg-slate-800 rounded-lg p-8 text-center border border-slate-700">
+            <div className="bg-ink-700 rounded-lg p-8 text-center border border-brass/20">
               <i className="ri-file-list-line text-4xl text-slate-600 mb-4"></i>
-              <p className="text-slate-400">{lang === 'ko' ? '버그 리포트가 없습니다.' : 'No bug reports found.'}</p>
+              <p className="text-fog">{lang === 'ko' ? '버그 리포트가 없습니다.' : 'No bug reports found.'}</p>
             </div>
           ) : (
             reports.map((report) => (
               <div
                 key={report.id}
-                className="bg-slate-800 rounded-lg p-4 border border-slate-700 hover:border-teal-500/50 transition-all"
+                className="bg-ink-700 rounded-lg p-4 border border-brass/20 hover:border-brass/50 transition-all"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
@@ -610,7 +610,7 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
                         report.bug_type === 'wrong_yes_no' ? 'bg-yellow-500/20 text-yellow-400' :
                         report.bug_type === 'wrong_irrelevant' ? 'bg-blue-500/20 text-blue-400' :
                         report.bug_type === 'wrong_similarity' ? 'bg-purple-500/20 text-purple-400' :
-                        'bg-slate-700 text-slate-300'
+                        'bg-ink-600 text-fog'
                       }`}>
                         {getBugTypeLabel(report.bug_type)}
                       </span>
@@ -628,29 +628,29 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-slate-300 mb-2 break-words">
-                      <span className="text-slate-400">{lang === 'ko' ? '질문:' : 'Question:'} </span>
+                    <p className="text-sm text-fog mb-2 break-words">
+                      <span className="text-fog">{lang === 'ko' ? '질문:' : 'Question:'} </span>
                       {report.question_text}
                     </p>
-                    <div className="text-xs text-slate-500 space-y-1">
+                    <div className="text-xs text-fog-dim space-y-1">
                       <div>
-                        <span className="text-slate-400">{lang === 'ko' ? 'AI 제안:' : 'AI Suggested:'} </span>
+                        <span className="text-fog">{lang === 'ko' ? 'AI 제안:' : 'AI Suggested:'} </span>
                         {report.ai_suggested_answer}
                       </div>
                       {report.expected_answer && (
                         <div>
-                          <span className="text-slate-400">{lang === 'ko' ? '기대 답변:' : 'Expected:'} </span>
+                          <span className="text-fog">{lang === 'ko' ? '기대 답변:' : 'Expected:'} </span>
                           {report.expected_answer}
                         </div>
                       )}
                       {report.similarity_score !== null && (
                         <div>
-                          <span className="text-slate-400">{lang === 'ko' ? '유사도:' : 'Similarity:'} </span>
+                          <span className="text-fog">{lang === 'ko' ? '유사도:' : 'Similarity:'} </span>
                           {(report.similarity_score * 100).toFixed(1)}%
                         </div>
                       )}
                       <div>
-                        <span className="text-slate-400">{lang === 'ko' ? '생성일:' : 'Created:'} </span>
+                        <span className="text-fog">{lang === 'ko' ? '생성일:' : 'Created:'} </span>
                         {new Date(report.created_at).toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US')}
                       </div>
                     </div>
@@ -676,7 +676,7 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
                         setAdminNotes(report.admin_notes || '');
                         setShowDetailModal(true);
                       }}
-                      className="px-3 py-1.5 bg-teal-500/20 text-teal-400 rounded text-xs font-semibold hover:bg-teal-500/30 transition-all"
+                      className="px-3 py-1.5 bg-brass/20 text-brass rounded text-xs font-semibold hover:bg-brass/30 transition-all"
                     >
                       <i className="ri-eye-line mr-1"></i>
                       {lang === 'ko' ? '상세보기' : 'Details'}
@@ -691,7 +691,7 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
         {/* 자동 필터링 미리보기 모달 */}
         {showAutoFilterPreview && autoFilterPreview && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-slate-800 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-slate-700">
+            <div className="bg-ink-700 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-brass/20">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold text-purple-400">
@@ -699,19 +699,19 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
                   </h2>
                   <button
                     onClick={() => setShowAutoFilterPreview(false)}
-                    className="text-slate-400 hover:text-white"
+                    className="text-fog hover:text-white"
                   >
                     <i className="ri-close-line text-2xl"></i>
                   </button>
                 </div>
 
-                <div className="mb-4 p-4 bg-slate-700 rounded border border-purple-500/50">
+                <div className="mb-4 p-4 bg-ink-600 rounded border border-purple-500/50">
                   <p className="text-sm text-purple-300">
                     {lang === 'ko' 
                       ? `총 ${autoFilterPreview.preview_count || 0}개의 리포트가 자동 필터링 대상입니다.`
                       : `${autoFilterPreview.preview_count || 0} reports will be filtered automatically.`}
                   </p>
-                  <p className="text-xs text-slate-400 mt-2">
+                  <p className="text-xs text-fog mt-2">
                     {lang === 'ko' 
                       ? '아래 리포트들은 학습에 부적합하다고 판단되어 자동으로 제외됩니다.'
                       : 'The following reports will be automatically excluded from learning.'}
@@ -721,18 +721,18 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
                 <div className="space-y-2 max-h-96 overflow-y-auto mb-4">
                   {autoFilterPreview.preview_data && Array.isArray(autoFilterPreview.preview_data) && autoFilterPreview.preview_data.length > 0 ? (
                     autoFilterPreview.preview_data.map((item: any, index: number) => (
-                      <div key={index} className="bg-slate-700 rounded p-3 border border-slate-600">
+                      <div key={index} className="bg-ink-600 rounded p-3 border border-brass/25">
                         <p className="text-sm text-white break-words">
-                          <span className="text-slate-400">#{index + 1} </span>
+                          <span className="text-fog">#{index + 1} </span>
                           {item.question_text || 'N/A'}
                         </p>
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-xs text-fog-dim mt-1">
                           {item.bug_type} - {item.reason}
                         </p>
                       </div>
                     ))
                   ) : (
-                    <p className="text-slate-400 text-center py-4">
+                    <p className="text-fog text-center py-4">
                       {lang === 'ko' ? '필터링 대상 리포트가 없습니다.' : 'No reports to filter.'}
                     </p>
                   )}
@@ -758,7 +758,7 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
                   </button>
                   <button
                     onClick={() => setShowAutoFilterPreview(false)}
-                    className="px-4 py-2 bg-slate-700 text-white rounded-lg font-semibold hover:bg-slate-600 transition-all"
+                    className="px-4 py-2 bg-ink-600 text-white rounded-lg font-semibold hover:bg-slate-600 transition-all"
                   >
                     {lang === 'ko' ? '취소' : 'Cancel'}
                   </button>
@@ -771,15 +771,15 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
         {/* 상세 모달 */}
         {showDetailModal && selectedReport && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-slate-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-700">
+            <div className="bg-ink-700 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-brass/20">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-teal-400">
+                  <h2 className="text-xl font-bold text-brass">
                     {lang === 'ko' ? '버그 리포트 상세' : 'Bug Report Details'}
                   </h2>
                   <button
                     onClick={() => setShowDetailModal(false)}
-                    className="text-slate-400 hover:text-white"
+                    className="text-fog hover:text-white"
                   >
                     <i className="ri-close-line text-2xl"></i>
                   </button>
@@ -787,31 +787,31 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm text-slate-400 mb-1">
+                    <label className="block text-sm text-fog mb-1">
                       {lang === 'ko' ? '버그 유형' : 'Bug Type'}
                     </label>
                     <p className="text-white">{getBugTypeLabel(selectedReport.bug_type)}</p>
                   </div>
 
                   <div>
-                    <label className="block text-sm text-slate-400 mb-1">
+                    <label className="block text-sm text-fog mb-1">
                       {lang === 'ko' ? '질문' : 'Question'}
                     </label>
-                    <p className="text-white bg-slate-700 p-3 rounded break-words">
+                    <p className="text-white bg-ink-600 p-3 rounded break-words">
                       {selectedReport.question_text}
                     </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm text-slate-400 mb-1">
+                      <label className="block text-sm text-fog mb-1">
                         {lang === 'ko' ? 'AI 제안 답변' : 'AI Suggested'}
                       </label>
                       <p className="text-white">{selectedReport.ai_suggested_answer}</p>
                     </div>
                     {selectedReport.expected_answer && (
                       <div>
-                        <label className="block text-sm text-slate-400 mb-1">
+                        <label className="block text-sm text-fog mb-1">
                           {lang === 'ko' ? '기대 답변' : 'Expected Answer'}
                         </label>
                         <p className="text-white">{selectedReport.expected_answer}</p>
@@ -821,23 +821,23 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
 
                   {selectedReport.problem_content && (
                     <div>
-                      <label className="block text-sm text-slate-400 mb-1">
+                      <label className="block text-sm text-fog mb-1">
                         {lang === 'ko' ? '문제 내용' : 'Problem Content'}
                       </label>
-                      <p className="text-white bg-slate-700 p-3 rounded text-sm max-h-40 overflow-y-auto">
+                      <p className="text-white bg-ink-600 p-3 rounded text-sm max-h-40 overflow-y-auto">
                         {selectedReport.problem_content}
                       </p>
                     </div>
                   )}
 
                   <div>
-                    <label className="block text-sm text-slate-400 mb-1">
+                    <label className="block text-sm text-fog mb-1">
                       {lang === 'ko' ? '관리자 메모' : 'Admin Notes'}
                     </label>
                     <textarea
                       value={adminNotes}
                       onChange={(e) => setAdminNotes(e.target.value)}
-                      className="w-full bg-slate-700 text-white p-3 rounded border border-slate-600 focus:border-teal-500 focus:outline-none"
+                      className="w-full bg-ink-600 text-white p-3 rounded border border-brass/25 focus:border-brass focus:outline-none"
                       rows={3}
                       placeholder={lang === 'ko' ? '메모를 입력하세요...' : 'Enter notes...'}
                     />
@@ -847,7 +847,7 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
                     <button
                       onClick={updateReportStatus}
                       disabled={isUpdating}
-                      className="flex-1 px-4 py-2 bg-teal-500 text-white rounded-lg font-semibold hover:bg-teal-600 disabled:opacity-50 transition-all"
+                      className="flex-1 px-4 py-2 bg-brass text-white rounded-lg font-semibold hover:bg-brass-600 disabled:opacity-50 transition-all"
                     >
                       {isUpdating 
                         ? (lang === 'ko' ? '저장 중...' : 'Saving...')
@@ -856,7 +856,7 @@ export default function AdminBugReportsPage({ params }: { params: Promise<{ lang
                     </button>
                     <button
                       onClick={() => setShowDetailModal(false)}
-                      className="px-4 py-2 bg-slate-700 text-white rounded-lg font-semibold hover:bg-slate-600 transition-all"
+                      className="px-4 py-2 bg-ink-600 text-white rounded-lg font-semibold hover:bg-slate-600 transition-all"
                     >
                       {lang === 'ko' ? '닫기' : 'Close'}
                     </button>

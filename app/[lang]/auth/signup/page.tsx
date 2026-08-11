@@ -206,16 +206,16 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-brass-300 to-brass bg-clip-text text-transparent">
             {t.auth.signup}
           </h1>
-          <p className="text-slate-400 text-sm">{lang === 'ko' ? '새 계정을 만들어 시작하세요' : 'Create a new account to get started'}</p>
+          <p className="text-fog text-sm">{lang === 'ko' ? '새 계정을 만들어 시작하세요' : 'Create a new account to get started'}</p>
         </div>
 
-        <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-slate-700 shadow-xl">
+        <div className="bg-ink-700/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-brass/20 shadow-xl">
           {error && (
             <div className="bg-red-500/10 border border-red-500/50 text-red-400 rounded-lg p-3 text-sm mb-6">
               {error}
@@ -269,7 +269,7 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
           {/* 이메일/비밀번호 회원가입 폼 */}
           <form onSubmit={handleEmailSignup} className="mb-6 space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-fog mb-2">
                 {lang === 'ko' ? '이메일' : 'Email'}
               </label>
               <input
@@ -280,12 +280,12 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
                 placeholder={lang === 'ko' ? '이메일을 입력하세요' : 'Enter your email'}
                 required
                 disabled={isLoading}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-fog mb-2">
                 {lang === 'ko' ? '비밀번호' : 'Password'}
               </label>
               <input
@@ -297,12 +297,12 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
                 required
                 minLength={6}
                 disabled={isLoading}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-fog mb-2">
                 {lang === 'ko' ? '비밀번호 확인' : 'Confirm Password'}
               </label>
               <input
@@ -314,12 +314,12 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
                 required
                 minLength={6}
                 disabled={isLoading}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
             <div>
-              <label htmlFor="nickname" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="nickname" className="block text-sm font-medium text-fog mb-2">
                 {lang === 'ko' ? '닉네임' : 'Nickname'}
               </label>
               <input
@@ -332,12 +332,12 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
                 minLength={2}
                 maxLength={20}
                 disabled={isLoading}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
             <div>
-              <label htmlFor="referralCode" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="referralCode" className="block text-sm font-medium text-fog mb-2">
                 {lang === 'ko' ? '추천인 코드 (선택사항)' : 'Referral Code (Optional)'}
               </label>
               <input
@@ -348,10 +348,10 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
                 placeholder={lang === 'ko' ? '7자리 추천인 코드를 입력하세요' : 'Enter 7-character referral code'}
                 maxLength={7}
                 disabled={isLoading}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               />
               {referralCode.trim() && (
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-fog">
                   {lang === 'ko' ? '💰 추천인 코드를 입력하면 20코인을 지급받습니다!' : '💰 Enter a referral code to receive 20 coins!'}
                 </p>
               )}
@@ -360,7 +360,7 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-teal-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-teal-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center">
@@ -378,13 +378,13 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
         </div>
 
         <div className="mt-6 text-center space-y-2">
-          <p className="text-slate-400 text-sm">
+          <p className="text-fog text-sm">
             {lang === 'ko' ? '이미 계정이 있으신가요?' : 'Already have an account?'}{' '}
-            <Link href={`/${lang}/auth/login`} className="text-teal-400 hover:text-teal-300 font-semibold transition-colors">
+            <Link href={`/${lang}/auth/login`} className="text-brass hover:text-brass-300 font-semibold transition-colors">
               {lang === 'ko' ? '로그인' : 'Login'}
             </Link>
           </p>
-          <Link href={`/${lang}`} className="text-slate-400 hover:text-white text-sm transition-colors block">
+          <Link href={`/${lang}`} className="text-fog hover:text-white text-sm transition-colors block">
             <i className="ri-arrow-left-line mr-2"></i>
             {t.common.home}
           </Link>

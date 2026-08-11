@@ -6,12 +6,12 @@ type HostAnswerButtonsProps = {
 
 export default function HostAnswerButtons({ onAnswer }: HostAnswerButtonsProps) {
   return (
-    <div className="bg-gradient-to-br from-teal-500/10 to-cyan-500/10 rounded-xl p-3 sm:p-4 border border-teal-500/30">
+    <div className="bg-gradient-to-br from-brass/10 to-brass-600/10 rounded-xl p-3 sm:p-4 border border-brass/30">
       <div className="flex items-center gap-2 mb-2 sm:mb-3">
         <div className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center flex-shrink-0">
-          <i className="ri-question-answer-line text-teal-400 text-sm sm:text-base"></i>
+          <i className="ri-question-answer-line text-brass text-sm sm:text-base"></i>
         </div>
-        <h3 className="font-semibold text-xs sm:text-sm text-teal-400">선택된 질문에 답변하기</h3>
+        <h3 className="font-semibold text-xs sm:text-sm text-brass">선택된 질문에 답변하기</h3>
       </div>
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <button

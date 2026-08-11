@@ -41,7 +41,7 @@ export default function ContactForm({ locale, contactEmail }: ContactFormProps) 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="name" className="block text-sm font-medium mb-2 text-slate-300">
+        <label htmlFor="name" className="block text-sm font-medium mb-2 text-fog">
           {isKo ? '이름' : 'Name'} <span className="text-red-400">*</span>
         </label>
         <input
@@ -50,13 +50,13 @@ export default function ContactForm({ locale, contactEmail }: ContactFormProps) 
           required
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
           placeholder={isKo ? '이름을 입력하세요' : 'Enter your name'}
         />
       </div>
 
       <div>
-        <label htmlFor="email" className="block text-sm font-medium mb-2 text-slate-300">
+        <label htmlFor="email" className="block text-sm font-medium mb-2 text-fog">
           {isKo ? '이메일' : 'Email'} <span className="text-red-400">*</span>
         </label>
         <input
@@ -65,13 +65,13 @@ export default function ContactForm({ locale, contactEmail }: ContactFormProps) 
           required
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
           placeholder={isKo ? '이메일을 입력하세요' : 'Enter your email'}
         />
       </div>
 
       <div>
-        <label htmlFor="subject" className="block text-sm font-medium mb-2 text-slate-300">
+        <label htmlFor="subject" className="block text-sm font-medium mb-2 text-fog">
           {isKo ? '제목' : 'Subject'} <span className="text-red-400">*</span>
         </label>
         <input
@@ -80,13 +80,13 @@ export default function ContactForm({ locale, contactEmail }: ContactFormProps) 
           required
           value={formData.subject}
           onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
           placeholder={isKo ? '문의 제목을 입력하세요' : 'Enter subject'}
         />
       </div>
 
       <div>
-        <label htmlFor="message" className="block text-sm font-medium mb-2 text-slate-300">
+        <label htmlFor="message" className="block text-sm font-medium mb-2 text-fog">
           {isKo ? '내용' : 'Message'} <span className="text-red-400">*</span>
         </label>
         <textarea
@@ -95,7 +95,7 @@ export default function ContactForm({ locale, contactEmail }: ContactFormProps) 
           rows={6}
           value={formData.message}
           onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
+          className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
           placeholder={isKo ? '문의 내용을 입력하세요' : 'Enter your message'}
         />
       </div>
@@ -103,7 +103,7 @@ export default function ContactForm({ locale, contactEmail }: ContactFormProps) 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-teal-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-teal-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isSubmitting ? (
           <span className="flex items-center justify-center">
@@ -118,7 +118,7 @@ export default function ContactForm({ locale, contactEmail }: ContactFormProps) 
         )}
       </button>
 
-      <p className="text-xs text-slate-400 text-center">
+      <p className="text-xs text-fog text-center">
         {isKo
           ? '* 이메일 클라이언트가 열립니다. 이메일을 보내주시면 빠르게 답변드리겠습니다.'
           : '* Your email client will open. Please send us an email and we will respond quickly.'}

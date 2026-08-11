@@ -432,7 +432,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
-          <p className="text-slate-400">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
+          <p className="text-fog">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
         </div>
       </div>
     );
@@ -443,7 +443,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
           <p className="text-red-400 text-xl mb-4">{lang === 'ko' ? '접근 권한이 없습니다.' : 'Access Denied'}</p>
-          <p className="text-slate-400">{lang === 'ko' ? '관리자만 접근할 수 있습니다.' : 'Only administrators can access this page.'}</p>
+          <p className="text-fog">{lang === 'ko' ? '관리자만 접근할 수 있습니다.' : 'Only administrators can access this page.'}</p>
         </div>
       </div>
     );
@@ -469,7 +469,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
         <button
           onClick={() => loadStats()}
           disabled={isLoading}
-          className="flex items-center gap-2 px-4 py-2 bg-teal-500/20 text-teal-400 border border-teal-500/50 rounded-lg hover:bg-teal-500/30 disabled:opacity-50 transition-colors text-sm font-medium"
+          className="flex items-center gap-2 px-4 py-2 bg-brass/20 text-brass border border-brass/50 rounded-lg hover:bg-brass/30 disabled:opacity-50 transition-colors text-sm font-medium"
         >
           <i className={`ri-refresh-line ${isLoading ? 'animate-spin' : ''}`}></i>
           {lang === 'ko' ? '새로고침' : 'Refresh'}
@@ -491,139 +491,139 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
         {/* 통계 카드 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
           {/* 사용자 통계 */}
-          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
-            <h2 className="text-xl font-bold mb-4 text-teal-400">
+          <div className="bg-ink-700/50 backdrop-blur-md rounded-xl p-6 border border-brass/20">
+            <h2 className="text-xl font-bold mb-4 text-brass">
               <i className="ri-user-line mr-2"></i>
               {lang === 'ko' ? '사용자' : 'Users'}
             </h2>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '게임 참여자' : 'Game Users'}</span>
+                <span className="text-fog">{lang === 'ko' ? '게임 참여자' : 'Game Users'}</span>
                 <span className="text-2xl font-bold">{displayStats.users.total.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '등록 사용자' : 'Registered'}</span>
-                <span className="text-xl font-semibold text-cyan-400">{displayStats.users.registered.toLocaleString()}</span>
+                <span className="text-fog">{lang === 'ko' ? '등록 사용자' : 'Registered'}</span>
+                <span className="text-xl font-semibold text-brass">{displayStats.users.registered.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '오늘 참여' : 'Today'}</span>
+                <span className="text-fog">{lang === 'ko' ? '오늘 참여' : 'Today'}</span>
                 <span className="text-xl font-semibold">{displayStats.users.active_today.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '이번 주' : 'This Week'}</span>
+                <span className="text-fog">{lang === 'ko' ? '이번 주' : 'This Week'}</span>
                 <span className="text-xl font-semibold">{displayStats.users.active_week.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '이번 달' : 'This Month'}</span>
+                <span className="text-fog">{lang === 'ko' ? '이번 달' : 'This Month'}</span>
                 <span className="text-xl font-semibold">{displayStats.users.active_month.toLocaleString()}</span>
               </div>
             </div>
           </div>
 
           {/* 방 통계 */}
-          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
+          <div className="bg-ink-700/50 backdrop-blur-md rounded-xl p-6 border border-brass/20">
             <h2 className="text-xl font-bold mb-4 text-blue-400">
               <i className="ri-door-open-line mr-2"></i>
               {lang === 'ko' ? '방' : 'Rooms'}
             </h2>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '전체' : 'Total'}</span>
+                <span className="text-fog">{lang === 'ko' ? '전체' : 'Total'}</span>
                 <span className="text-2xl font-bold">{displayStats.rooms.total.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '활성' : 'Active'}</span>
+                <span className="text-fog">{lang === 'ko' ? '활성' : 'Active'}</span>
                 <span className="text-xl font-semibold text-green-400">{displayStats.rooms.active.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '오늘 생성' : 'Created Today'}</span>
+                <span className="text-fog">{lang === 'ko' ? '오늘 생성' : 'Created Today'}</span>
                 <span className="text-xl font-semibold">{displayStats.rooms.created_today.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '이번 주' : 'This Week'}</span>
+                <span className="text-fog">{lang === 'ko' ? '이번 주' : 'This Week'}</span>
                 <span className="text-xl font-semibold">{displayStats.rooms.created_week.toLocaleString()}</span>
               </div>
             </div>
           </div>
 
           {/* 문제 통계 */}
-          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
+          <div className="bg-ink-700/50 backdrop-blur-md rounded-xl p-6 border border-brass/20">
             <h2 className="text-xl font-bold mb-4 text-purple-400">
               <i className="ri-question-line mr-2"></i>
               {lang === 'ko' ? '문제' : 'Problems'}
             </h2>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '전체' : 'Total'}</span>
+                <span className="text-fog">{lang === 'ko' ? '전체' : 'Total'}</span>
                 <span className="text-2xl font-bold">{displayStats.problems.total.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '오늘 생성' : 'Created Today'}</span>
+                <span className="text-fog">{lang === 'ko' ? '오늘 생성' : 'Created Today'}</span>
                 <span className="text-xl font-semibold">{displayStats.problems.created_today.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '이번 주' : 'This Week'}</span>
+                <span className="text-fog">{lang === 'ko' ? '이번 주' : 'This Week'}</span>
                 <span className="text-xl font-semibold">{displayStats.problems.created_week.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '총 좋아요' : 'Total Likes'}</span>
+                <span className="text-fog">{lang === 'ko' ? '총 좋아요' : 'Total Likes'}</span>
                 <span className="text-xl font-semibold text-pink-400">{displayStats.problems.total_likes.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '총 조회수' : 'Total Views'}</span>
-                <span className="text-xl font-semibold text-cyan-400">{displayStats.problems.total_views.toLocaleString()}</span>
+                <span className="text-fog">{lang === 'ko' ? '총 조회수' : 'Total Views'}</span>
+                <span className="text-xl font-semibold text-brass">{displayStats.problems.total_views.toLocaleString()}</span>
               </div>
             </div>
           </div>
 
           {/* 이벤트 통계 */}
-          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
+          <div className="bg-ink-700/50 backdrop-blur-md rounded-xl p-6 border border-brass/20">
             <h2 className="text-xl font-bold mb-4 text-yellow-400">
               <i className="ri-bar-chart-line mr-2"></i>
               {lang === 'ko' ? '이벤트' : 'Events'}
             </h2>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '전체' : 'Total'}</span>
+                <span className="text-fog">{lang === 'ko' ? '전체' : 'Total'}</span>
                 <span className="text-2xl font-bold">{displayStats.events.total.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '오늘' : 'Today'}</span>
+                <span className="text-fog">{lang === 'ko' ? '오늘' : 'Today'}</span>
                 <span className="text-xl font-semibold">{displayStats.events.today.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '이번 주' : 'This Week'}</span>
+                <span className="text-fog">{lang === 'ko' ? '이번 주' : 'This Week'}</span>
                 <span className="text-xl font-semibold">{displayStats.events.week.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '전환율' : 'Conversion Rate'}</span>
+                <span className="text-fog">{lang === 'ko' ? '전환율' : 'Conversion Rate'}</span>
                 <span className="text-xl font-semibold text-green-400">{displayStats.events.conversion_rate.toFixed(2)}%</span>
               </div>
             </div>
           </div>
 
           {/* AI 학습 통계 */}
-          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
+          <div className="bg-ink-700/50 backdrop-blur-md rounded-xl p-6 border border-brass/20">
             <h2 className="text-xl font-bold mb-4 text-orange-400">
               <i className="ri-brain-line mr-2"></i>
               {lang === 'ko' ? 'AI 학습' : 'AI Learning'}
             </h2>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '전체 리포트' : 'Total Reports'}</span>
+                <span className="text-fog">{lang === 'ko' ? '전체 리포트' : 'Total Reports'}</span>
                 <span className="text-2xl font-bold">{displayStats.ai_learning.total_reports.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '학습 가능' : 'Valid for Learning'}</span>
+                <span className="text-fog">{lang === 'ko' ? '학습 가능' : 'Valid for Learning'}</span>
                 <span className="text-xl font-semibold text-green-400">{displayStats.ai_learning.valid_for_learning.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '발견된 패턴' : 'Patterns Found'}</span>
+                <span className="text-fog">{lang === 'ko' ? '발견된 패턴' : 'Patterns Found'}</span>
                 <span className="text-xl font-semibold">{displayStats.ai_learning.patterns_found.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '적용된 패턴' : 'Patterns Applied'}</span>
-                <span className="text-xl font-semibold text-teal-400">{displayStats.ai_learning.patterns_applied.toLocaleString()}</span>
+                <span className="text-fog">{lang === 'ko' ? '적용된 패턴' : 'Patterns Applied'}</span>
+                <span className="text-xl font-semibold text-brass">{displayStats.ai_learning.patterns_applied.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -632,7 +632,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
         {/* 버그 리포트 및 사용자 신고 요약 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-8">
           {/* 버그 리포트 요약 */}
-          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50 hover:border-red-500/50 transition-all">
+          <div className="bg-ink-700/50 backdrop-blur-md rounded-xl p-6 border border-brass/20 hover:border-red-500/50 transition-all">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-red-400">
                 <i className="ri-bug-line mr-2"></i>
@@ -640,30 +640,30 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
               </h2>
               <a
                 href={`/${lang}/admin/bug-reports`}
-                className="text-sm text-teal-400 hover:text-teal-300 transition-colors"
+                className="text-sm text-brass hover:text-brass-300 transition-colors"
               >
                 {lang === 'ko' ? '전체 보기' : 'View All'} <i className="ri-arrow-right-line"></i>
               </a>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '전체' : 'Total'}</span>
+                <span className="text-fog">{lang === 'ko' ? '전체' : 'Total'}</span>
                 <span className="text-2xl font-bold">{displayStats.bug_reports.total.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '대기중' : 'Pending'}</span>
+                <span className="text-fog">{lang === 'ko' ? '대기중' : 'Pending'}</span>
                 <span className="text-xl font-semibold text-yellow-400">{displayStats.bug_reports.pending.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '검토됨' : 'Reviewed'}</span>
+                <span className="text-fog">{lang === 'ko' ? '검토됨' : 'Reviewed'}</span>
                 <span className="text-xl font-semibold text-blue-400">{displayStats.bug_reports.reviewed.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '수정됨' : 'Fixed'}</span>
+                <span className="text-fog">{lang === 'ko' ? '수정됨' : 'Fixed'}</span>
                 <span className="text-xl font-semibold text-green-400">{displayStats.bug_reports.fixed.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '거부됨' : 'Rejected'}</span>
+                <span className="text-fog">{lang === 'ko' ? '거부됨' : 'Rejected'}</span>
                 <span className="text-xl font-semibold text-red-400">{displayStats.bug_reports.rejected.toLocaleString()}</span>
               </div>
             </div>
@@ -680,7 +680,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
           </div>
 
           {/* 사용자 신고 요약 */}
-          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50 hover:border-orange-500/50 transition-all">
+          <div className="bg-ink-700/50 backdrop-blur-md rounded-xl p-6 border border-brass/20 hover:border-orange-500/50 transition-all">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-orange-400">
                 <i className="ri-flag-line mr-2"></i>
@@ -688,31 +688,31 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
               </h2>
               <a
                 href={`/${lang}/admin/reports`}
-                className="text-sm text-teal-400 hover:text-teal-300 transition-colors"
+                className="text-sm text-brass hover:text-brass-300 transition-colors"
               >
                 {lang === 'ko' ? '전체 보기' : 'View All'} <i className="ri-arrow-right-line"></i>
               </a>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '전체' : 'Total'}</span>
+                <span className="text-fog">{lang === 'ko' ? '전체' : 'Total'}</span>
                 <span className="text-2xl font-bold">{displayStats.user_reports.total.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '대기중' : 'Pending'}</span>
+                <span className="text-fog">{lang === 'ko' ? '대기중' : 'Pending'}</span>
                 <span className="text-xl font-semibold text-yellow-400">{displayStats.user_reports.pending.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '검토됨' : 'Reviewed'}</span>
+                <span className="text-fog">{lang === 'ko' ? '검토됨' : 'Reviewed'}</span>
                 <span className="text-xl font-semibold text-blue-400">{displayStats.user_reports.reviewed.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '해결됨' : 'Resolved'}</span>
+                <span className="text-fog">{lang === 'ko' ? '해결됨' : 'Resolved'}</span>
                 <span className="text-xl font-semibold text-green-400">{displayStats.user_reports.resolved.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">{lang === 'ko' ? '기각됨' : 'Dismissed'}</span>
-                <span className="text-xl font-semibold text-slate-400">{displayStats.user_reports.dismissed.toLocaleString()}</span>
+                <span className="text-fog">{lang === 'ko' ? '기각됨' : 'Dismissed'}</span>
+                <span className="text-xl font-semibold text-fog">{displayStats.user_reports.dismissed.toLocaleString()}</span>
               </div>
             </div>
             {displayStats.user_reports.pending > 0 && (
@@ -729,7 +729,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
         </div>
 
         {/* 빠른 링크 */}
-        <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
+        <div className="bg-ink-700/50 backdrop-blur-md rounded-xl p-6 border border-brass/20">
           <h2 className="text-xl font-bold mb-4">
             <i className="ri-links-line mr-2"></i>
             {lang === 'ko' ? '빠른 링크' : 'Quick Links'}
@@ -737,7 +737,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <a
               href={`/${lang}/admin/bug-reports`}
-              className="p-4 bg-slate-700/50 hover:bg-red-500/20 border border-slate-600 hover:border-red-500/50 rounded-lg transition-all text-center group"
+              className="p-4 bg-ink-600/50 hover:bg-red-500/20 border border-brass/25 hover:border-red-500/50 rounded-lg transition-all text-center group"
             >
               <i className="ri-bug-line text-3xl mb-2 block text-red-400 group-hover:scale-110 transition-transform"></i>
               <span className="text-sm font-semibold">{lang === 'ko' ? '버그 리포트' : 'Bug Reports'}</span>
@@ -749,7 +749,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
             </a>
             <a
               href={`/${lang}/admin/reports`}
-              className="p-4 bg-slate-700/50 hover:bg-orange-500/20 border border-slate-600 hover:border-orange-500/50 rounded-lg transition-all text-center group"
+              className="p-4 bg-ink-600/50 hover:bg-orange-500/20 border border-brass/25 hover:border-orange-500/50 rounded-lg transition-all text-center group"
             >
               <i className="ri-flag-line text-3xl mb-2 block text-orange-400 group-hover:scale-110 transition-transform"></i>
               <span className="text-sm font-semibold">{lang === 'ko' ? '사용자 신고' : 'User Reports'}</span>
@@ -761,16 +761,16 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
             </a>
             <a
               href={`/${lang}/admin/dashboard`}
-              className="p-4 bg-slate-700/50 hover:bg-teal-500/20 border border-slate-600 hover:border-teal-500/50 rounded-lg transition-all text-center group"
+              className="p-4 bg-ink-600/50 hover:bg-brass/20 border border-brass/25 hover:border-brass/50 rounded-lg transition-all text-center group"
             >
-              <i className="ri-dashboard-line text-3xl mb-2 block text-teal-400 group-hover:scale-110 transition-transform"></i>
+              <i className="ri-dashboard-line text-3xl mb-2 block text-brass group-hover:scale-110 transition-transform"></i>
               <span className="text-sm font-semibold">{lang === 'ko' ? '대시보드' : 'Dashboard'}</span>
             </a>
             <a
               href={`/${lang}`}
-              className="p-4 bg-slate-700/50 hover:bg-slate-600 border border-slate-600 hover:border-slate-500 rounded-lg transition-all text-center group"
+              className="p-4 bg-ink-600/50 hover:bg-slate-600 border border-brass/25 hover:border-slate-500 rounded-lg transition-all text-center group"
             >
-              <i className="ri-home-line text-3xl mb-2 block text-slate-400 group-hover:scale-110 transition-transform"></i>
+              <i className="ri-home-line text-3xl mb-2 block text-fog group-hover:scale-110 transition-transform"></i>
               <span className="text-sm font-semibold">{lang === 'ko' ? '홈으로' : 'Home'}</span>
             </a>
           </div>

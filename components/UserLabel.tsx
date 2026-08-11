@@ -108,7 +108,7 @@ export default function UserLabel({
   return (
     <div className={`inline-flex items-center gap-2 ${className}`}>
       {showProfileImage && (
-        <div className={`${imageSize} rounded-full flex-shrink-0 overflow-hidden border border-slate-600 bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-xs`}>
+        <div className={`${imageSize} rounded-full flex-shrink-0 overflow-hidden border border-brass/25 bg-gradient-to-r from-brass to-brass-600 flex items-center justify-center text-white font-bold text-xs`}>
           {displayName.charAt(0).toUpperCase()}
         </div>
       )}
@@ -119,7 +119,7 @@ export default function UserLabel({
         {displayName}
       </span>
       {userTitle && (
-        <span className="text-xs sm:text-sm text-slate-300 bg-slate-700/50 px-2 py-0.5 rounded">
+        <span className="text-xs sm:text-sm text-fog bg-ink-600/50 px-2 py-0.5 rounded">
           {userTitle.icon && <span className="mr-1">{userTitle.icon}</span>}
           {userTitle.name}
         </span>

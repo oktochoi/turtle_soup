@@ -60,19 +60,19 @@ export default async function GuidePage({
   const lastUpdated = '2025-01-17';
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <main className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 max-w-4xl">
-        <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 lg:p-10 border border-slate-700 shadow-xl">
-          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+        <div className="bg-ink-700/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 lg:p-10 border border-brass/20 shadow-xl">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-brass-300 to-brass bg-clip-text text-transparent">
             {isKo ? '게임 이용 가이드' : 'Game Guide'}
           </h1>
-          <p className="text-slate-400 text-sm mb-8">
+          <p className="text-fog text-sm mb-8">
             {isKo ? '최종 업데이트' : 'Last updated'}: {lastUpdated}
           </p>
 
-          <div className="prose prose-invert max-w-none space-y-8 text-slate-300">
+          <div className="prose prose-invert max-w-none space-y-8 text-fog">
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '게임 소개' : 'Game Introduction'}
               </h2>
               <p className="mb-4">
@@ -80,9 +80,9 @@ export default async function GuidePage({
                   ? '바다거북스프는 추리와 질문을 통해 진실을 밝혀내는 게임입니다. 호스트가 설정한 이야기와 진실을 플레이어들이 질문을 통해 추리합니다.'
                   : 'Turtle Soup Riddle is a game where you uncover the truth through deduction and questions. Players deduce the story and truth set by the host through questions.'}
               </p>
-              <div className="bg-teal-500/10 border border-teal-500/30 rounded-lg p-4 mb-4">
+              <div className="bg-brass/10 border border-brass/30 rounded-lg p-4 mb-4">
                 <p className="text-sm">
-                  <strong className="text-teal-300">{isKo ? '예시' : 'Example'}:</strong>{' '}
+                  <strong className="text-brass-300">{isKo ? '예시' : 'Example'}:</strong>{' '}
                   {isKo
                     ? '이야기: "한 남자가 바다에 빠졌다. 구조대가 왔지만 그를 구하지 못했다."'
                     : 'Story: "A man fell into the sea. The rescue team came but could not save him."'}
@@ -96,27 +96,27 @@ export default async function GuidePage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '멀티플레이어 게임' : 'Multiplayer Games'}
               </h2>
-              <p className="mb-6 text-slate-300">
+              <p className="mb-6 text-fog">
                 {isKo
                   ? '친구들과 함께 실시간으로 즐길 수 있는 다양한 멀티플레이어 게임을 제공합니다.'
                   : 'We offer various multiplayer games that you can enjoy in real-time with friends.'}
               </p>
 
               {/* 바다거북스프 */}
-              <div className="mb-8 p-6 bg-slate-800/50 rounded-xl border border-slate-700">
-                <h3 className="text-xl font-bold text-teal-300 mb-3 flex items-center gap-2">
+              <div className="mb-8 p-6 bg-ink-700/50 rounded-xl border border-brass/20">
+                <h3 className="text-xl font-bold text-brass-300 mb-3 flex items-center gap-2">
                   <i className="ri-bowl-line"></i>
                   {isKo ? '바다거북스프' : 'Turtle Soup'}
                 </h3>
-                <p className="text-slate-300 mb-4">
+                <p className="text-fog mb-4">
                   {isKo
                     ? 'Yes/No 질문을 통해 진실을 추리하는 클래식한 추리 게임입니다.'
                     : 'A classic deduction game where you deduce the truth through Yes/No questions.'}
                 </p>
-                <ol className="list-decimal pl-6 space-y-2 text-sm text-slate-300">
+                <ol className="list-decimal pl-6 space-y-2 text-sm text-fog">
                   <li>
                     {isKo
                       ? '호스트가 방을 만들고 이야기와 정답을 입력합니다.'
@@ -140,62 +140,62 @@ export default async function GuidePage({
                 </ol>
 
                 {/* 바다거북스프 잘 푸는 법 */}
-                <div className="mt-6 pt-6 border-t border-slate-600">
-                  <h4 className="text-lg font-bold text-teal-300 mb-4">
+                <div className="mt-6 pt-6 border-t border-brass/25">
+                  <h4 className="text-lg font-bold text-brass-300 mb-4">
                     {isKo ? '바다거북스프 잘 푸는 법' : 'How to Solve Turtle Soup Effectively'}
                   </h4>
-                  <p className="text-slate-300 text-sm mb-4">
+                  <p className="text-fog text-sm mb-4">
                     {isKo
                       ? '바다거북스프는 단순히 떠오르는 질문을 던지는 게임이 아니라, 정보를 체계적으로 좁혀가는 추리 게임이다. 처음 문제를 접하면 대부분 이야기의 분위기나 공포 요소에 집중하지만, 실제로 중요한 것은 상황을 구성하는 핵심 요소들을 분리해서 확인하는 것이다. 장소, 등장인물, 시간, 행동 순서라는 네 가지 기본 축을 먼저 정리하는 것이 중요하다.'
                       : 'Turtle Soup is not a game of asking random questions—it\'s a deduction game where you systematically narrow down information. When first encountering a problem, most people focus on the atmosphere or horror elements, but what really matters is separating and verifying the core elements that make up the situation. Organizing the four basic axes—location, characters, time, and order of actions—is crucial from the start.'}
                   </p>
-                  <p className="text-slate-300 text-sm mb-4">
+                  <p className="text-fog text-sm mb-4">
                     {isKo
                       ? '예를 들어 "그는 방에 있었다"라는 문장이 있다면, 그 방이 실내인지 실외인지, 특정 공간인지 임시 장소인지부터 확인해야 한다. 많은 문제는 사람들이 자연스럽게 떠올리는 공간 이미지를 뒤집는 방식으로 설계된다. 등장인물 역시 사람인지, 생물인지, 혹은 무생물에 가까운 존재인지 확인하는 질문이 필요하다.'
                       : 'For example, if there\'s a sentence like "He was in a room," you need to first confirm whether that room is indoor or outdoor, a specific space or a temporary place. Many puzzles are designed to flip the spatial images people naturally imagine. For characters, you need questions to verify whether they\'re human, living beings, or closer to inanimate objects.'}
                   </p>
-                  <p className="text-slate-300 text-sm mb-4">
+                  <p className="text-fog text-sm mb-4">
                     {isKo
                       ? '또한 초반에는 세부적인 감정이나 이유보다 "사실 관계"를 먼저 좁히는 것이 좋다. 왜 울었는지를 묻기 전에, 무엇을 보았는지, 무엇이 실제로 일어났는지를 확인해야 한다. 정보가 충분히 모이지 않은 상태에서 결론을 추측하면 오히려 추리가 꼬이기 쉽다.'
                       : 'Also, in the early stages, it\'s better to narrow down "factual relationships" before asking about specific emotions or reasons. Before asking why someone cried, confirm what they saw and what actually happened. Guessing conclusions before enough information is gathered tends to derail your deduction.'}
                   </p>
-                  <p className="text-slate-300 text-sm mb-4">
+                  <p className="text-fog text-sm mb-4">
                     {isKo
                       ? '마지막으로, 좋은 플레이어는 질문을 통해 하나의 가설을 검증한다. 무작위 질문을 던지기보다는 "이 상황이 맞다면 이런 답이 나와야 한다"는 가설을 세우고 확인하는 방식이 훨씬 효율적이다. 바다거북스프는 감이 아니라 논리로 풀수록 재미가 커지는 게임이다.'
                       : 'Finally, good players verify one hypothesis through their questions. Rather than asking random questions, setting up a hypothesis like "if this situation is correct, this answer should follow" and then confirming it is much more efficient. Turtle Soup is a game that gets more fun the more you solve it with logic rather than intuition.'}
                   </p>
 
-                  <h5 className="text-base font-semibold text-teal-400 mb-2 mt-6">
+                  <h5 className="text-base font-semibold text-brass mb-2 mt-6">
                     {isKo ? '질문 설계 요령' : 'Question Design Tips'}
                   </h5>
-                  <p className="text-slate-300 text-sm mb-4">
+                  <p className="text-fog text-sm mb-4">
                     {isKo
                       ? '바다거북스프에서 질문은 단순한 호기심 표현이 아니라 추리를 전진시키는 도구다. 좋은 질문은 항상 여러 가능성을 동시에 줄여준다. 가장 기본적인 원칙은 "예/아니오로 명확히 갈리는 질문"을 만드는 것이다. 초반에는 넓은 범위를 커버하는 질문이 효과적이다. 예를 들어 "이 사건은 실내에서 일어났나요?", "등장인물은 혼자였나요?" 같은 질문은 한 번에 많은 경우의 수를 제거해준다.'
                       : 'In Turtle Soup, questions are tools to advance your deduction, not mere expressions of curiosity. Good questions always reduce multiple possibilities at once. The most basic principle is making questions that clearly divide into yes/no. In the early stages, questions that cover a wide range are effective.'}
                   </p>
 
-                  <h5 className="text-base font-semibold text-teal-400 mb-2 mt-6">
+                  <h5 className="text-base font-semibold text-brass mb-2 mt-6">
                     {isKo ? '힌트 활용법' : 'How to Use Hints'}
                   </h5>
-                  <p className="text-slate-300 text-sm mb-4">
+                  <p className="text-fog text-sm mb-4">
                     {isKo
                       ? '힌트는 막혔을 때 쓰는 최후의 수단처럼 보이지만, 사실 전략적으로 사용하면 추리를 더 재미있게 만들어준다. 대부분의 퍼즐은 특정 핵심 단서를 중심으로 돌아간다. 힌트는 그 단서의 방향을 알려주는 역할을 한다. 힌트를 하나 사용한 뒤에는 반드시 새로운 질문을 여러 개 만들어보는 것이 중요하다.'
                       : 'Hints may seem like a last resort when you\'re stuck, but they actually make deduction more enjoyable when used strategically. Most puzzles revolve around a specific key clue. Hints play the role of pointing you in the direction of that clue. After using one hint, it\'s important to definitely create several new questions.'}
                   </p>
 
-                  <h5 className="text-base font-semibold text-teal-400 mb-2 mt-6">
+                  <h5 className="text-base font-semibold text-brass mb-2 mt-6">
                     {isKo ? '초보자 실수 모음' : 'Common Beginner Mistakes'}
                   </h5>
-                  <p className="text-slate-300 text-sm mb-4">
+                  <p className="text-fog text-sm mb-4">
                     {isKo
                       ? '많은 초보 플레이어들이 처음 떠오른 해석에 집착한다. 문제를 읽자마자 유령 이야기나 범죄 사건으로 단정해버리면, 그 틀에서 벗어나기 어려워진다. 또 너무 세부적인 질문부터 시작하는 것, 감정에 집중하는 것, 질문 기록을 정리하지 않는 것도 흔한 오류다.'
                       : 'Many beginner players cling to their first interpretation. If you conclude it\'s a ghost story or crime case as soon as you read the problem, it becomes hard to escape that framework. Starting with overly specific questions, focusing on emotions, and not organizing question records are also common errors.'}
                   </p>
 
-                  <h5 className="text-base font-semibold text-teal-400 mb-2 mt-6">
+                  <h5 className="text-base font-semibold text-brass mb-2 mt-6">
                     {isKo ? '문제 만들기 팁' : 'Problem Creation Tips'}
                   </h5>
-                  <p className="text-slate-300 text-sm mb-4">
+                  <p className="text-fog text-sm mb-4">
                     {isKo
                       ? '좋은 바다거북스프 문제는 단순히 충격적인 결말이 아니라, 논리적으로 성립하는 구조를 가지고 있어야 한다. 대부분의 명작 퍼즐은 "착각"을 중심으로 설계된다. 공간에 대한 착각, 대상에 대한 착각, 시간 순서에 대한 착각 등이 대표적이다. 문제 설명은 가능한 한 짧고 중립적으로 작성하는 것이 좋다.'
                       : 'A good Turtle Soup problem should have a logically sound structure, not just a shocking conclusion. Most masterpiece puzzles are designed around "misconceptions." Misconceptions about space, about the subject, about the order of time—these are representative. Problem descriptions should be written as briefly and neutrally as possible.'}
@@ -204,17 +204,17 @@ export default async function GuidePage({
               </div>
 
               {/* 라이어 게임 */}
-              <div className="mb-8 p-6 bg-slate-800/50 rounded-xl border border-slate-700">
+              <div className="mb-8 p-6 bg-ink-700/50 rounded-xl border border-brass/20">
                 <h3 className="text-xl font-bold text-purple-300 mb-3 flex items-center gap-2">
                   <i className="ri-user-unfollow-line"></i>
                   {isKo ? '라이어 게임' : 'Liar Game'}
                 </h3>
-                <p className="text-slate-300 mb-4">
+                <p className="text-fog mb-4">
                   {isKo
                     ? '한 명의 라이어를 찾아내는 심리전 게임입니다.'
                     : 'A psychological game where you find the liar among players.'}
                 </p>
-                <ol className="list-decimal pl-6 space-y-2 text-sm text-slate-300">
+                <ol className="list-decimal pl-6 space-y-2 text-sm text-fog">
                   <li>
                     {isKo
                       ? '호스트가 게임 주제와 규칙을 설정합니다.'
@@ -239,17 +239,17 @@ export default async function GuidePage({
               </div>
 
               {/* 마피아 */}
-              <div className="mb-8 p-6 bg-slate-800/50 rounded-xl border border-slate-700">
+              <div className="mb-8 p-6 bg-ink-700/50 rounded-xl border border-brass/20">
                 <h3 className="text-xl font-bold text-red-300 mb-3 flex items-center gap-2">
                   <i className="ri-sword-line"></i>
                   {isKo ? '마피아' : 'Mafia'}
                 </h3>
-                <p className="text-slate-300 mb-4">
+                <p className="text-fog mb-4">
                   {isKo
                     ? '마피아와 시민의 대결을 그린 심리 추리 게임입니다.'
                     : 'A psychological deduction game depicting the battle between mafia and citizens.'}
                 </p>
-                <ol className="list-decimal pl-6 space-y-2 text-sm text-slate-300">
+                <ol className="list-decimal pl-6 space-y-2 text-sm text-fog">
                   <li>
                     {isKo
                       ? '호스트가 게임 설정과 역할을 배정합니다.'
@@ -275,7 +275,7 @@ export default async function GuidePage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '오프라인 모드' : 'Offline Mode'}
               </h2>
               <p className="mb-4">
@@ -308,7 +308,7 @@ export default async function GuidePage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '문제 생성하기' : 'Creating Problems'}
               </h2>
               <p className="mb-4">
@@ -341,7 +341,7 @@ export default async function GuidePage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '게임 팁' : 'Game Tips'}
               </h2>
               <ul className="list-disc pl-6 space-y-2">
@@ -374,7 +374,7 @@ export default async function GuidePage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '랭킹 시스템' : 'Ranking System'}
               </h2>
               <p className="mb-4">
@@ -397,7 +397,7 @@ export default async function GuidePage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '출석체크 및 경험치' : 'Check-in and Experience Points'}
               </h2>
               <p className="mb-4">
@@ -424,11 +424,11 @@ export default async function GuidePage({
               </ul>
             </section>
 
-            <div className="mt-8 pt-6 border-t border-slate-700">
+            <div className="mt-8 pt-6 border-t border-brass/20">
               <div className="flex flex-wrap gap-3">
                 <Link
                   href={`/${locale}/faq`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-teal-500/20 text-teal-400 border border-teal-500/50 rounded-lg hover:bg-teal-500/30 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-brass/20 text-brass border border-brass/50 rounded-lg hover:bg-brass/30 transition-colors"
                 >
                   <i className="ri-questionnaire-line"></i>
                   <span>{isKo ? 'FAQ 보기' : 'View FAQ'}</span>
@@ -442,7 +442,7 @@ export default async function GuidePage({
                 </Link>
                 <Link
                   href={`/${locale}/create-room`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 rounded-lg hover:bg-cyan-500/30 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-brass/20 text-brass border border-brass/50 rounded-lg hover:bg-brass/30 transition-colors"
                 >
                   <i className="ri-group-line"></i>
                   <span>{isKo ? '방 만들기' : 'Create Room'}</span>

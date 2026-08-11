@@ -182,26 +182,26 @@ export default function SetupNicknamePage({ params }: { params: Promise<{ lang: 
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
-          <p className="text-slate-400">{t.common.loading}</p>
+          <p className="text-fog">{t.common.loading}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-brass-300 to-brass bg-clip-text text-transparent">
             {t.auth.setupNickname}
           </h1>
-          <p className="text-slate-400 text-sm">{t.auth.setupNicknameDesc}</p>
+          <p className="text-fog text-sm">{t.auth.setupNicknameDesc}</p>
         </div>
 
-        <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-slate-700 shadow-xl">
+        <div className="bg-ink-700/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-brass/20 shadow-xl">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div className="bg-red-500/10 border border-red-500/50 text-red-400 rounded-lg p-3 text-sm">
@@ -210,7 +210,7 @@ export default function SetupNicknamePage({ params }: { params: Promise<{ lang: 
             )}
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-slate-300">
+              <label className="block text-sm font-medium mb-2 text-fog">
                 {t.auth.nickname}
               </label>
               <input
@@ -221,10 +221,10 @@ export default function SetupNicknamePage({ params }: { params: Promise<{ lang: 
                 required
                 minLength={2}
                 maxLength={20}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
               {isChecking && (
-                <p className="text-xs text-slate-400 mt-1">{t.auth.checkingNickname}</p>
+                <p className="text-xs text-fog mt-1">{t.auth.checkingNickname}</p>
               )}
               {nickname.trim().length >= 2 && !isChecking && !error && (
                 <p className="text-xs text-green-400 mt-1">{t.auth.nicknameAvailable}</p>
@@ -234,7 +234,7 @@ export default function SetupNicknamePage({ params }: { params: Promise<{ lang: 
             <button
               type="submit"
               disabled={isLoading || isChecking || !!error || nickname.trim().length < 2}
-              className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-teal-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-teal-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? t.auth.settingUp : t.auth.setupNicknameButton}
             </button>

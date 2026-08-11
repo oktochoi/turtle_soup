@@ -21,7 +21,7 @@ export default function EmptyState({
   onAction,
   lang = 'ko',
 }: EmptyStateProps) {
-  const buttonClass = "px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-teal-500/50 text-sm sm:text-base touch-manipulation";
+  const buttonClass = "px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-teal-500/50 text-sm sm:text-base touch-manipulation";
 
   const renderAction = () => {
     if (!actionLabel) return null;
@@ -45,14 +45,14 @@ export default function EmptyState({
   };
 
   return (
-    <div className="text-center py-12 sm:py-16 bg-slate-800/50 rounded-xl border border-slate-700">
+    <div className="text-center py-12 sm:py-16 bg-ink-700/50 rounded-xl border border-brass/20">
       <div className="mb-4 sm:mb-6">
-        <i className={`${icon} text-5xl sm:text-6xl text-slate-500`}></i>
+        <i className={`${icon} text-5xl sm:text-6xl text-fog-dim`}></i>
       </div>
       <h3 className="text-lg sm:text-xl font-bold text-white mb-2 sm:mb-3">
         {title}
       </h3>
-      <p className="text-sm sm:text-base text-slate-400 mb-6 sm:mb-8 max-w-md mx-auto px-4">
+      <p className="text-sm sm:text-base text-fog mb-6 sm:mb-8 max-w-md mx-auto px-4">
         {description}
       </p>
       {renderAction()}

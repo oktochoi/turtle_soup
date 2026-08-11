@@ -67,15 +67,15 @@ export default function QuizPlayOrder({
                     ? 'bg-green-500/10 border-green-500'
                     : isWrongItem
                     ? 'bg-red-500/10 border-red-500'
-                    : 'bg-slate-800 border-slate-700'
-                  : 'bg-slate-800 border-slate-700'
+                    : 'bg-ink-700 border-brass/20'
+                  : 'bg-ink-700 border-brass/20'
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-sm font-semibold text-white">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-ink-600 flex items-center justify-center text-sm font-semibold text-white">
                   {index + 1}
                 </div>
-                <div className="flex-1 text-slate-200">{item}</div>
+                <div className="flex-1 text-bone-muted">{item}</div>
                 {!showAnswer && (
                   <input
                     type="number"
@@ -91,7 +91,7 @@ export default function QuizPlayOrder({
                       }
                     }}
                     placeholder={isKo ? '순서' : 'Order'}
-                    className="w-20 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    className="w-20 bg-ink-600 border border-brass/25 rounded-lg px-3 py-2 text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
                 )}
                 {showAnswer && (
@@ -119,7 +119,7 @@ export default function QuizPlayOrder({
         <button
           onClick={handleSubmit}
           disabled={order.length !== items.length || order.some(o => o < 0 || o >= items.length)}
-          className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isKo ? '정답 제출' : 'Submit Answer'}
         </button>
@@ -148,15 +148,15 @@ export default function QuizPlayOrder({
       {explanation && (
         <details className="mt-4 group">
           <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
-            <div className="bg-slate-800 rounded-lg border border-slate-600 hover:border-teal-500/30 transition-colors px-4 py-2.5 flex items-center justify-between">
-              <span className="text-sm font-semibold text-teal-400">
+            <div className="bg-ink-700 rounded-lg border border-brass/25 hover:border-brass/30 transition-colors px-4 py-2.5 flex items-center justify-between">
+              <span className="text-sm font-semibold text-brass">
                 {isKo ? '해설 보기' : 'View Explanation'}
               </span>
-              <i className="ri-arrow-down-s-line text-slate-400 group-open:rotate-180 transition-transform"></i>
+              <i className="ri-arrow-down-s-line text-fog group-open:rotate-180 transition-transform"></i>
             </div>
           </summary>
-          <div className="mt-2 p-4 bg-slate-800 rounded-lg border border-slate-600 border-t-0 rounded-t-none">
-            <div className="text-sm text-slate-300 whitespace-pre-wrap">{explanation}</div>
+          <div className="mt-2 p-4 bg-ink-700 rounded-lg border border-brass/25 border-t-0 rounded-t-none">
+            <div className="text-sm text-fog whitespace-pre-wrap">{explanation}</div>
           </div>
         </details>
       )}

@@ -98,7 +98,7 @@ export default function ImageUpload({
 
   return (
     <div className="space-y-2">
-      <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+      <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
         <i className="ri-image-line mr-1"></i>
         {required
           ? (lang === 'ko' ? '썸네일 (대표 이미지) *' : 'Thumbnail (Required) *')
@@ -109,11 +109,11 @@ export default function ImageUpload({
           type="file"
           accept="image/*"
           onChange={handleFileUpload}
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-teal-500 file:text-white hover:file:bg-teal-600"
+          className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brass file:text-white hover:file:bg-teal-600"
         />
         {onImageUrlChange && (
           <div>
-            <span className="text-xs text-slate-400 block mb-1">
+            <span className="text-xs text-fog block mb-1">
               {lang === 'ko' ? '또는 이미지 URL' : 'Or image URL'}
             </span>
             <input
@@ -122,7 +122,7 @@ export default function ImageUpload({
               onChange={(e) => setUrlInput(e.target.value)}
               onBlur={handleUrlBlur}
               placeholder={lang === 'ko' ? 'https://...' : 'https://...'}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
           </div>
         )}
@@ -130,7 +130,7 @@ export default function ImageUpload({
           <p className="text-xs text-red-400">{error}</p>
         )}
         {preview && (
-          <div className="relative w-full h-48 bg-slate-900 rounded-xl overflow-hidden border border-slate-700">
+          <div className="relative w-full h-48 bg-ink-800 rounded-xl overflow-hidden border border-brass/20">
             <img src={preview} alt="Preview" className="w-full h-full object-contain" />
             <button
               type="button"
@@ -141,7 +141,7 @@ export default function ImageUpload({
             </button>
           </div>
         )}
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-fog">
           {lang === 'ko' 
             ? `이미지 크기는 최대 ${maxSizeMB}MB입니다.`
             : `Maximum image size is ${maxSizeMB}MB.`}

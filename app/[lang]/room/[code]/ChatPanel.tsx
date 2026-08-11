@@ -335,9 +335,9 @@ export default function ChatPanel({ roomCode, nickname, lang, title, gamePhase }
   };
 
   return (
-    <div className="bg-slate-800 rounded-xl border border-slate-700 flex flex-col h-[400px] sm:h-[500px]">
-      <div className="p-3 sm:p-4 border-b border-slate-700">
-        <h3 className="text-sm sm:text-base font-semibold text-teal-400 flex items-center gap-2">
+    <div className="bg-ink-700 rounded-xl border border-brass/20 flex flex-col h-[400px] sm:h-[500px]">
+      <div className="p-3 sm:p-4 border-b border-brass/20">
+        <h3 className="text-sm sm:text-base font-semibold text-brass flex items-center gap-2">
           <i className="ri-chat-3-line"></i>
           {title || t.room.chat}
         </h3>
@@ -351,23 +351,23 @@ export default function ChatPanel({ roomCode, nickname, lang, title, gamePhase }
         {isLoading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-teal-400 mx-auto mb-2"></div>
-            <p className="text-xs text-slate-400">채팅 로딩 중...</p>
+            <p className="text-xs text-fog">채팅 로딩 중...</p>
           </div>
         ) : messages.length === 0 ? (
           <div className="text-center py-8">
             {gamePhase === 'SPEAKING' || gamePhase === 'VOTING' || gamePhase === 'RESULT' ? (
               <>
-                <p className="text-xs sm:text-sm text-slate-400">
+                <p className="text-xs sm:text-sm text-fog">
                   {lang === 'ko' ? '아직 메시지가 없습니다.' : 'No messages yet.'}
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-fog-dim mt-1">
                   {lang === 'ko' ? '게임 대화를 시작해보세요!' : 'Start the game chat!'}
                 </p>
               </>
             ) : (
               <>
-                <p className="text-xs sm:text-sm text-slate-400">{t.room.noMessagesYet}</p>
-                <p className="text-xs text-slate-500 mt-1">{t.room.startChatting}</p>
+                <p className="text-xs sm:text-sm text-fog">{t.room.noMessagesYet}</p>
+                <p className="text-xs text-fog-dim mt-1">{t.room.startChatting}</p>
                 <p className="text-xs text-amber-400/70 mt-2 px-2">
                   {t.room.realtimeMessagesWorking}
                 </p>
@@ -386,7 +386,7 @@ export default function ChatPanel({ roomCode, nickname, lang, title, gamePhase }
                   key={msg.id}
                   className="flex justify-center my-2"
                 >
-                  <div className="bg-slate-700/50 text-slate-400 text-xs px-3 py-1.5 rounded-full border border-slate-600/50">
+                  <div className="bg-ink-600/50 text-fog text-xs px-3 py-1.5 rounded-full border border-brass/25/50">
                     {msg.message}
                   </div>
                 </div>
@@ -400,19 +400,19 @@ export default function ChatPanel({ roomCode, nickname, lang, title, gamePhase }
               >
                 <div className={`flex items-center gap-2 ${isOwnMessage ? 'flex-row-reverse' : ''}`}>
                   <span className={`text-xs font-semibold ${
-                    isOwnMessage ? 'text-cyan-400' : 'text-teal-400'
+                    isOwnMessage ? 'text-brass' : 'text-brass'
                   }`}>
                     {msg.nickname}
                   </span>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-fog-dim">
                     {formatTime(msg.timestamp)}
                   </span>
                 </div>
                 <div
                   className={`max-w-[80%] sm:max-w-[75%] rounded-lg px-3 py-2 text-xs sm:text-sm break-words ${
                     isOwnMessage
-                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                      : 'bg-slate-700 text-slate-200 border border-slate-600'
+                      ? 'bg-brass/20 text-brass-300 border border-brass/30'
+                      : 'bg-ink-600 text-bone-muted border border-brass/25'
                   }`}
                 >
                   {msg.message}
@@ -425,7 +425,7 @@ export default function ChatPanel({ roomCode, nickname, lang, title, gamePhase }
       </div>
 
       {/* 메시지 입력 */}
-      <form onSubmit={handleSubmitMessage} className="p-3 sm:p-4 border-t border-slate-700">
+      <form onSubmit={handleSubmitMessage} className="p-3 sm:p-4 border-t border-brass/20">
         <div className="flex gap-2">
           <input
             ref={messageInputRef}
@@ -434,13 +434,13 @@ export default function ChatPanel({ roomCode, nickname, lang, title, gamePhase }
             onChange={(e) => setMessageText(e.target.value)}
             placeholder={nickname ? t.room.enterMessage : t.room.enterNicknameToChat}
             disabled={!nickname}
-            className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 bg-ink-800 border border-brass/20 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             maxLength={200}
           />
           <button
             type="submit"
             disabled={!messageText.trim() || !nickname}
-            className="px-3 sm:px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm touch-manipulation"
+            className="px-3 sm:px-4 py-2 bg-brass hover:bg-brass-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm touch-manipulation"
           >
             <i className="ri-send-plane-line"></i>
           </button>

@@ -16,7 +16,7 @@ import { QUIZ_TYPE_METADATA, type QuizType } from '@/lib/types/quiz';
 // 게임 유형별 색상 팔레트
 const getQuizTypeColors = (quizType: QuizType) => {
   const colorMap: Record<QuizType, { bg: string; text: string; border: string }> = {
-    soup: { bg: 'bg-cyan-500/20', text: 'text-cyan-300', border: 'border-cyan-500/30' },
+    soup: { bg: 'bg-brass/20', text: 'text-brass-300', border: 'border-brass/30' },
     reasoning: { bg: 'bg-indigo-500/20', text: 'text-indigo-300', border: 'border-indigo-500/30' },
     nonsense: { bg: 'bg-yellow-500/20', text: 'text-yellow-300', border: 'border-yellow-500/30' },
     mcq: { bg: 'bg-blue-500/20', text: 'text-blue-300', border: 'border-blue-500/30' },
@@ -28,12 +28,12 @@ const getQuizTypeColors = (quizType: QuizType) => {
     pattern: { bg: 'bg-sky-500/20', text: 'text-sky-300', border: 'border-sky-500/30' },
     liar: { bg: 'bg-amber-500/20', text: 'text-amber-300', border: 'border-amber-500/30' },
     mafia: { bg: 'bg-red-500/20', text: 'text-red-300', border: 'border-red-500/30' },
-    chat: { bg: 'bg-slate-500/20', text: 'text-slate-300', border: 'border-slate-500/30' },
+    chat: { bg: 'bg-slate-500/20', text: 'text-fog', border: 'border-slate-500/30' },
     battle: { bg: 'bg-orange-500/20', text: 'text-orange-300', border: 'border-orange-500/30' },
     fill_blank: { bg: 'bg-emerald-500/20', text: 'text-emerald-300', border: 'border-emerald-500/30' },
-    order: { bg: 'bg-teal-500/20', text: 'text-teal-300', border: 'border-teal-500/30' },
+    order: { bg: 'bg-brass/20', text: 'text-brass-300', border: 'border-brass/30' },
   };
-  return colorMap[quizType] || { bg: 'bg-slate-500/20', text: 'text-slate-300', border: 'border-slate-500/30' };
+  return colorMap[quizType] || { bg: 'bg-slate-500/20', text: 'text-fog', border: 'border-slate-500/30' };
 };
 
 type SortOption = 'latest' | 'popular' | 'difficulty';
@@ -268,77 +268,69 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-6xl">
-        {/* 헤더 */}
-        <div className="mb-4 sm:mb-6 lg:mb-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-3">
-              <Link href={`/${lang}/play`}>
-                <button className="text-slate-400 hover:text-white transition-colors text-xs sm:text-sm">
-                  <i className="ri-arrow-left-line mr-2"></i>
-                  {'게임 선택'}
-                </button>
-              </Link>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
-                {'바다거북스프 문제 모음'}
+    <div className="min-h-screen text-slate-100">
+      <div className="page-shell py-6 sm:py-10">
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white">
+                바다거북스프 문제 모음
               </h1>
+              <p className="mt-2 text-sm text-slate-400 max-w-2xl">
+                레전드·어려운·공포·최신 문제를 한곳에서 풀어보세요.
+              </p>
             </div>
-            <Link href={`/${lang}/create-problem`}>
-              <button className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold px-3 sm:px-4 py-2 rounded-xl transition-all duration-200 text-sm sm:text-base touch-manipulation">
-                <i className="ri-add-circle-line mr-2"></i>
-                {t.problem.createProblem}
-              </button>
+            <Link href={`/${lang}/create-problem`} className="btn-primary">
+              {t.problem.createProblem}
             </Link>
           </div>
 
-          {/* SEO 카테고리 내부 링크 */}
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
             {[
-              { href: `/${lang}/problems/legend`, label: '🏆 레전드 문제', color: 'from-amber-500/20 to-yellow-500/20 border-amber-500/30 hover:border-amber-400/60' },
-              { href: `/${lang}/problems/hard`, label: '🔥 어려운 문제', color: 'from-red-500/20 to-orange-500/20 border-red-500/30 hover:border-red-400/60' },
-              { href: `/${lang}/problems/scary`, label: '👻 공포·반전', color: 'from-purple-500/20 to-violet-500/20 border-purple-500/30 hover:border-purple-400/60' },
-              { href: `/${lang}/problems/easy`, label: '🌱 쉬운 문제', color: 'from-green-500/20 to-emerald-500/20 border-green-500/30 hover:border-green-400/60' },
-              { href: `/${lang}/problems/latest`, label: '✨ 최신 문제', color: 'from-cyan-500/20 to-teal-500/20 border-cyan-500/30 hover:border-cyan-400/60' },
+              { href: `/${lang}/problems/legend`, label: '레전드' },
+              { href: `/${lang}/problems/hard`, label: '어려운' },
+              { href: `/${lang}/problems/scary`, label: '공포·반전' },
+              { href: `/${lang}/problems/easy`, label: '쉬운' },
+              { href: `/${lang}/problems/latest`, label: '최신' },
             ].map((cat) => (
-              <Link key={cat.href} href={cat.href} className={`block text-center py-2.5 px-3 rounded-xl bg-gradient-to-r ${cat.color} border text-white text-sm font-medium transition-all duration-200`}>
+              <Link
+                key={cat.href}
+                href={cat.href}
+                className="rounded-xl border border-slate-800 bg-slate-900/80 py-2.5 px-3 text-center text-sm text-slate-100 transition hover:border-teal-500/40"
+              >
                 {cat.label}
               </Link>
             ))}
           </div>
 
-          {/* 설명 텍스트 */}
-          <div className="mt-4 p-4 sm:p-5 bg-slate-800/60 rounded-xl border border-slate-700/50 text-slate-300 text-sm sm:text-base leading-relaxed space-y-3">
+          <div className="mt-5 rounded-xl border border-slate-800 bg-slate-900/70 p-4 sm:p-5 text-slate-300 text-sm sm:text-base leading-relaxed space-y-3">
             <p>
-              {'바다거북스프 문제를 찾고 계신가요? 레전드 문제부터 어려운 문제, 공포·반전 문제까지 다양한 바다거북스프 문제를 직접 풀어볼 수 있습니다. AI가 질문에 자동으로 답변해주는 솔로 모드로 혼자서도 추리를 즐길 수 있습니다.'}
+              바다거북스프 문제를 찾고 계신가요? 레전드 문제부터 어려운 문제, 공포·반전 문제까지 다양한 바다거북스프 문제를 직접 풀어볼 수 있습니다. AI가 질문에 자동으로 답변해주는 솔로 모드로 혼자서도 추리를 즐길 수 있습니다.
             </p>
             <p>
-              {'바다거북스프 퍼즐은 장소, 등장인물, 시간, 행동 순서를 체계적으로 좁혀가는 것이 핵심입니다. 초반에는 넓은 범위를 묻고, 정보가 모이면 구체적으로 좁혀가세요. 추리 팁은 튜토리얼 페이지에서 확인할 수 있습니다.'}
-            </p>
-            <p>
-              {'친구들과 함께 플레이하고 싶다면 방 만들기에서 멀티플레이어 모드를 선택하세요. 문제를 만들고 싶다면 위의 "문제 만들기" 버튼을 클릭하세요.'}
+              장소, 등장인물, 시간, 행동 순서를 체계적으로 좁혀가는 것이 핵심입니다. 초반에는 넓은 범위를 묻고, 정보가 모이면 구체적으로 좁혀가세요.
             </p>
           </div>
         </div>
 
         {/* 필터 및 검색 */}
-        <div className="bg-slate-800 rounded-xl p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 border border-slate-700">
+        <div className="bg-ink-700 rounded-xl p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 border border-brass/20">
           <div className="space-y-3 sm:space-y-4">
             {/* 검색 */}
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">{t.problem.search}:</label>
+              <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">{t.problem.search}:</label>
               <input
                 type="text"
                 placeholder={t.problem.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm sm:text-base"
+                className="w-full bg-ink-800 border border-brass/20 rounded-lg px-3 sm:px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm sm:text-base"
               />
             </div>
 
             {/* 관리자 채택 필터 */}
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+              <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
                 관리자 채택:
               </label>
               <div className="flex flex-wrap gap-2">
@@ -346,8 +338,8 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                   onClick={() => setFeaturedFilter('all')}
                   className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     featuredFilter === 'all'
-                      ? 'bg-teal-500 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      ? 'bg-brass text-white'
+                      : 'bg-ink-600 text-fog hover:bg-slate-600'
                   }`}
                 >
                   {t.problem.all}
@@ -357,7 +349,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                   className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     featuredFilter === 'featured'
                       ? 'bg-yellow-500 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      : 'bg-ink-600 text-fog hover:bg-slate-600'
                   }`}
                 >
                   <i className="ri-star-fill mr-1"></i>
@@ -370,14 +362,14 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
 
             {/* 난이도 필터 */}
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">{t.problem.difficultyLabel}:</label>
+              <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">{t.problem.difficultyLabel}:</label>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setDifficultyFilter('all')}
                   className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     difficultyFilter === 'all'
-                      ? 'bg-teal-500 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      ? 'bg-brass text-white'
+                      : 'bg-ink-600 text-fog hover:bg-slate-600'
                   }`}
                 >
                   {t.problem.all}
@@ -387,7 +379,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                   className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     difficultyFilter === 'easy'
                       ? 'bg-green-500 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      : 'bg-ink-600 text-fog hover:bg-slate-600'
                   }`}
                 >
                   {t.problem.easy}
@@ -397,7 +389,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                   className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     difficultyFilter === 'medium'
                       ? 'bg-yellow-500 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      : 'bg-ink-600 text-fog hover:bg-slate-600'
                   }`}
                 >
                   {t.problem.medium}
@@ -407,7 +399,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                   className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     difficultyFilter === 'hard'
                       ? 'bg-red-500 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      : 'bg-ink-600 text-fog hover:bg-slate-600'
                   }`}
                 >
                   {t.problem.hard}
@@ -417,14 +409,14 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
 
             {/* 정렬 */}
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">{t.problem.sortLabel}:</label>
+              <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">{t.problem.sortLabel}:</label>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSortOption('latest')}
                   className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     sortOption === 'latest'
-                      ? 'bg-teal-500 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      ? 'bg-brass text-white'
+                      : 'bg-ink-600 text-fog hover:bg-slate-600'
                   }`}
                 >
                   {t.problem.latest}
@@ -433,8 +425,8 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                   onClick={() => setSortOption('popular')}
                   className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     sortOption === 'popular'
-                      ? 'bg-teal-500 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      ? 'bg-brass text-white'
+                      : 'bg-ink-600 text-fog hover:bg-slate-600'
                   }`}
                 >
                   {t.problem.popular}
@@ -443,8 +435,8 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                   onClick={() => setSortOption('difficulty')}
                   className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                     sortOption === 'difficulty'
-                      ? 'bg-teal-500 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      ? 'bg-brass text-white'
+                      : 'bg-ink-600 text-fog hover:bg-slate-600'
                   }`}
                 >
                   {t.problem.difficultySort}
@@ -565,11 +557,11 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
               return (
                 <div
                   key={problem.id}
-                  className="bg-slate-800/80 backdrop-blur-sm rounded-xl p-4 sm:p-5 lg:p-6 border border-slate-700/60 hover:border-slate-600 transition-all duration-200 shadow-md hover:shadow-lg"
+                  className="bg-ink-700/80 backdrop-blur-sm rounded-xl p-4 sm:p-5 lg:p-6 border border-brass/60 hover:border-brass/25 transition-all duration-200 shadow-md hover:shadow-lg"
                 >
                   {/* 이미지 썸네일 (가운데 정렬, 중앙 표시) - 이미지가 있을 때만 표시 */}
                   {imageUrl && (
-                    <div className="mb-3 sm:mb-4 rounded-lg overflow-hidden bg-slate-900 flex items-center justify-center" style={{ minHeight: '120px' }}>
+                    <div className="mb-3 sm:mb-4 rounded-lg overflow-hidden bg-ink-800 flex items-center justify-center" style={{ minHeight: '120px' }}>
                       <img
                         src={imageUrl}
                         alt={problem.title}
@@ -593,7 +585,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                     <div className="mb-2 flex flex-wrap gap-1.5">
                       {problemTags.map((tag, tagIndex) => {
                         // 태그에 맞는 색상 매핑 (기존 게임 유형 색상 사용)
-                        let tagColor = { bg: 'bg-slate-500/20', text: 'text-slate-300', border: 'border-slate-500/30' };
+                        let tagColor = { bg: 'bg-slate-500/20', text: 'text-fog', border: 'border-slate-500/30' };
                         
                         // 태그명을 기반으로 색상 결정
                         const tagLower = tag.toLowerCase();
@@ -638,7 +630,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                   <div className="flex items-start justify-between mb-3 sm:mb-4 gap-2">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <h3 className="text-base sm:text-lg lg:text-xl font-bold text-white break-words hover:text-slate-100 transition-colors">
+                        <h3 className="text-base sm:text-lg lg:text-xl font-bold text-white break-words hover:text-bone transition-colors">
                           {problem.title}
                         </h3>
                         {(problem as any).status === 'featured' && (
@@ -654,22 +646,22 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                         {difficultyBadge.emoji} {difficultyBadge.text}
                       </span>
                       {averageRating > 0 && (
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-fog">
                           ⭐ {averageRating.toFixed(1)}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <p className="text-xs sm:text-sm text-slate-300 mb-3 sm:mb-4 line-clamp-3">
+                  <p className="text-xs sm:text-sm text-fog mb-3 sm:mb-4 line-clamp-3">
                     {truncateText(problem.content, 100)}
                   </p>
 
                   <div className="mb-3 sm:mb-4" />
 
                   <Link href={`/${lang}/problem/${problem.id}`}>
-                    <button className="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 sm:py-3 rounded-lg transition-all duration-200 text-sm sm:text-base touch-manipulation">
-                      {t.problem.solve}
+                    <button className="w-full bg-ink-600 hover:bg-slate-600 text-white font-semibold py-2.5 sm:py-3 rounded-lg transition-all duration-200 text-sm sm:text-base touch-manipulation">
+                      {quizType === 'soup' ? '사건 수사 시작' : t.problem.solve}
                     </button>
                   </Link>
                 </div>
@@ -683,7 +675,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
-                  className="px-3 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all text-sm font-semibold"
+                  className="px-3 sm:px-4 py-2 bg-ink-700 hover:bg-ink-600 disabled:bg-ink-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all text-sm font-semibold"
                 >
                   <i className="ri-arrow-left-line"></i>
                 </button>
@@ -706,8 +698,8 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                       onClick={() => setCurrentPage(pageNum)}
                       className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-sm font-semibold ${
                         currentPage === pageNum
-                          ? 'bg-teal-500 text-white'
-                          : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                          ? 'bg-brass text-white'
+                          : 'bg-ink-700 hover:bg-ink-600 text-fog'
                       }`}
                     >
                       {pageNum}
@@ -718,7 +710,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-3 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all text-sm font-semibold"
+                  className="px-3 sm:px-4 py-2 bg-ink-700 hover:bg-ink-600 disabled:bg-ink-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all text-sm font-semibold"
                 >
                   <i className="ri-arrow-right-line"></i>
                 </button>
@@ -727,7 +719,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
 
             {/* 결과 개수 */}
             {!isLoading && (
-              <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-slate-400">
+              <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-fog">
                 {`총 ${filteredProblems.length}개의 문제 (${(currentPage - 1) * itemsPerPage + 1}-${Math.min(currentPage * itemsPerPage, filteredProblems.length)} / ${filteredProblems.length})`}
               </div>
             )}

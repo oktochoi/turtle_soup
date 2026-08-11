@@ -35,7 +35,7 @@ export default function QuizFormFillBlank({
       {/* 이미지 업로드 */}
       {onImageChange && (
         <div>
-          <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+          <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
             <i className="ri-image-line mr-1"></i>
             {lang === 'ko' ? '이미지 (선택사항)' : 'Image (Optional)'}
           </label>
@@ -44,10 +44,10 @@ export default function QuizFormFillBlank({
               type="file"
               accept="image/*"
               onChange={handleImageUpload}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-teal-500 file:text-white hover:file:bg-teal-600"
+              className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brass file:text-white hover:file:bg-teal-600"
             />
             {imageUrl && (
-              <div className="relative w-full h-48 bg-slate-900 rounded-xl overflow-hidden">
+              <div className="relative w-full h-48 bg-ink-800 rounded-xl overflow-hidden">
                 <img src={imageUrl} alt="Preview" className="w-full h-full object-contain" />
               </div>
             )}
@@ -57,7 +57,7 @@ export default function QuizFormFillBlank({
 
       {/* 정답 */}
       <div>
-        <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+        <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
           <i className="ri-checkbox-circle-line mr-1"></i>
           {lang === 'ko' ? '정답' : 'Answer'}
         </label>
@@ -66,7 +66,7 @@ export default function QuizFormFillBlank({
           value={answer}
           onChange={(e) => onAnswerChange(e.target.value)}
           placeholder={lang === 'ko' ? '빈칸에 들어갈 정답을 입력하세요' : 'Enter the answer for the blank'}
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+          className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
           maxLength={200}
         />
       </div>
@@ -74,7 +74,7 @@ export default function QuizFormFillBlank({
       {/* 설명 */}
       {onExplanationChange && (
         <div>
-          <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+          <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
             <i className="ri-information-line mr-1"></i>
             {lang === 'ko' ? '설명 (선택사항)' : 'Explanation (Optional)'}
           </label>
@@ -82,7 +82,7 @@ export default function QuizFormFillBlank({
             value={explanation}
             onChange={(e) => onExplanationChange(e.target.value)}
             placeholder={lang === 'ko' ? '정답의 이유와 설명을 입력하세요' : 'Enter the explanation for the answer'}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
+            className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
             maxLength={300}
           />
         </div>

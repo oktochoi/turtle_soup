@@ -31,10 +31,10 @@ export default async function HardPage({ params }: { params: Promise<{ lang: str
   const intro = '난이도 최상! 도전적인 바다거북스프 문제를 풀어보세요.';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-3xl font-bold mb-3 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">{h1}</h1>
-        <p className="text-slate-400 mb-8">{intro}</p>
+    <div className="min-h-screen text-bone">
+      <div className="page-shell max-w-4xl py-10">
+        <h1 className="font-display text-3xl mb-3 text-bone">{h1}</h1>
+        <p className="text-fog mb-8">{intro}</p>
         <ProblemsListClient problems={problems || []} lang={locale} />
       </div>
     </div>

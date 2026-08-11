@@ -33,7 +33,7 @@ export default function QuizFormMCQ({
     <>
       {/* 선택지 (4개) */}
       <div>
-        <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+        <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
           <i className="ri-list-check mr-1"></i>
           {lang === 'ko' ? '선택지 (4개)' : 'Options (4)'}
         </label>
@@ -46,8 +46,8 @@ export default function QuizFormMCQ({
                 className={`
                   flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center
                   ${correct === index
-                    ? 'border-teal-500 bg-teal-500'
-                    : 'border-slate-600 bg-slate-800'
+                    ? 'border-brass bg-brass'
+                    : 'border-brass/25 bg-ink-700'
                   }
                 `}
               >
@@ -58,7 +58,7 @@ export default function QuizFormMCQ({
                 value={option}
                 onChange={(e) => handleOptionChange(index, e.target.value)}
                 placeholder={lang === 'ko' ? `선택지 ${index + 1}` : `Option ${index + 1}`}
-                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                className="flex-1 bg-ink-700 border border-brass/20 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
                 maxLength={200}
               />
             </div>
@@ -68,7 +68,7 @@ export default function QuizFormMCQ({
 
       {/* 설명 */}
       <div>
-        <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+        <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
           <i className="ri-information-line mr-1"></i>
           {lang === 'ko' ? '설명 (선택사항)' : 'Explanation (Optional)'}
         </label>
@@ -76,7 +76,7 @@ export default function QuizFormMCQ({
           value={explanation}
           onChange={(e) => onExplanationChange(e.target.value)}
           placeholder={lang === 'ko' ? '정답의 이유와 설명을 입력하세요' : 'Enter the explanation for the answer'}
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
+          className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
           maxLength={300}
         />
       </div>

@@ -26,23 +26,23 @@ function RelatedProblems({ problems, lang, difficulty }: { problems: any[]; lang
   const diffLabel = difficulty === 'easy' ? '쉬운' : difficulty === 'hard' ? '어려운' : '같은 난이도의';
 
   return (
-    <div className="bg-slate-900 border-t border-slate-800">
+    <div className="bg-ink-800 border-t border-brass/20">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <h2 className="text-lg font-semibold text-white mb-4">
           {`${diffLabel} 바다거북스프 문제`}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {problems.map((p) => (
-            <Link key={p.id} href={`/${lang}/problem/${p.id}`} className="block p-4 rounded-xl bg-slate-800/60 border border-slate-700 hover:border-teal-500/50 transition-all">
+            <Link key={p.id} href={`/${lang}/problem/${p.id}`} className="block p-4 rounded-xl bg-ink-700/60 border border-brass/20 hover:border-brass/50 transition-all">
               <span className="text-white text-sm font-medium line-clamp-1">{p.title}</span>
             </Link>
           ))}
         </div>
         <div className="mt-4 flex gap-3">
-          <Link href={`/${lang}/problems`} className="text-sm text-teal-400 hover:text-teal-300 transition-colors">
+          <Link href={`/${lang}/problems`} className="text-sm text-brass hover:text-brass-300 transition-colors">
             ← 전체 문제 모음
           </Link>
-          <Link href={`/${lang}/problems/${difficulty === 'hard' ? 'hard' : difficulty === 'easy' ? 'easy' : 'latest'}`} className="text-sm text-teal-400 hover:text-teal-300 transition-colors">
+          <Link href={`/${lang}/problems/${difficulty === 'hard' ? 'hard' : difficulty === 'easy' ? 'easy' : 'latest'}`} className="text-sm text-brass hover:text-brass-300 transition-colors">
             {`${diffLabel} 문제 더보기 →`}
           </Link>
         </div>

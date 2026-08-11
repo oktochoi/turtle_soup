@@ -45,7 +45,7 @@ export default function QuizFormPattern({
 
       {/* 패턴/수열 */}
       <div>
-        <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+        <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
           <i className="ri-numbers-line mr-1"></i>
           {lang === 'ko' ? '패턴/수열' : 'Pattern/Sequence'}
         </label>
@@ -53,17 +53,17 @@ export default function QuizFormPattern({
           value={pattern}
           onChange={(e) => onPatternChange(e.target.value)}
           placeholder={lang === 'ko' ? '예: 2, 4, 8, 16, ? 또는 패턴을 설명하세요' : 'Example: 2, 4, 8, 16, ? or describe the pattern'}
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-32 resize-none text-sm"
+          className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-32 resize-none text-sm"
           maxLength={500}
         />
-        <div className="text-right text-xs text-slate-500 mt-1">
+        <div className="text-right text-xs text-fog-dim mt-1">
           {pattern.length} / 500
         </div>
       </div>
 
       {/* 정답 */}
       <div>
-        <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+        <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
           <i className="ri-checkbox-circle-line mr-1"></i>
           {lang === 'ko' ? '정답' : 'Answer'}
         </label>
@@ -72,7 +72,7 @@ export default function QuizFormPattern({
           value={answer}
           onChange={(e) => onAnswerChange(e.target.value)}
           placeholder={lang === 'ko' ? '다음 숫자나 패턴의 정답을 입력하세요' : 'Enter the next number or pattern answer'}
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+          className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
           maxLength={200}
         />
       </div>
@@ -80,7 +80,7 @@ export default function QuizFormPattern({
       {/* 설명 */}
       {onExplanationChange && (
         <div>
-          <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+          <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
             <i className="ri-information-line mr-1"></i>
             {lang === 'ko' ? '해설 (선택사항)' : 'Explanation (Optional)'}
           </label>
@@ -88,7 +88,7 @@ export default function QuizFormPattern({
             value={explanation}
             onChange={(e) => onExplanationChange(e.target.value)}
             placeholder={lang === 'ko' ? '패턴을 찾는 과정과 설명을 입력하세요' : 'Enter the process and explanation for finding the pattern'}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
+            className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
             maxLength={300}
           />
         </div>

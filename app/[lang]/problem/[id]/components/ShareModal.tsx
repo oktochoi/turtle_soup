@@ -29,30 +29,30 @@ export default function ShareModal({
       onClick={onClose}
     >
       <div 
-        className="bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 rounded-2xl p-6 sm:p-8 max-w-md w-full border border-slate-600 shadow-2xl animate-fade-in-up"
+        className="bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 rounded-2xl p-6 sm:p-8 max-w-md w-full border border-brass/25 shadow-2xl animate-fade-in-up"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+          <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-brass-300 to-brass bg-clip-text text-transparent">
             {t.problem.shareTitle}
           </h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors text-2xl"
+            className="text-fog hover:text-white transition-colors text-2xl"
           >
             <i className="ri-close-line"></i>
           </button>
         </div>
 
         {/* 문제 미리보기 카드 */}
-        <div className="bg-slate-900/50 rounded-xl p-4 sm:p-5 mb-6 border border-slate-600/50">
+        <div className="bg-ink-800/50 rounded-xl p-4 sm:p-5 mb-6 border border-brass/25/50">
           <h3 className="text-lg font-bold text-white mb-2 line-clamp-2">
             {problem.title}
           </h3>
-          <p className="text-sm text-slate-300 line-clamp-3 mb-3">
+          <p className="text-sm text-fog line-clamp-3 mb-3">
             {problem.content}
           </p>
-          <div className="flex items-center gap-3 text-xs text-slate-400" />
+          <div className="flex items-center gap-3 text-xs text-fog" />
         </div>
 
         {/* 공유 옵션 */}
@@ -176,7 +176,7 @@ export default function ShareModal({
                 document.body.removeChild(textArea);
               }
             }}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all font-medium border border-slate-600"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-ink-600 hover:bg-slate-600 text-white rounded-lg transition-all font-medium border border-brass/25"
           >
             <i className="ri-file-copy-line text-xl"></i>
             <span>{t.problem.copyLink}</span>
@@ -184,9 +184,9 @@ export default function ShareModal({
         </div>
 
         {/* URL 표시 */}
-        <div className="mt-6 p-3 bg-slate-900/50 rounded-lg border border-slate-600/50">
-          <p className="text-xs text-slate-400 mb-1">{t.problem.shareLink}</p>
-          <p className="text-xs text-teal-400 break-all font-mono">
+        <div className="mt-6 p-3 bg-ink-800/50 rounded-lg border border-brass/25/50">
+          <p className="text-xs text-fog mb-1">{t.problem.shareLink}</p>
+          <p className="text-xs text-brass break-all font-mono">
             {typeof window !== 'undefined' ? `${window.location.origin}/${lang}/problem/${problemId}` : ''}
           </p>
         </div>

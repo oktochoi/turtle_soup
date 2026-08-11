@@ -37,12 +37,12 @@ export default function QuestionInputSection({
   t,
 }: QuestionInputSectionProps) {
   return (
-    <div className="bg-slate-800 rounded-xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 border border-slate-700">
+    <div className="bg-ink-700 rounded-xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 border border-brass/20">
       <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 flex items-center gap-2">
-        <i className="ri-question-line text-teal-400"></i>
+        <i className="ri-question-line text-brass"></i>
         {t.problem.question}
       </h2>
-      <p className="text-xs sm:text-sm text-slate-400 mb-3 sm:mb-4">
+      <p className="text-xs sm:text-sm text-fog mb-3 sm:mb-4">
         {t.problem.questionDescription}
       </p>
 
@@ -66,14 +66,14 @@ export default function QuestionInputSection({
                 }
               }
             }}
-            className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm sm:text-base"
+            className="flex-1 bg-ink-800 border border-brass/20 rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm sm:text-base"
           />
 
           {!suggestedAnswer && (
             <button
               onClick={onAnalyzeBeforeSubmit}
               disabled={!questionText.trim() || isAnalyzing}
-              className="px-3 sm:px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap text-sm sm:text-base touch-manipulation"
+              className="px-3 sm:px-4 py-2 bg-brass hover:bg-brass-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap text-sm sm:text-base touch-manipulation"
               title="AI 답변 제안 받기"
             >
               {isAnalyzing ? (loadingMessage || t.problem.analyzing) : '🔧'}
@@ -83,9 +83,9 @@ export default function QuestionInputSection({
 
         {/* AI 제안 답변 표시 */}
         {suggestedAnswer && (
-          <div className="bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700">
+          <div className="bg-ink-800 rounded-lg p-3 sm:p-4 border border-brass/20">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs sm:text-sm text-slate-300">
+              <p className="text-xs sm:text-sm text-fog">
                 {t.problem.aiSuggestedAnswer}
               </p>
               <div className="flex items-center gap-2">
@@ -106,7 +106,7 @@ export default function QuestionInputSection({
 
                 <button
                   onClick={() => onSuggestedAnswerChange(null)}
-                  className="text-xs text-slate-400 hover:text-slate-300 touch-manipulation"
+                  className="text-xs text-fog hover:text-fog touch-manipulation"
                 >
                   {t.problem.reAnalyze}
                 </button>
@@ -132,7 +132,7 @@ export default function QuestionInputSection({
                 className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                   suggestedAnswer === 'yes'
                     ? 'bg-green-500 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    : 'bg-ink-600 text-fog hover:bg-slate-600'
                 }`}
               >
                 {t.problem.yes}
@@ -142,7 +142,7 @@ export default function QuestionInputSection({
                 className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                   suggestedAnswer === 'no'
                     ? 'bg-red-500 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    : 'bg-ink-600 text-fog hover:bg-slate-600'
                 }`}
               >
                 {t.problem.no}
@@ -152,7 +152,7 @@ export default function QuestionInputSection({
                 className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                   suggestedAnswer === 'irrelevant'
                     ? 'bg-yellow-500 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    : 'bg-ink-600 text-fog hover:bg-slate-600'
                 }`}
               >
                 {t.problem.irrelevant}
@@ -162,7 +162,7 @@ export default function QuestionInputSection({
                 className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all touch-manipulation ${
                   suggestedAnswer === 'decisive'
                     ? 'bg-purple-500 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    : 'bg-ink-600 text-fog hover:bg-slate-600'
                 }`}
               >
                 {t.problem.decisive}
@@ -174,7 +174,7 @@ export default function QuestionInputSection({
         <button
           onClick={onSubmitQuestion}
           disabled={!questionText.trim() || isAnalyzing}
-          className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2.5 sm:py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base touch-manipulation"
+          className="w-full bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white font-semibold py-2.5 sm:py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base touch-manipulation"
         >
           {t.problem.question}
         </button>
@@ -182,14 +182,14 @@ export default function QuestionInputSection({
 
       {/* 로컬 질문 내역 */}
       {localQuestions.length > 0 && (
-        <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
+        <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-brass/20">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-3">
             <h3 className="text-base sm:text-lg font-semibold">
               {t.problem.questionHistory}
             </h3>
             <button
               onClick={onClearLocalQuestions}
-              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-all text-xs sm:text-sm touch-manipulation"
+              className="px-3 py-1.5 bg-ink-600 hover:bg-slate-600 text-fog rounded-lg transition-all text-xs sm:text-sm touch-manipulation"
             >
               <i className="ri-delete-bin-line mr-1"></i>
               {t.problem.clearHistory}
@@ -207,16 +207,16 @@ export default function QuestionInputSection({
                   ? 'text-yellow-400'
                   : q.answer === 'decisive' || q.answer === '결정적인'
                   ? 'text-purple-400'
-                  : 'text-slate-400';
+                  : 'text-fog';
 
               return (
                 <div
                   key={index}
-                  className="bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700"
+                  className="bg-ink-800 rounded-lg p-3 sm:p-4 border border-brass/20"
                 >
                   <div className="space-y-2">
                     <div className="flex items-start gap-2">
-                      <span className="text-xs sm:text-sm font-semibold text-cyan-400 flex-shrink-0">
+                      <span className="text-xs sm:text-sm font-semibold text-brass flex-shrink-0">
                         Q:
                       </span>
                       <p className="text-xs sm:text-sm text-white flex-1 break-words">
@@ -224,7 +224,7 @@ export default function QuestionInputSection({
                       </p>
                     </div>
                     <div className="flex items-start gap-2">
-                      <span className="text-xs sm:text-sm font-semibold text-teal-400 flex-shrink-0">
+                      <span className="text-xs sm:text-sm font-semibold text-brass flex-shrink-0">
                         A:
                       </span>
                       <p className={`text-xs sm:text-sm font-semibold ${answerColor}`}>

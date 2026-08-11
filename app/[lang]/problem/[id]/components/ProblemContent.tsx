@@ -71,38 +71,38 @@ export default function ProblemContent({
     return (
       <div className="space-y-4 mb-4">
         <div>
-          <label className="block text-sm font-medium mb-2 text-slate-300">{t.problem.problemTitle}</label>
+          <label className="block text-sm font-medium mb-2 text-fog">{t.problem.problemTitle}</label>
           <input
             type="text"
             value={editTitle}
             onChange={(e) => onEditTitleChange(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+            className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
             maxLength={100}
           />
         </div>
         {quizType === 'soup' && (
           <>
             <div>
-              <label className="block text-sm font-medium mb-2 text-slate-300">{t.problem.problemContent}</label>
+              <label className="block text-sm font-medium mb-2 text-fog">{t.problem.problemContent}</label>
               <textarea
                 value={editContent}
                 onChange={(e) => onEditContentChange(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 h-40 resize-none text-sm"
+                className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 h-40 resize-none text-sm"
                 maxLength={2000}
               />
-              <div className="text-right text-xs text-slate-500 mt-1">
+              <div className="text-right text-xs text-fog-dim mt-1">
                 {editContent.length} / 2000
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2 text-slate-300">{t.problem.problemAnswer}</label>
+              <label className="block text-sm font-medium mb-2 text-fog">{t.problem.problemAnswer}</label>
               <textarea
                 value={editAnswer}
                 onChange={(e) => onEditAnswerChange(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 h-40 resize-none text-sm"
+                className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 h-40 resize-none text-sm"
                 maxLength={2000}
               />
-              <div className="text-right text-xs text-slate-500 mt-1">
+              <div className="text-right text-xs text-fog-dim mt-1">
                 {editAnswer.length} / 2000
               </div>
             </div>
@@ -110,30 +110,30 @@ export default function ProblemContent({
         )}
         {/* 해설/배경지식 (모든 퀴즈 타입, AdSense 품질 강화) */}
         <div>
-          <label className="block text-sm font-medium mb-2 text-slate-300">
+          <label className="block text-sm font-medium mb-2 text-fog">
             해설 및 배경지식 (선택)
           </label>
           <textarea
             value={editExplanation}
             onChange={(e) => onEditExplanationChange?.(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 resize-none text-sm"
+            className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 resize-none text-sm"
             maxLength={5000}
             placeholder="정답의 배경, 유래, 관련 지식 등 300~500단어 권장"
           />
-          <div className="text-right text-xs text-slate-500 mt-1">
+          <div className="text-right text-xs text-fog-dim mt-1">
             {editExplanation.length} / 5000
           </div>
         </div>
         <div className="flex gap-3">
           <button
             onClick={onSaveEdit}
-            className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2 rounded-lg transition-all"
+            className="flex-1 bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white font-semibold py-2 rounded-lg transition-all"
           >
             {t.common.save}
           </button>
           <button
             onClick={onCancelEdit}
-            className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-lg transition-all"
+            className="flex-1 bg-ink-600 hover:bg-slate-600 text-white font-semibold py-2 rounded-lg transition-all"
           >
             {t.common.cancel}
           </button>
@@ -146,11 +146,11 @@ export default function ProblemContent({
     <>
       {/* Soup 타입: 기존 방식 */}
       {quizType === 'soup' && (
-        <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 mb-4 border border-slate-700/50">
+        <div className="bg-ink-700/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 mb-4 border border-brass/20">
           {(problem.author || (problem as any).original_author) && (
-            <div className="mb-3 pb-3 border-b border-slate-700 space-y-2">
+            <div className="mb-3 pb-3 border-b border-brass/20 space-y-2">
               {problem.author && (
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-fog">
                   <span>{t.problem.author}:</span>
                   {authorGameUserId ? (
                     <Link href={`/${lang}/profile/${authorGameUserId}`} className="hover:opacity-80 transition-opacity">
@@ -163,12 +163,12 @@ export default function ProblemContent({
                       />
                     </Link>
                   ) : (
-                    <span className="text-cyan-400">{problem.author}</span>
+                    <span className="text-brass">{problem.author}</span>
                   )}
                 </div>
               )}
               {((problem as any).original_author || (problem as any).original_title) && (
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400 flex-wrap">
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-fog flex-wrap">
                   <i className="ri-user-star-line text-purple-400"></i>
                   <span>원작:</span>
                   {(problem as any).original_title && (
@@ -188,7 +188,7 @@ export default function ProblemContent({
                   )}
                   {(problem as any).original_author && (
                     <>
-                      {((problem as any).original_title) && <span className="text-slate-500">·</span>}
+                      {((problem as any).original_title) && <span className="text-fog-dim">·</span>}
                       <a
                         href={(problem as any).source_url || '#'}
                         target="_blank"
@@ -214,11 +214,11 @@ export default function ProblemContent({
 
       {/* 다른 퀴즈 타입: 플레이 컴포넌트 */}
       {quizType !== 'soup' && quizContent && (
-        <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 mb-4 border border-slate-700/50">
+        <div className="bg-ink-700/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 mb-4 border border-brass/20">
           {(problem.author || (problem as any).original_author) && (
-            <div className="mb-3 pb-3 border-b border-slate-700 space-y-2">
+            <div className="mb-3 pb-3 border-b border-brass/20 space-y-2">
               {problem.author && (
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-fog">
                   <span>{t.problem.author}:</span>
                   {authorGameUserId ? (
                     <Link href={`/${lang}/profile/${authorGameUserId}`} className="hover:opacity-80 transition-opacity">
@@ -231,12 +231,12 @@ export default function ProblemContent({
                       />
                     </Link>
                   ) : (
-                    <span className="text-cyan-400">{problem.author}</span>
+                    <span className="text-brass">{problem.author}</span>
                   )}
                 </div>
               )}
               {((problem as any).original_author || (problem as any).original_title) && (
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400 flex-wrap">
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-fog flex-wrap">
                   <i className="ri-user-star-line text-purple-400"></i>
                   <span>원작:</span>
                   {(problem as any).original_title && (
@@ -256,7 +256,7 @@ export default function ProblemContent({
                   )}
                   {(problem as any).original_author && (
                     <>
-                      {((problem as any).original_title) && <span className="text-slate-500">·</span>}
+                      {((problem as any).original_title) && <span className="text-fog-dim">·</span>}
                       <a
                         href={(problem as any).source_url || '#'}
                         target="_blank"
@@ -422,8 +422,8 @@ export default function ProblemContent({
                 lang="ko"
               />
               {quizContent.description && (
-                <div className="mt-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-                  <p className="text-sm text-slate-300 whitespace-pre-wrap">{quizContent.description}</p>
+                <div className="mt-4 p-4 bg-ink-700/50 rounded-lg border border-brass/20">
+                  <p className="text-sm text-fog whitespace-pre-wrap">{quizContent.description}</p>
                 </div>
               )}
             </>
@@ -433,16 +433,16 @@ export default function ProblemContent({
           {(problem as any).explanation && (
             <details className="mt-6 group">
               <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
-                <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 hover:border-teal-500/30 transition-colors flex items-center justify-between">
-                  <span className="font-semibold text-teal-400 text-sm sm:text-base flex items-center gap-2">
+                <div className="bg-ink-700/60 backdrop-blur-sm rounded-xl p-4 border border-brass/20 hover:border-brass/30 transition-colors flex items-center justify-between">
+                  <span className="font-semibold text-brass text-sm sm:text-base flex items-center gap-2">
                     <i className="ri-book-open-line"></i>
                     해설 및 추리 포인트 보기
                   </span>
-                  <i className="ri-arrow-down-s-line text-xl text-slate-400 group-open:rotate-180 transition-transform"></i>
+                  <i className="ri-arrow-down-s-line text-xl text-fog group-open:rotate-180 transition-transform"></i>
                 </div>
               </summary>
-              <div className="mt-2 bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-slate-700/50 border-t-0 rounded-t-none">
-                <p className="text-xs sm:text-sm lg:text-base leading-relaxed whitespace-pre-wrap text-slate-300">
+              <div className="mt-2 bg-ink-700/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-brass/20 border-t-0 rounded-t-none">
+                <p className="text-xs sm:text-sm lg:text-base leading-relaxed whitespace-pre-wrap text-fog">
                   {(problem as any).explanation}
                 </p>
               </div>

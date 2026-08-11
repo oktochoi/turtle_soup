@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import type { Problem } from '@/lib/types';
 import UserLabel from '@/components/UserLabel';
+import { caseNumberFromId } from '@/lib/investigation';
 
 interface ProblemHeaderProps {
   problem: Problem;
@@ -58,8 +59,9 @@ export default function ProblemHeader({
   t,
 }: ProblemHeaderProps) {
   const isFeatured = (problem as any).status === 'featured';
+  const caseNo = caseNumberFromId(problem.id);
   return (
-    <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 border border-slate-700/60 hover:border-slate-600 transition-all duration-300 shadow-lg">
+    <div className="bg-ink-700/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 border border-brass/60 hover:border-brass/25 transition-all duration-300 shadow-lg">
       <div className="flex flex-col sm:flex-row items-start justify-between mb-4 gap-3">
         <div className="flex-1 w-full sm:w-auto">
           {isEditing ? (
@@ -71,8 +73,12 @@ export default function ProblemHeader({
               maxLength={100}
             />
           ) : (
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white break-words hover:text-slate-100 transition-colors duration-200">
+            <div className="flex flex-col gap-1">
+              {(!quizType || quizType === 'soup') && (
+                <p className="text-[11px] tracking-[0.22em] text-teal-300/90">CASE #{caseNo}</p>
+              )}
+              <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white break-words hover:text-bone transition-colors duration-200">
                 {problem.title}
               </h1>
               {(problem as any).status === 'featured' && (
@@ -81,9 +87,10 @@ export default function ProblemHeader({
                   {lang === 'ko' ? '관리자 채택' : 'Featured'}
                 </span>
               )}
+              </div>
             </div>
           )}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-400">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 text-xs sm:text-sm text-fog">
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <span className="flex items-center gap-1">
                 {difficultyBadge.emoji} {difficultyBadge.text}
@@ -125,7 +132,7 @@ export default function ProblemHeader({
               className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all text-xs sm:text-sm ${
                 isFeatured
                   ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                  : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                  : 'bg-ink-600 hover:bg-slate-600 text-fog'
               }`}
               title={isFeatured ? (lang === 'ko' ? '관리자 채택 해제' : 'Unfeature') : (lang === 'ko' ? '관리자 채택' : 'Feature')}
             >
@@ -140,20 +147,20 @@ export default function ProblemHeader({
             className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-all text-xs sm:text-sm ${
               isLiked
                 ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
-                : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 border border-slate-600/50'
+                : 'bg-ink-600/50 text-fog hover:bg-slate-600/50 border border-brass/25/50'
             }`}
           >
             <i className={`ri-heart-${isLiked ? 'fill' : 'line'}`}></i>
           </button>
           <button
             onClick={onShareClick}
-            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-all text-xs sm:text-sm bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 border border-slate-600/50"
+            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-all text-xs sm:text-sm bg-ink-600/50 hover:bg-slate-600/50 text-fog border border-brass/25/50"
             title="공유하기"
           >
             <i className="ri-share-line"></i>
             <span className="hidden sm:inline">{t.problem.share}</span>
           </button>
-          <div className="flex items-center gap-1 sm:gap-2 text-slate-400 text-xs sm:text-sm">
+          <div className="flex items-center gap-1 sm:gap-2 text-fog text-xs sm:text-sm">
             <i className="ri-chat-3-line"></i>
             <span>{problem.comment_count}</span>
           </div>
@@ -162,9 +169,9 @@ export default function ProblemHeader({
 
       {/* 별점 투표 (밸런스 게임 제외) */}
       {quizType !== 'balance' && (
-        <div className="mb-4 p-3 sm:p-4 bg-slate-800/50 rounded-lg border border-slate-700/50">
+        <div className="mb-4 p-3 sm:p-4 bg-ink-700/50 rounded-lg border border-brass/20">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-            <span className="text-xs sm:text-sm text-slate-300 font-medium whitespace-nowrap">{t.problem.difficulty}:</span>
+            <span className="text-xs sm:text-sm text-fog font-medium whitespace-nowrap">{t.problem.difficulty}:</span>
             <div className="flex items-center gap-0.5 sm:gap-1">
               {[1, 2, 3, 4, 5].map((star) => {
                 const displayRating = hoverRating !== null ? hoverRating : userRating;
@@ -188,12 +195,12 @@ export default function ProblemHeader({
               })}
             </div>
             {averageRating > 0 && (
-              <span className="text-xs sm:text-sm text-slate-400">
+              <span className="text-xs sm:text-sm text-fog">
                 {t.problem.average} ⭐ {averageRating.toFixed(1)}
               </span>
             )}
             {averageRating === 0 && (
-              <span className="text-xs sm:text-sm text-slate-500">{t.problem.noRating}</span>
+              <span className="text-xs sm:text-sm text-fog-dim">{t.problem.noRating}</span>
             )}
           </div>
         </div>
@@ -203,7 +210,7 @@ export default function ProblemHeader({
       {problem.tags.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
           {problem.tags.map(tag => (
-            <span key={tag} className="px-3 py-1 bg-slate-700/50 text-slate-300 rounded-lg text-xs border border-slate-600/50 hover:bg-slate-700 transition-colors cursor-default">
+            <span key={tag} className="px-3 py-1 bg-ink-600/50 text-fog rounded-lg text-xs border border-brass/25/50 hover:bg-ink-600 transition-colors cursor-default">
               #{tag}
             </span>
           ))}

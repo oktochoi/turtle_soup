@@ -34,7 +34,7 @@ export default function QuizFormBalance({
       {/* 이미지 업로드 */}
       {onImageChange && (
         <div>
-          <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+          <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
             <i className="ri-image-line mr-1"></i>
             {lang === 'ko' ? '이미지 (선택사항)' : 'Image (Optional)'}
           </label>
@@ -56,10 +56,10 @@ export default function QuizFormBalance({
                   reader.readAsDataURL(file);
                 }
               }}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-teal-500 file:text-white hover:file:bg-teal-600"
+              className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brass file:text-white hover:file:bg-teal-600"
             />
             {imageUrl && (
-              <div className="relative w-full h-48 bg-slate-900 rounded-xl overflow-hidden">
+              <div className="relative w-full h-48 bg-ink-800 rounded-xl overflow-hidden">
                 <img src={imageUrl} alt="Preview" className="w-full h-full object-contain" />
               </div>
             )}
@@ -69,7 +69,7 @@ export default function QuizFormBalance({
 
       {/* 설명 (선택사항) */}
       <div>
-        <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+        <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
           <i className="ri-file-text-line mr-1"></i>
           {lang === 'ko' ? '설명 (선택사항)' : 'Description (Optional)'}
         </label>
@@ -77,7 +77,7 @@ export default function QuizFormBalance({
           value={question}
           onChange={(e) => onQuestionChange(e.target.value)}
           placeholder={lang === 'ko' ? '추가 설명을 입력하세요 (선택사항)' : 'Enter additional description (optional)'}
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
+          className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
           maxLength={500}
         />
       </div>
@@ -85,7 +85,7 @@ export default function QuizFormBalance({
       {/* 선택지 (2개 이상) */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-xs sm:text-sm font-medium text-slate-300">
+          <label className="block text-xs sm:text-sm font-medium text-fog">
             <i className="ri-scales-line mr-1"></i>
             {lang === 'ko' ? '선택지 (최소 2개)' : 'Options (minimum 2)'}
           </label>
@@ -96,7 +96,7 @@ export default function QuizFormBalance({
                 onOptionsChange([...options, '']);
               }
             }}
-            className="text-xs px-3 py-1 bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition-all flex items-center gap-1"
+            className="text-xs px-3 py-1 bg-teal-600 hover:bg-brass text-white rounded-lg transition-all flex items-center gap-1"
           >
             <i className="ri-add-line"></i>
             {lang === 'ko' ? '추가' : 'Add'}
@@ -110,7 +110,7 @@ export default function QuizFormBalance({
                 value={option}
                 onChange={(e) => handleOptionChange(index, e.target.value)}
                 placeholder={lang === 'ko' ? `선택지 ${String.fromCharCode(65 + index)}` : `Option ${String.fromCharCode(65 + index)}`}
-                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                className="flex-1 bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
                 maxLength={200}
               />
               {options.length > 2 && (

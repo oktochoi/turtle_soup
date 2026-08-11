@@ -20,10 +20,10 @@ export default function QuestionInput({ onSubmit, disabled = false }: QuestionIn
   };
 
   return (
-    <div className="bg-slate-800 rounded-xl p-3 sm:p-4 border border-slate-700">
+    <div className="bg-ink-700 rounded-xl p-3 sm:p-4 border border-brass/20">
       <div className="flex items-center gap-2 mb-2 sm:mb-3">
         <div className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center flex-shrink-0">
-          <i className="ri-question-line text-cyan-400 text-sm sm:text-base"></i>
+          <i className="ri-question-line text-brass text-sm sm:text-base"></i>
         </div>
         <h3 className="font-semibold text-xs sm:text-sm">{t.problem.question}</h3>
       </div>
@@ -34,7 +34,7 @@ export default function QuestionInput({ onSubmit, disabled = false }: QuestionIn
           onChange={(e) => setText(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
           placeholder={disabled ? t.room.questionLimitReached : t.room.enterQuestion}
-          className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 bg-ink-800 border border-brass/20 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           maxLength={200}
           disabled={disabled}
         />

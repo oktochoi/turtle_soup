@@ -106,7 +106,7 @@ export default async function LangLayout({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
 
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-screen bg-transparent">
         <Header />
         <main className="flex-1">{children}</main>
         <SocialBottomBar />

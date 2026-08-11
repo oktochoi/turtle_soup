@@ -415,7 +415,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
         .single();
 
       if (!currentGameUser) {
-        showToast(lang === 'ko' ? '사용자 정보를 찾을 수 없습니다.' : 'User not found.', 'error');
+        showToast('사용자 정보를 찾을 수 없습니다.', 'error');
         return;
       }
 
@@ -430,7 +430,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
         if (error) throw error;
         setIsFollowing(false);
         setFollowersCount(prev => Math.max(0, prev - 1));
-        showToast(lang === 'ko' ? '언팔로우했습니다.' : 'Unfollowed.', 'success');
+        showToast('언팔로우했습니다.', 'success');
       } else {
         // 팔로우
         const { error } = await supabase
@@ -443,7 +443,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
         if (error) throw error;
         setIsFollowing(true);
         setFollowersCount(prev => prev + 1);
-        showToast(lang === 'ko' ? '팔로우했습니다.' : 'Followed.', 'success');
+        showToast('팔로우했습니다.', 'success');
 
         // 팔로우 알림 생성 (팔로우당한 사람에게)
         try {
@@ -461,10 +461,8 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
               .insert({
                 user_id: userId, // 팔로우당한 사람의 ID
                 type: 'follow',
-                title: lang === 'ko' ? '새 팔로워' : 'New Follower',
-                message: lang === 'ko' 
-                  ? `${followerUser.nickname}님이 팔로우했습니다.`
-                  : `${followerUser.nickname} started following you.`,
+                title: '새 팔로워',
+                message: `${followerUser.nickname}님이 팔로우했습니다.`,
                 related_user_id: currentGameUser.id, // 팔로우한 사람의 ID
                 is_read: false,
               });
@@ -476,7 +474,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
       }
     } catch (error) {
       console.error('팔로우 오류:', error);
-      showToast(lang === 'ko' ? '팔로우 처리에 실패했습니다.' : 'Follow action failed.', 'error');
+      showToast('팔로우 처리에 실패했습니다.', 'error');
     }
   };
 
@@ -503,7 +501,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
 
       setSelectedTitleId(titleId);
       setProgress({ ...progress, selected_title_id: titleId });
-      showToast(lang === 'ko' ? '칭호가 변경되었습니다.' : 'Title has been changed.', 'success');
+      showToast('칭호가 변경되었습니다.', 'success');
     } catch (error) {
       console.error('칭호 선택 오류:', error);
       showToast(t.profile.selectTitleFail, 'error');
@@ -529,7 +527,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
   // 계정 삭제 함수
   const handleDeleteAccount = async () => {
     if (confirmDeleteText !== '삭제') {
-      showToast(lang === 'ko' ? '"삭제"를 정확히 입력해주세요.' : 'Please type "삭제" exactly.', 'error');
+      showToast('"삭제"를 정확히 입력해주세요.', 'error');
       return;
     }
     
@@ -548,7 +546,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
         throw new Error(data.error || '계정 삭제에 실패했습니다.');
       }
       
-      showToast(lang === 'ko' ? '계정이 삭제되었습니다.' : 'Account has been deleted.', 'success');
+      showToast('계정이 삭제되었습니다.', 'success');
       
       // 로그아웃 처리
       const { createClient } = await import('@/lib/supabase/client');
@@ -569,12 +567,12 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
 
   const handleSaveNickname = async () => {
     if (!user || !newNickname.trim()) {
-      showToast(lang === 'ko' ? '닉네임을 입력해주세요.' : 'Please enter a nickname.', 'error');
+      showToast('닉네임을 입력해주세요.', 'error');
       return;
     }
     
     if (newNickname.trim().length < 2 || newNickname.trim().length > 20) {
-      showToast(lang === 'ko' ? '닉네임은 2자 이상 20자 이하여야 합니다.' : 'Nickname must be between 2 and 20 characters.', 'error');
+      showToast('닉네임은 2자 이상 20자 이하여야 합니다.', 'error');
       return;
     }
     
@@ -583,7 +581,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                          (!user.auth_user_id && !currentUser);
     
     if (!isOwnProfile) {
-      showToast(lang === 'ko' ? '자신의 닉네임만 수정할 수 있습니다.' : 'You can only edit your own nickname.', 'error');
+      showToast('자신의 닉네임만 수정할 수 있습니다.', 'error');
       return;
     }
     
@@ -610,7 +608,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
       
       setUser({ ...user, nickname: newNickname.trim() });
       setIsEditingNickname(false);
-      showToast(lang === 'ko' ? '닉네임이 변경되었습니다.' : 'Nickname has been changed.', 'success');
+      showToast('닉네임이 변경되었습니다.', 'success');
     } catch (error) {
       handleError(error, '닉네임 변경', true);
     } finally {
@@ -621,8 +619,8 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
       case 'legendary': return 'from-yellow-400 to-amber-500 border-yellow-400';
-      case 'epic': return 'from-purple-500 to-pink-500 border-purple-400';
-      case 'rare': return 'from-blue-500 to-cyan-500 border-blue-400';
+      case 'epic': return 'from-brass to-brass-600 border-purple-400';
+      case 'rare': return 'from-blue-500 to-brass-600 border-blue-400';
       default: return 'from-slate-500 to-slate-600 border-slate-400';
     }
   };
@@ -630,7 +628,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
   const handleSubmitReport = async () => {
     if (!reportReason.trim()) {
       if (typeof window !== 'undefined' && (window as any).toastWarning) {
-        (window as any).toastWarning(lang === 'ko' ? '신고 사유를 입력해주세요.' : 'Please enter a report reason.');
+        (window as any).toastWarning('신고 사유를 입력해주세요.');
       }
       return;
     }
@@ -638,7 +636,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
     // 자기 자신을 신고하는 것 방지
     if (user?.auth_user_id && currentUser?.id === user.auth_user_id) {
       if (typeof window !== 'undefined' && (window as any).toastWarning) {
-        (window as any).toastWarning(lang === 'ko' ? '자기 자신을 신고할 수 없습니다.' : 'You cannot report yourself.');
+        (window as any).toastWarning('자기 자신을 신고할 수 없습니다.');
       }
       return;
     }
@@ -674,7 +672,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
         // 중복 신고 에러 처리
         if (error.message?.includes('already reported') || error.message?.includes('24 hours')) {
           if (typeof window !== 'undefined' && (window as any).toastWarning) {
-            (window as any).toastWarning(lang === 'ko' ? '24시간 이내에 같은 사유로 이미 신고하셨습니다.' : 'You have already reported this user for the same reason within the last 24 hours.');
+            (window as any).toastWarning('24시간 이내에 같은 사유로 이미 신고하셨습니다.');
           }
           return;
         }
@@ -682,7 +680,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
       }
 
       if (typeof window !== 'undefined' && (window as any).toastSuccess) {
-        (window as any).toastSuccess(lang === 'ko' ? '신고가 접수되었습니다. 검토 후 조치하겠습니다.' : 'Report submitted. We will review and take action.');
+        (window as any).toastSuccess('신고가 접수되었습니다. 검토 후 조치하겠습니다.');
       }
 
       // 모달 닫기 및 상태 초기화
@@ -699,10 +697,10 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
-          <p className="text-slate-400">{t.profile.loadingProfile}</p>
+          <p className="text-fog">{t.profile.loadingProfile}</p>
         </div>
       </div>
     );
@@ -710,11 +708,11 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
 
   if (!user || !progress) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white flex items-center justify-center">
         <div className="text-center">
-          <p className="text-slate-400 mb-4">{t.profile.profileNotFound}</p>
+          <p className="text-fog mb-4">{t.profile.profileNotFound}</p>
           <Link href={`/${lang}`}>
-            <button className="px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg">
+            <button className="px-4 py-2 bg-gradient-to-r from-brass to-brass-600 text-white rounded-lg">
               {t.common.home}
             </button>
           </Link>
@@ -734,11 +732,11 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
   const xpProgress = Math.min(100, Math.max(0, (currentLevelXP / nextLevelXP) * 100));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-4xl">
         <div className="mb-6">
           <Link href={`/${lang}`}>
-            <button className="text-slate-400 hover:text-white transition-colors text-sm">
+            <button className="text-fog hover:text-white transition-colors text-sm">
               <i className="ri-arrow-left-line mr-2"></i>
               {t.common.back}
             </button>
@@ -746,12 +744,12 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
         </div>
 
         {/* 프로필 헤더 - Instagram 스타일 */}
-        <div className="bg-slate-900 border-b border-slate-800 mb-6">
+        <div className="bg-ink-800 border-b border-brass/20 mb-6">
           <div className="container mx-auto px-4 py-6 sm:py-8 max-w-4xl">
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
               {/* 프로필 사진 */}
               <div className="flex-shrink-0 flex justify-center sm:justify-start">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-3xl sm:text-4xl font-bold border-2 border-slate-700">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-r from-brass to-brass-600 flex items-center justify-center text-3xl sm:text-4xl font-bold border-2 border-brass/20">
                   {(isEditingNickname ? newNickname : user.nickname).charAt(0).toUpperCase()}
                 </div>
               </div>
@@ -767,7 +765,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                           type="text"
                           value={newNickname}
                           onChange={(e) => setNewNickname(e.target.value)}
-                          className="text-xl sm:text-2xl font-semibold bg-slate-800 border border-slate-600 rounded px-3 py-1 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                          className="text-xl sm:text-2xl font-semibold bg-ink-700 border border-brass/25 rounded px-3 py-1 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                           maxLength={20}
                           autoFocus
                           onKeyDown={(e) => {
@@ -778,23 +776,23 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                         <button
                           onClick={handleSaveNickname}
                           disabled={isSavingNickname}
-                          className="px-3 py-1 bg-teal-500 hover:bg-teal-600 text-white rounded text-sm font-semibold disabled:opacity-50"
+                          className="px-3 py-1 bg-brass hover:bg-brass-600 text-white rounded text-sm font-semibold disabled:opacity-50"
                         >
-                          {lang === 'ko' ? '저장' : 'Save'}
+                          {'저장'}
                         </button>
                         <button
                           onClick={handleCancelEditNickname}
-                          className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm font-semibold"
+                          className="px-3 py-1 bg-ink-600 hover:bg-slate-600 text-white rounded text-sm font-semibold"
                         >
-                          {lang === 'ko' ? '취소' : 'Cancel'}
+                          {'취소'}
                         </button>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
                         <h1 
                           onClick={isOwnProfile ? handleEditNickname : undefined}
-                          className={`text-xl sm:text-2xl font-semibold ${isOwnProfile ? 'cursor-pointer hover:text-teal-400 transition-colors' : ''}`}
-                          title={isOwnProfile ? (lang === 'ko' ? '클릭하여 닉네임 수정' : 'Click to edit nickname') : undefined}
+                          className={`text-xl sm:text-2xl font-semibold ${isOwnProfile ? 'cursor-pointer hover:text-brass transition-colors' : ''}`}
+                          title={isOwnProfile ? ('클릭하여 닉네임 수정') : undefined}
                         >
                           {user.nickname}
                         </h1>
@@ -807,15 +805,15 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                     {isOwnProfile ? (
                       <>
                         <Link href={`/${lang}/create-problem`}>
-                          <button className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-semibold transition-colors">
-                            {lang === 'ko' ? '문제 만들기' : 'Create Problem'}
+                          <button className="px-4 py-1.5 bg-ink-700 hover:bg-ink-600 text-white rounded-lg text-sm font-semibold transition-colors">
+                            {'문제 만들기'}
                           </button>
                         </Link>
                         <button
                           onClick={handleEditNickname}
-                          className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                          className="px-4 py-1.5 bg-ink-700 hover:bg-ink-600 text-white rounded-lg text-sm font-semibold transition-colors"
                         >
-                          {lang === 'ko' ? '프로필 편집' : 'Edit Profile'}
+                          {'프로필 편집'}
                         </button>
                       </>
                     ) : (
@@ -824,16 +822,16 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                           onClick={handleFollow}
                           className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
                             isFollowing
-                              ? 'bg-slate-800 hover:bg-slate-700 text-white'
+                              ? 'bg-ink-700 hover:bg-ink-600 text-white'
                               : 'bg-blue-500 hover:bg-blue-600 text-white'
                           }`}
                         >
-                          {isFollowing ? (lang === 'ko' ? '팔로잉' : 'Following') : (lang === 'ko' ? '팔로우' : 'Follow')}
+                          {isFollowing ? ('팔로잉') : ('팔로우')}
                         </button>
                         <button
                           onClick={() => setShowReportModal(true)}
-                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-semibold transition-colors"
-                          title={lang === 'ko' ? '신고하기' : 'Report'}
+                          className="px-3 py-1.5 bg-ink-700 hover:bg-ink-600 text-white rounded-lg text-sm font-semibold transition-colors"
+                          title={'신고하기'}
                         >
                           <i className="ri-flag-line"></i>
                         </button>
@@ -844,10 +842,10 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                 
                 {/* 신고 안내 문구 */}
                 {!isOwnProfile && (
-                  <div className="mt-3 p-2 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                    <p className="text-xs text-slate-400 text-center">
+                  <div className="mt-3 p-2 bg-ink-700/50 rounded-lg border border-brass/20">
+                    <p className="text-xs text-fog text-center">
                       <i className="ri-information-line mr-1"></i>
-                      {lang === 'ko' ? '※ 프로필에서 사용자를 신고할 수 있습니다' : '※ You can report users from their profile'}
+                      {'※ 프로필에서 사용자를 신고할 수 있습니다'}
                     </p>
                   </div>
                 )}
@@ -856,21 +854,21 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                 <div className="flex items-center gap-4 sm:gap-6 mb-4">
                   <div className="text-center">
                     <span className="text-base sm:text-lg font-semibold">{createdProblemsCount}</span>
-                    <span className="text-sm text-slate-400 ml-1">{lang === 'ko' ? '게시물' : 'posts'}</span>
+                    <span className="text-sm text-fog ml-1">{'게시물'}</span>
                   </div>
                   <button
                     onClick={handleShowFollowers}
                     className="text-center hover:opacity-80 transition-opacity cursor-pointer"
                   >
                     <span className="text-base sm:text-lg font-semibold">{followersCount}</span>
-                    <span className="text-sm text-slate-400 ml-1">{lang === 'ko' ? '팔로워' : 'followers'}</span>
+                    <span className="text-sm text-fog ml-1">{'팔로워'}</span>
                   </button>
                   <button
                     onClick={handleShowFollowing}
                     className="text-center hover:opacity-80 transition-opacity cursor-pointer"
                   >
                     <span className="text-base sm:text-lg font-semibold">{followingCount}</span>
-                    <span className="text-sm text-slate-400 ml-1">{lang === 'ko' ? '팔로잉' : 'following'}</span>
+                    <span className="text-sm text-fog ml-1">{'팔로잉'}</span>
                   </button>
                 </div>
 
@@ -882,17 +880,17 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                   {/* 추천인 코드 */}
                   {user.referral_code && (
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="text-slate-400">{lang === 'ko' ? '추천인 코드:' : 'Referral Code:'}</span>
-                      <code className="bg-slate-800 px-2 py-1 rounded text-cyan-400 font-mono font-semibold">
+                      <span className="text-fog">{'추천인 코드:'}</span>
+                      <code className="bg-ink-700 px-2 py-1 rounded text-brass font-mono font-semibold">
                         {user.referral_code}
                       </code>
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(user.referral_code);
-                          showToast(lang === 'ko' ? '추천인 코드가 복사되었습니다.' : 'Referral code copied.', 'success');
+                          showToast('추천인 코드가 복사되었습니다.', 'success');
                         }}
-                        className="text-slate-400 hover:text-white transition-colors"
-                        title={lang === 'ko' ? '복사하기' : 'Copy'}
+                        className="text-fog hover:text-white transition-colors"
+                        title={'복사하기'}
                       >
                         <i className="ri-file-copy-line"></i>
                       </button>
@@ -909,24 +907,24 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
           <div className="container mx-auto px-4 max-w-4xl space-y-4">
             {filteredProblems.map((problem) => (
               <Link key={problem.id} href={`/${lang}/problem/${problem.id}`}>
-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 hover:bg-slate-800 transition-colors cursor-pointer">
+                <div className="bg-ink-800 border border-brass/20 rounded-lg p-4 hover:bg-ink-700 transition-colors cursor-pointer">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <h3 className="text-base sm:text-lg font-semibold text-white mb-2 line-clamp-2">
                         {problem.title}
                       </h3>
                       {problem.content && (
-                        <p className="text-sm text-slate-400 mb-3 line-clamp-2">
+                        <p className="text-sm text-fog mb-3 line-clamp-2">
                           {problem.content.replace(/<[^>]*>/g, '').substring(0, 150)}...
                         </p>
                       )}
-                      <div className="flex items-center gap-4 text-xs sm:text-sm text-slate-400">
+                      <div className="flex items-center gap-4 text-xs sm:text-sm text-fog">
                         <span className="flex items-center gap-1">
                           <i className="ri-chat-3-line"></i>
                           {problem.comment_count || 0}
                         </span>
-                        <span className="text-slate-500">
-                          {new Date(problem.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
+                        <span className="text-fog-dim">
+                          {new Date(problem.created_at).toLocaleDateString('ko-KR')}
                         </span>
                       </div>
                     </div>
@@ -938,7 +936,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
         ) : createdProblemsCount > 0 ? (
           <div className="container mx-auto px-4 max-w-4xl">
             <div className="text-center py-12">
-              <p className="text-slate-400">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
+              <p className="text-fog">{'로딩 중...'}</p>
             </div>
           </div>
         ) : (
@@ -947,16 +945,16 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
               <div className="text-4xl mb-4 text-slate-600">
                 <i className="ri-image-add-line"></i>
               </div>
-              <p className="text-slate-400 mb-2">
+              <p className="text-fog mb-2">
                 {isOwnProfile 
-                  ? (lang === 'ko' ? '아직 만든 문제가 없습니다.' : 'No problems created yet.')
-                  : (lang === 'ko' ? '아직 만든 문제가 없습니다.' : 'No problems yet.')
+                  ? ('아직 만든 문제가 없습니다.')
+                  : ('아직 만든 문제가 없습니다.')
                 }
               </p>
               {isOwnProfile && (
                 <Link href={`/${lang}/create-problem`}>
                   <button className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors">
-                    {lang === 'ko' ? '첫 문제 만들기' : 'Create First Problem'}
+                    {'첫 문제 만들기'}
                   </button>
                 </Link>
               )}
@@ -967,10 +965,10 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
         {/* 칭호 섹션 - Thread 스타일 */}
         {userTitles.length > 0 && (
           <div className="container mx-auto px-4 max-w-4xl mt-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-lg p-6">
+            <div className="bg-ink-800 border border-brass/20 rounded-lg p-6">
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <i className="ri-medal-line text-purple-400"></i>
-                {lang === 'ko' ? '칭호' : 'Titles'}
+                {'칭호'}
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {titles
@@ -982,18 +980,18 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                       className={`p-3 rounded-lg border-2 transition-all text-left ${
                         selectedTitleId === title.id
                           ? `bg-gradient-to-r ${getRarityColor(title.rarity)} text-white border-transparent ring-2 ring-white/50`
-                          : `bg-slate-800 text-slate-300 border-slate-700 hover:border-slate-600`
+                          : `bg-ink-700 text-fog border-brass/20 hover:border-brass/25`
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         {title.icon && <span className="text-xl">{title.icon}</span>}
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-sm truncate">
-                            {lang === 'en' && (title as any).name_en ? (title as any).name_en : title.name}
+                            {title.name}
                           </div>
                           {title.description && (
                             <div className="text-xs opacity-75 mt-1 truncate">
-                              {lang === 'en' && (title as any).description_en ? (title as any).description_en : title.description}
+                              {title.description}
                             </div>
                           )}
                         </div>
@@ -1011,10 +1009,10 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
         {/* 업적 섹션 - Thread 스타일 */}
         {userAchievements.length > 0 && (
           <div className="container mx-auto px-4 max-w-4xl mt-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-lg p-6">
+            <div className="bg-ink-800 border border-brass/20 rounded-lg p-6">
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <i className="ri-award-line text-yellow-400"></i>
-                {lang === 'ko' ? '업적' : 'Achievements'}
+                {'업적'}
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {achievements
@@ -1029,7 +1027,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                         {achievement.icon && <span className="text-xl">{achievement.icon}</span>}
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-sm truncate">
-                            {lang === 'en' && (achievement as any).name_en ? (achievement as any).name_en : achievement.name}
+                            {achievement.name}
                           </div>
                         </div>
                       </div>
@@ -1038,11 +1036,8 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
               </div>
               {userAchievements.length > 6 && (
                 <div className="mt-4 text-center">
-                  <p className="text-sm text-slate-400">
-                    {lang === 'ko' 
-                      ? `+ ${userAchievements.length - 6}개의 업적 더보기`
-                      : `+ ${userAchievements.length - 6} more achievements`
-                    }
+                  <p className="text-sm text-fog">
+                    {`+ ${userAchievements.length - 6}개의 업적 더보기`}
                   </p>
                 </div>
               )}
@@ -1052,22 +1047,20 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
 
         {/* 계정 삭제 섹션 (자기 자신의 프로필일 때만 표시) */}
         {((user.auth_user_id && currentUser?.id === user.auth_user_id) || (!user.auth_user_id && !currentUser)) && (
-          <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl p-6 border border-red-700/50 mt-6">
+          <div className="bg-ink-700/50 backdrop-blur-xl rounded-xl p-6 border border-red-700/50 mt-6">
             <h2 className="text-xl font-bold mb-4 text-red-400">
               <i className="ri-error-warning-line mr-2"></i>
-              {lang === 'ko' ? '계정 삭제' : 'Delete Account'}
+              {'계정 삭제'}
             </h2>
-            <p className="text-sm text-slate-400 mb-4">
-              {lang === 'ko' 
-                ? '계정을 삭제하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.' 
-                : 'Deleting your account will permanently delete all your data and cannot be recovered.'}
+            <p className="text-sm text-fog mb-4">
+              계정을 삭제하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.
             </p>
             <button
               onClick={() => setShowDeleteAccountModal(true)}
               className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all font-semibold"
             >
               <i className="ri-delete-bin-line mr-2"></i>
-              {lang === 'ko' ? '계정 삭제하기' : 'Delete Account'}
+              {'계정 삭제하기'}
             </button>
           </div>
         )}
@@ -1076,10 +1069,10 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
       {/* 신고 모달 */}
       {showReportModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 rounded-xl p-6 sm:p-8 border border-slate-700 max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-ink-700 rounded-xl p-6 sm:p-8 border border-brass/20 max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl sm:text-2xl font-bold text-white">
-                {lang === 'ko' ? '유저 신고하기' : 'Report User'}
+                {'유저 신고하기'}
               </h2>
               <button
                 onClick={() => {
@@ -1088,7 +1081,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                   setReportReason('');
                   setReportDescription('');
                 }}
-                className="text-slate-400 hover:text-white transition-colors text-2xl"
+                className="text-fog hover:text-white transition-colors text-2xl"
               >
                 <i className="ri-close-line"></i>
               </button>
@@ -1097,16 +1090,16 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
             <div className="space-y-4">
               {/* 신고 유형 선택 */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  {lang === 'ko' ? '신고 유형' : 'Report Type'}
+                <label className="block text-sm font-medium text-fog mb-2">
+                  {'신고 유형'}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { value: 'spam', label: lang === 'ko' ? '스팸' : 'Spam', icon: 'ri-spam-line' },
-                    { value: 'harassment', label: lang === 'ko' ? '괴롭힘' : 'Harassment', icon: 'ri-user-forbid-line' },
-                    { value: 'inappropriate_content', label: lang === 'ko' ? '부적절한 내용' : 'Inappropriate', icon: 'ri-prohibited-line' },
-                    { value: 'fake_account', label: lang === 'ko' ? '가짜 계정' : 'Fake Account', icon: 'ri-user-unfollow-line' },
-                    { value: 'other', label: lang === 'ko' ? '기타' : 'Other', icon: 'ri-more-line' },
+                    { value: 'spam', label: '스팸', icon: 'ri-spam-line' },
+                    { value: 'harassment', label: '괴롭힘', icon: 'ri-user-forbid-line' },
+                    { value: 'inappropriate_content', label: '부적절한 내용', icon: 'ri-prohibited-line' },
+                    { value: 'fake_account', label: '가짜 계정', icon: 'ri-user-unfollow-line' },
+                    { value: 'other', label: '기타', icon: 'ri-more-line' },
                   ].map((type) => (
                     <button
                       key={type.value}
@@ -1114,7 +1107,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                       className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
                         reportType === type.value
                           ? 'bg-red-500 text-white'
-                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                          : 'bg-ink-600 text-fog hover:bg-slate-600'
                       }`}
                     >
                       <i className={type.icon}></i>
@@ -1126,33 +1119,33 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
 
               {/* 신고 사유 */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  {lang === 'ko' ? '신고 사유 *' : 'Reason *'}
+                <label className="block text-sm font-medium text-fog mb-2">
+                  {'신고 사유 *'}
                 </label>
                 <input
                   type="text"
                   value={reportReason}
                   onChange={(e) => setReportReason(e.target.value)}
-                  placeholder={lang === 'ko' ? '신고 사유를 입력하세요' : 'Enter report reason'}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder={'신고 사유를 입력하세요'}
+                  className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500"
                   maxLength={200}
                 />
               </div>
 
               {/* 상세 설명 (선택사항) */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  {lang === 'ko' ? '상세 설명 (선택사항)' : 'Description (Optional)'}
+                <label className="block text-sm font-medium text-fog mb-2">
+                  {'상세 설명 (선택사항)'}
                 </label>
                 <textarea
                   value={reportDescription}
                   onChange={(e) => setReportDescription(e.target.value)}
-                  placeholder={lang === 'ko' ? '추가 설명을 입력하세요' : 'Enter additional details'}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                  placeholder={'추가 설명을 입력하세요'}
+                  className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
                   rows={4}
                   maxLength={500}
                 />
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-fog-dim mt-1">
                   {reportDescription.length} / 500
                 </p>
               </div>
@@ -1166,18 +1159,18 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                     setReportReason('');
                     setReportDescription('');
                   }}
-                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all font-semibold"
+                  className="flex-1 px-4 py-2 bg-ink-600 hover:bg-slate-600 text-white rounded-lg transition-all font-semibold"
                 >
                   {t.common.cancel}
                 </button>
                 <button
                   onClick={handleSubmitReport}
                   disabled={!reportReason.trim() || isSubmittingReport}
-                  className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all font-semibold"
+                  className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-ink-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all font-semibold"
                 >
                   {isSubmittingReport 
-                    ? (lang === 'ko' ? '제출 중...' : 'Submitting...')
-                    : (lang === 'ko' ? '신고하기' : 'Submit Report')
+                    ? ('제출 중...')
+                    : ('신고하기')
                   }
                 </button>
               </div>
@@ -1189,18 +1182,18 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
       {/* 계정 삭제 확인 모달 */}
       {showDeleteAccountModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 rounded-xl p-6 sm:p-8 border border-red-700 max-w-md w-full">
+          <div className="bg-ink-700 rounded-xl p-6 sm:p-8 border border-red-700 max-w-md w-full">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl sm:text-2xl font-bold text-red-400">
                 <i className="ri-error-warning-line mr-2"></i>
-                {lang === 'ko' ? '계정 삭제 확인' : 'Confirm Account Deletion'}
+                {'계정 삭제 확인'}
               </h2>
               <button
                 onClick={() => {
                   setShowDeleteAccountModal(false);
                   setConfirmDeleteText('');
                 }}
-                className="text-slate-400 hover:text-white transition-colors text-2xl"
+                className="text-fog hover:text-white transition-colors text-2xl"
               >
                 <i className="ri-close-line"></i>
               </button>
@@ -1209,25 +1202,25 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
             <div className="space-y-4">
               <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4">
                 <p className="text-sm text-red-300 font-semibold mb-2">
-                  {lang === 'ko' ? '⚠️ 경고' : '⚠️ Warning'}
+                  {'⚠️ 경고'}
                 </p>
                 <ul className="text-xs text-red-200 space-y-1 list-disc list-inside">
-                  <li>{lang === 'ko' ? '계정이 영구적으로 삭제됩니다.' : 'Your account will be permanently deleted.'}</li>
-                  <li>{lang === 'ko' ? '모든 데이터(문제, 댓글, 기록 등)가 삭제됩니다.' : 'All data (problems, comments, records, etc.) will be deleted.'}</li>
-                  <li>{lang === 'ko' ? '이 작업은 되돌릴 수 없습니다.' : 'This action cannot be undone.'}</li>
+                  <li>{'계정이 영구적으로 삭제됩니다.'}</li>
+                  <li>{'모든 데이터(문제, 댓글, 기록 등)가 삭제됩니다.'}</li>
+                  <li>{'이 작업은 되돌릴 수 없습니다.'}</li>
                 </ul>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  {lang === 'ko' ? '확인을 위해 "삭제"를 입력하세요' : 'Type "삭제" to confirm'}
+                <label className="block text-sm font-medium text-fog mb-2">
+                  {'확인을 위해 "삭제"를 입력하세요'}
                 </label>
                 <input
                   type="text"
                   value={confirmDeleteText}
                   onChange={(e) => setConfirmDeleteText(e.target.value)}
                   placeholder="삭제"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
               </div>
 
@@ -1237,18 +1230,18 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                     setShowDeleteAccountModal(false);
                     setConfirmDeleteText('');
                   }}
-                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all font-semibold"
+                  className="flex-1 px-4 py-2 bg-ink-600 hover:bg-slate-600 text-white rounded-lg transition-all font-semibold"
                 >
                   {t.common.cancel}
                 </button>
                 <button
                   onClick={handleDeleteAccount}
                   disabled={confirmDeleteText !== '삭제' || isDeletingAccount}
-                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all font-semibold"
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-ink-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all font-semibold"
                 >
                   {isDeletingAccount 
-                    ? (lang === 'ko' ? '삭제 중...' : 'Deleting...')
-                    : (lang === 'ko' ? '계정 삭제' : 'Delete Account')
+                    ? ('삭제 중...')
+                    : ('계정 삭제')
                   }
                 </button>
               </div>
@@ -1260,14 +1253,14 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
       {/* 팔로워 목록 모달 */}
       {showFollowersModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 rounded-xl p-6 sm:p-8 border border-slate-700 max-w-md w-full max-h-[80vh] overflow-y-auto">
+          <div className="bg-ink-700 rounded-xl p-6 sm:p-8 border border-brass/20 max-w-md w-full max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl sm:text-2xl font-bold text-white">
-                {lang === 'ko' ? '팔로워' : 'Followers'}
+                {'팔로워'}
               </h2>
               <button
                 onClick={() => setShowFollowersModal(false)}
-                className="text-slate-400 hover:text-white transition-colors text-2xl"
+                className="text-fog hover:text-white transition-colors text-2xl"
               >
                 <i className="ri-close-line"></i>
               </button>
@@ -1277,11 +1270,11 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
               {isLoadingFollowers ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
-                  <p className="text-slate-400 mt-2">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
+                  <p className="text-fog mt-2">{'로딩 중...'}</p>
                 </div>
               ) : followersList.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-slate-400">{lang === 'ko' ? '팔로워가 없습니다.' : 'No followers yet.'}</p>
+                  <p className="text-fog">{'팔로워가 없습니다.'}</p>
                 </div>
               ) : (
                 followersList.map((follower) => (
@@ -1289,15 +1282,15 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                     key={follower.id}
                     href={`/${lang}/profile/${follower.id}`}
                     onClick={() => setShowFollowersModal(false)}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-ink-600 transition-colors"
                   >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-brass to-brass-600 flex items-center justify-center text-white font-bold">
                       {follower.nickname.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-white truncate">{follower.nickname}</div>
                       {follower.referral_code && (
-                        <div className="text-xs text-slate-400 truncate">{follower.referral_code}</div>
+                        <div className="text-xs text-fog truncate">{follower.referral_code}</div>
                       )}
                     </div>
                   </Link>
@@ -1311,14 +1304,14 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
       {/* 팔로잉 목록 모달 */}
       {showFollowingModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 rounded-xl p-6 sm:p-8 border border-slate-700 max-w-md w-full max-h-[80vh] overflow-y-auto">
+          <div className="bg-ink-700 rounded-xl p-6 sm:p-8 border border-brass/20 max-w-md w-full max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl sm:text-2xl font-bold text-white">
-                {lang === 'ko' ? '팔로잉' : 'Following'}
+                {'팔로잉'}
               </h2>
               <button
                 onClick={() => setShowFollowingModal(false)}
-                className="text-slate-400 hover:text-white transition-colors text-2xl"
+                className="text-fog hover:text-white transition-colors text-2xl"
               >
                 <i className="ri-close-line"></i>
               </button>
@@ -1328,11 +1321,11 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
               {isLoadingFollowing ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
-                  <p className="text-slate-400 mt-2">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
+                  <p className="text-fog mt-2">{'로딩 중...'}</p>
                 </div>
               ) : followingList.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-slate-400">{lang === 'ko' ? '팔로잉 중인 사용자가 없습니다.' : 'Not following anyone yet.'}</p>
+                  <p className="text-fog">{'팔로잉 중인 사용자가 없습니다.'}</p>
                 </div>
               ) : (
                 followingList.map((following) => (
@@ -1340,15 +1333,15 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                     key={following.id}
                     href={`/${lang}/profile/${following.id}`}
                     onClick={() => setShowFollowingModal(false)}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-ink-600 transition-colors"
                   >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-brass to-brass-600 flex items-center justify-center text-white font-bold">
                       {following.nickname.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-white truncate">{following.nickname}</div>
                       {following.referral_code && (
-                        <div className="text-xs text-slate-400 truncate">{following.referral_code}</div>
+                        <div className="text-xs text-fog truncate">{following.referral_code}</div>
                       )}
                     </div>
                   </Link>

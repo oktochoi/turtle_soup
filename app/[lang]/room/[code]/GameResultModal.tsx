@@ -26,8 +26,8 @@ export default function GameResultModal({ story, truth, questions, onRestart, ro
   const t = useTranslations();
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50">
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl sm:rounded-2xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden border border-slate-700 shadow-2xl">
-        <div className="bg-gradient-to-r from-teal-500 to-cyan-500 p-4 sm:p-6 text-center">
+      <div className="bg-gradient-to-br from-slate-800 to-ink-800 rounded-xl sm:rounded-2xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden border border-brass/20 shadow-2xl">
+        <div className="bg-gradient-to-r from-brass to-brass-600 p-4 sm:p-6 text-center">
           <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center bg-white/20 rounded-full mx-auto mb-2 sm:mb-3">
             <i className="ri-trophy-line text-white text-2xl sm:text-3xl"></i>
           </div>
@@ -64,26 +64,26 @@ export default function GameResultModal({ story, truth, questions, onRestart, ro
             </div>
           </div>
 
-          <div className="bg-slate-800/50 rounded-xl p-4 sm:p-6 border border-slate-700 mb-4 sm:mb-6">
+          <div className="bg-ink-700/50 rounded-xl p-4 sm:p-6 border border-brass/20 mb-4 sm:mb-6">
             <div className="flex items-center gap-2 mb-3 sm:mb-4">
               <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-blue-500/20 rounded-lg flex-shrink-0">
                 <i className="ri-question-line text-blue-400 text-sm sm:text-base"></i>
               </div>
               <h3 className="font-bold text-blue-400 text-sm sm:text-base">{t.room.questionList}</h3>
-              <span className="ml-auto text-xs sm:text-sm text-slate-500">{questions.length}{t.room.questionsCount}</span>
+              <span className="ml-auto text-xs sm:text-sm text-fog-dim">{questions.length}{t.room.questionsCount}</span>
             </div>
             <div className="space-y-2 max-h-64 sm:max-h-80 overflow-y-auto pr-2">
               {questions.length === 0 ? (
-                <div className="text-center py-8 text-slate-500 text-xs sm:text-sm">
+                <div className="text-center py-8 text-fog-dim text-xs sm:text-sm">
                   <i className="ri-chat-off-line text-2xl sm:text-3xl mb-2"></i>
                   <p>{t.room.noQuestions}</p>
                 </div>
               ) : (
                 questions.map((q, index) => (
-                  <div key={q.id} className="bg-slate-900 rounded-lg p-3 sm:p-4 border border-slate-700 hover:border-blue-500/50 transition-colors">
+                  <div key={q.id} className="bg-ink-800 rounded-lg p-3 sm:p-4 border border-brass/20 hover:border-blue-500/50 transition-colors">
                     <div className="flex items-start gap-2 mb-2 flex-wrap">
-                      <span className="text-xs font-bold text-slate-500 bg-slate-800 px-2 py-1 rounded">#{index + 1}</span>
-                      <span className="text-xs sm:text-sm font-semibold text-cyan-400">{q.nickname}</span>
+                      <span className="text-xs font-bold text-fog-dim bg-ink-700 px-2 py-1 rounded">#{index + 1}</span>
+                      <span className="text-xs sm:text-sm font-semibold text-brass">{q.nickname}</span>
                     {q.answer && (
                       <span
                           className={`ml-auto px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
@@ -105,9 +105,9 @@ export default function GameResultModal({ story, truth, questions, onRestart, ro
           </div>
         </div>
 
-          <div className="p-4 sm:p-6 border-t border-slate-700 flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="p-4 sm:p-6 border-t border-brass/20 flex flex-col sm:flex-row gap-2 sm:gap-3">
           <Link href={`/${lang}`} className="flex-1">
-              <button className="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap text-sm sm:text-base">
+              <button className="w-full bg-ink-600 hover:bg-slate-600 text-white font-semibold py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap text-sm sm:text-base">
               <i className="ri-home-line mr-2"></i>
                 {t.room.backToHome}
             </button>
@@ -122,7 +122,7 @@ export default function GameResultModal({ story, truth, questions, onRestart, ro
               </button>
             )}
           <Link href={`/${lang}/create-room`} className="flex-1">
-              <button className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap text-sm sm:text-base">
+              <button className="w-full bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white font-semibold py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap text-sm sm:text-base">
               <i className="ri-add-circle-line mr-2"></i>
               {t.room.createNewRoomTitle}
             </button>

@@ -46,10 +46,10 @@ export default function QuizPlayOX({
                 ? 'bg-green-600 text-white'
                 : selected === 'O'
                 ? 'bg-red-600 text-white'
-                : 'bg-slate-700 text-slate-400'
+                : 'bg-ink-600 text-fog'
               : selected === 'O'
-              ? 'bg-teal-600 text-white hover:bg-teal-500'
-              : 'bg-slate-700 text-white hover:bg-slate-600'
+              ? 'bg-teal-600 text-white hover:bg-brass'
+              : 'bg-ink-600 text-white hover:bg-slate-600'
           } ${showAnswer ? 'cursor-default' : 'cursor-pointer'}`}
         >
           O
@@ -64,10 +64,10 @@ export default function QuizPlayOX({
                 ? 'bg-green-600 text-white'
                 : selected === 'X'
                 ? 'bg-red-600 text-white'
-                : 'bg-slate-700 text-slate-400'
+                : 'bg-ink-600 text-fog'
               : selected === 'X'
-              ? 'bg-teal-600 text-white hover:bg-teal-500'
-              : 'bg-slate-700 text-white hover:bg-slate-600'
+              ? 'bg-teal-600 text-white hover:bg-brass'
+              : 'bg-ink-600 text-white hover:bg-slate-600'
           } ${showAnswer ? 'cursor-default' : 'cursor-pointer'}`}
         >
           X
@@ -84,7 +84,7 @@ export default function QuizPlayOX({
               : (isKo ? '틀렸습니다.' : 'Incorrect.')
             }
           </div>
-          <div className="text-lg text-slate-300 mt-2">
+          <div className="text-lg text-fog mt-2">
             {isKo ? '정답: ' : 'Answer: '}{correct}
           </div>
         </div>
@@ -94,15 +94,15 @@ export default function QuizPlayOX({
       {explanation && (
         <details className="mt-4 group">
           <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
-            <div className="bg-slate-800 rounded-lg border border-slate-600 hover:border-teal-500/30 transition-colors px-4 py-2.5 flex items-center justify-between">
-              <span className="text-sm font-semibold text-teal-400">
+            <div className="bg-ink-700 rounded-lg border border-brass/25 hover:border-brass/30 transition-colors px-4 py-2.5 flex items-center justify-between">
+              <span className="text-sm font-semibold text-brass">
                 {isKo ? '해설 보기' : 'View Explanation'}
               </span>
-              <i className="ri-arrow-down-s-line text-slate-400 group-open:rotate-180 transition-transform"></i>
+              <i className="ri-arrow-down-s-line text-fog group-open:rotate-180 transition-transform"></i>
             </div>
           </summary>
-          <div className="mt-2 p-4 bg-slate-800 rounded-lg border border-slate-600 border-t-0 rounded-t-none">
-            <div className="text-sm text-slate-300">{explanation}</div>
+          <div className="mt-2 p-4 bg-ink-700 rounded-lg border border-brass/25 border-t-0 rounded-t-none">
+            <div className="text-sm text-fog">{explanation}</div>
           </div>
         </details>
       )}

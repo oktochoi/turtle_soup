@@ -188,7 +188,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
       pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
       reviewed: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
       resolved: 'bg-green-500/20 text-green-400 border-green-500/50',
-      dismissed: 'bg-slate-500/20 text-slate-400 border-slate-500/50',
+      dismissed: 'bg-slate-500/20 text-fog border-slate-500/50',
     };
     return colors[status] || colors.pending;
   };
@@ -213,7 +213,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
-          <p className="text-slate-400">로딩 중...</p>
+          <p className="text-fog">로딩 중...</p>
         </div>
       </div>
     );
@@ -225,7 +225,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
       <div className="mb-6">
           <button
             onClick={() => router.push(`/${lang}`)}
-            className="text-slate-400 hover:text-white transition-colors text-sm mb-4"
+            className="text-fog hover:text-white transition-colors text-sm mb-4"
           >
             <i className="ri-arrow-left-line mr-2"></i>
             {t.common.back}
@@ -233,7 +233,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
           <h1 className="text-2xl sm:text-3xl font-bold mb-2">
             유저 신고 관리
           </h1>
-          <p className="text-slate-400 text-sm">
+          <p className="text-fog text-sm">
             신고된 유저들을 검토하고 조치하세요.
           </p>
         </div>
@@ -246,8 +246,8 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
               onClick={() => setSelectedStatus(status)}
               className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
                 selectedStatus === status
-                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  ? 'bg-gradient-to-r from-blue-500 to-brass-600 text-white'
+                  : 'bg-ink-700 text-fog hover:bg-ink-600'
               }`}
             >
               {status === 'all' 
@@ -261,8 +261,8 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
         {/* 신고 목록 */}
         <div className="space-y-4">
           {reports.length === 0 ? (
-            <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-8 border border-slate-700/50 text-center">
-              <p className="text-slate-400">
+            <div className="bg-ink-700/50 backdrop-blur-md rounded-xl p-8 border border-brass/20 text-center">
+              <p className="text-fog">
                 신고가 없습니다.
               </p>
             </div>
@@ -276,7 +276,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
                   setNewStatus(report.status);
                   setShowDetailModal(true);
                 }}
-                className="bg-slate-800/50 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-slate-700/50 hover:border-blue-500/50 transition-all cursor-pointer"
+                className="bg-ink-700/50 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-brass/20 hover:border-blue-500/50 transition-all cursor-pointer"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex-1">
@@ -288,15 +288,15 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
                         {getReportTypeLabel(report.report_type)}
                       </span>
                     </div>
-                    <div className="text-sm text-slate-300 mb-1">
-                      <span className="text-slate-400">신고당한 유저:</span>{' '}
+                    <div className="text-sm text-fog mb-1">
+                      <span className="text-fog">신고당한 유저:</span>{' '}
                       <span className="font-semibold">{report.reported_user_nickname || report.reported_user_id}</span>
                     </div>
-                    <div className="text-sm text-slate-300 mb-1">
-                      <span className="text-slate-400">신고 사유:</span>{' '}
+                    <div className="text-sm text-fog mb-1">
+                      <span className="text-fog">신고 사유:</span>{' '}
                       {report.reason}
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-fog-dim">
                       {formatDate(report.created_at)}
                     </div>
                   </div>
@@ -313,7 +313,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
       {/* 상세 모달 */}
       {showDetailModal && selectedReport && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 rounded-xl p-6 sm:p-8 border border-slate-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-ink-700 rounded-xl p-6 sm:p-8 border border-brass/20 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl sm:text-2xl font-bold text-white">
                 신고 상세 정보
@@ -324,7 +324,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
                   setSelectedReport(null);
                   setAdminNotes('');
                 }}
-                className="text-slate-400 hover:text-white transition-colors text-2xl"
+                className="text-fog hover:text-white transition-colors text-2xl"
               >
                 <i className="ri-close-line"></i>
               </button>
@@ -332,46 +332,46 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
 
             <div className="space-y-4">
               {/* 신고 정보 */}
-              <div className="bg-slate-900/50 rounded-lg p-4 space-y-3">
+              <div className="bg-ink-800/50 rounded-lg p-4 space-y-3">
                 <div>
-                  <span className="text-sm text-slate-400">신고 유형:</span>
+                  <span className="text-sm text-fog">신고 유형:</span>
                   <div className="mt-1 font-semibold">{getReportTypeLabel(selectedReport.report_type)}</div>
                 </div>
                 <div>
-                  <span className="text-sm text-slate-400">신고당한 유저:</span>
+                  <span className="text-sm text-fog">신고당한 유저:</span>
                   <div className="mt-1 font-semibold">{selectedReport.reported_user_nickname || selectedReport.reported_user_id}</div>
                 </div>
                 <div>
-                  <span className="text-sm text-slate-400">신고한 유저:</span>
+                  <span className="text-sm text-fog">신고한 유저:</span>
                   <div className="mt-1 font-semibold">
                     {selectedReport.reporter_nickname || selectedReport.reporter_identifier || '익명'}
                   </div>
                 </div>
                 <div>
-                  <span className="text-sm text-slate-400">신고 사유:</span>
+                  <span className="text-sm text-fog">신고 사유:</span>
                   <div className="mt-1">{selectedReport.reason}</div>
                 </div>
                 {selectedReport.description && (
                   <div>
-                    <span className="text-sm text-slate-400">상세 설명:</span>
+                    <span className="text-sm text-fog">상세 설명:</span>
                     <div className="mt-1 whitespace-pre-wrap">{selectedReport.description}</div>
                   </div>
                 )}
                 <div>
-                  <span className="text-sm text-slate-400">신고 일시:</span>
+                  <span className="text-sm text-fog">신고 일시:</span>
                   <div className="mt-1 text-sm">{formatDate(selectedReport.created_at)}</div>
                 </div>
               </div>
 
               {/* 상태 업데이트 */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-fog mb-2">
                   상태 변경
                 </label>
                 <select
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value as any)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="pending">{getStatusLabel('pending')}</option>
                   <option value="reviewed">{getStatusLabel('reviewed')}</option>
@@ -382,14 +382,14 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
 
               {/* 관리자 메모 */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-fog mb-2">
                   관리자 메모
                 </label>
                 <textarea
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
                   placeholder="관리자 메모를 입력하세요..."
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   rows={4}
                 />
               </div>
@@ -402,14 +402,14 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
                     setSelectedReport(null);
                     setAdminNotes('');
                   }}
-                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all font-semibold"
+                  className="flex-1 px-4 py-2 bg-ink-600 hover:bg-slate-600 text-white rounded-lg transition-all font-semibold"
                 >
                   {t.common.cancel}
                 </button>
                 <button
                   onClick={handleUpdateStatus}
                   disabled={isUpdating}
-                  className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all font-semibold"
+                  className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-ink-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all font-semibold"
                 >
                   {isUpdating ? '업데이트 중...' : '상태 업데이트'}
                 </button>

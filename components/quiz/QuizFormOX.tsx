@@ -23,7 +23,7 @@ export default function QuizFormOX({
     <>
       {/* 정답 선택 */}
       <div>
-        <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+        <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
           <i className="ri-checkbox-circle-line mr-1"></i>
           {lang === 'ko' ? '정답' : 'Answer'}
         </label>
@@ -35,7 +35,7 @@ export default function QuizFormOX({
               flex-1 py-4 rounded-xl border-2 font-bold text-xl transition-all
               ${correct === 'O'
                 ? 'border-green-500 bg-green-500/10 text-green-400 shadow-lg shadow-green-500/20'
-                : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600'
+                : 'border-brass/20 bg-ink-700/50 text-fog hover:border-brass/25'
               }
             `}
           >
@@ -49,7 +49,7 @@ export default function QuizFormOX({
               flex-1 py-4 rounded-xl border-2 font-bold text-xl transition-all
               ${correct === 'X'
                 ? 'border-red-500 bg-red-500/10 text-red-400 shadow-lg shadow-red-500/20'
-                : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600'
+                : 'border-brass/20 bg-ink-700/50 text-fog hover:border-brass/25'
               }
             `}
           >
@@ -61,7 +61,7 @@ export default function QuizFormOX({
 
       {/* 설명 */}
       <div>
-        <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+        <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
           <i className="ri-information-line mr-1"></i>
           {lang === 'ko' ? '설명 (선택사항)' : 'Explanation (Optional)'}
         </label>
@@ -69,7 +69,7 @@ export default function QuizFormOX({
           value={explanation}
           onChange={(e) => onExplanationChange(e.target.value)}
           placeholder={lang === 'ko' ? '정답의 이유와 설명을 입력하세요' : 'Enter the explanation for the answer'}
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
+          className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
           maxLength={300}
         />
       </div>

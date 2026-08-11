@@ -29,6 +29,7 @@ import QuestionInputSection from './components/QuestionInputSection';
 import AnswerInputSection from './components/AnswerInputSection';
 import UserAnswersFeed from './components/UserAnswersFeed';
 import AdminQuestionList from './components/AdminQuestionList';
+import InvestigationGame from './components/InvestigationGame';
 
 type ProblemClientProps = {
   initialProblem: Problem;
@@ -1798,7 +1799,7 @@ export default function ProblemClient({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white flex items-center justify-center">
         <div className="text-center">
           <div className="mb-6 relative w-24 h-24 mx-auto">
             {/* 거북이 애니메이션 */}
@@ -1827,8 +1828,8 @@ export default function ProblemClient({
               <ellipse cx="70" cy="70" rx="6" ry="5" fill="#14b8a6" />
             </svg>
           </div>
-          <p className="text-slate-400">{t.problem.loadingProblems}</p>
-          <p className="text-slate-500 text-sm mt-2">
+          <p className="text-fog">{t.problem.loadingProblems}</p>
+          <p className="text-fog-dim text-sm mt-2">
             {(t.problem as any)[`loadingPageMessage${(loadingPageMessageIndex % 3) + 1}`]}
           </p>
         </div>
@@ -1838,10 +1839,10 @@ export default function ProblemClient({
 
   if (!problem) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white flex items-center justify-center">
         <div className="text-center">
-          <p className="text-slate-400">{t.problem.problemNotFound}</p>
-          <Link href={`/${lang}`} className="text-teal-400 hover:text-teal-300 mt-4 inline-block">
+          <p className="text-fog">{t.problem.problemNotFound}</p>
+          <Link href={`/${lang}`} className="text-brass hover:text-brass-300 mt-4 inline-block">
             {t.common.backToHome}
           </Link>
         </div>
@@ -1898,7 +1899,7 @@ export default function ProblemClient({
     ]
   } : null;
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">
       {structuredData && <JsonLd data={structuredData} />}
       {faqStructuredData && <JsonLd data={faqStructuredData} />}
   
@@ -1906,7 +1907,7 @@ export default function ProblemClient({
         {/* 뒤로가기 */}
         <div className="mb-4 sm:mb-6">
           <Link href={`/${lang}`}>
-            <button className="text-slate-400 hover:text-white transition-colors text-xs sm:text-sm">
+            <button className="text-fog hover:text-white transition-colors text-xs sm:text-sm">
               <i className="ri-arrow-left-line mr-2"></i>
               {t.common.back}
             </button>
@@ -2082,123 +2083,32 @@ export default function ProblemClient({
           hasVoted={hasVoted}
           t={t}
         />
-
-        {/* 질문하기 섹션 (Soup 타입만) */}
+        {/* 싱글플레이 수사 게임 (Soup 타입) */}
         {quizType === 'soup' && (
-          <>
-            <QuestionInputSection
-              lang={lang}
-              questionText={questionText}
-              suggestedAnswer={suggestedAnswer}
-              isAnalyzing={isAnalyzing}
-              loadingMessage={isAnalyzing ? (t.problem as any)[`loadingMessage${(loadingMessageIndex % 8) + 1}`] : undefined}
-              localQuestions={localQuestions}
-              onQuestionTextChange={(text) => {
-                setQuestionText(text);
-                setSuggestedAnswer(null);
-              }}
-              onSuggestedAnswerChange={setSuggestedAnswer}
-              onAnalyzeBeforeSubmit={handleAnalyzeBeforeSubmit}
-              onSubmitQuestion={handleSubmitQuestion}
-              onClearLocalQuestions={clearLocalQuestions}
-              onBugReport={(type, question, answer) => {
-                setBugReportType(type);
-                setBugReportQuestion(question);
-                setBugReportAnswer(answer);
-                setShowBugReportModal(true);
-              }}
-              getAnswerBadge={getAnswerBadge}
-              t={t}
-            />
-            <AnswerInputSection
-              lang={lang}
+          <div className="mb-6">
+            <InvestigationGame
               problem={problem}
-              userGuess={userGuess}
-              similarityScore={similarityScore}
-              isCalculatingSimilarity={isCalculatingSimilarity}
-              loadingMessage={isCalculatingSimilarity ? (t.problem as any)[`loadingMessage${(loadingMessageIndex % 8) + 1}`] : undefined}
-              hasSubmittedAnswer={hasSubmittedAnswer}
-              showAnswer={showAnswer}
-              showHints={showHints}
-              hints={(problem as any)?.hints}
-              cooldownRemaining={cooldownRemaining}
-              onUserGuessChange={(guess) => {
-                setUserGuess(guess);
-                setSimilarityScore(null);
+              knowledge={problemKnowledge}
+              ensureKnowledge={async () => {
+                if (problemKnowledge) return problemKnowledge;
+                if (!problem.content || !problem.answer) return null;
+                const hints = (problem as any).hints as string[] | null | undefined;
+                const knowledge = await buildProblemKnowledge(
+                  problem.content,
+                  problem.answer,
+                  undefined,
+                  hints,
+                  (problem as any).explanation
+                );
+                setProblemKnowledge(knowledge);
+                return knowledge;
               }}
-              onSubmitAnswer={async () => {
-                if (!userGuess.trim() || !problem) {
-                  showToast(t.problem.enterAnswerAlert, 'warning');
-                  return;
-                }
-
-                setIsCalculatingSimilarity(true);
-                try {
-                  const problemContentWithExplanation = [problem.content, (problem as any).explanation].filter(Boolean).join(' ');
-                  const similarity = await calculateAnswerSimilarity(
-                          userGuess.trim(),
-                          problem.answer,
-                          problemContentWithExplanation
-                        );
-
-                  setSimilarityScore(similarity);
-                  setHasSubmittedAnswer(true);
-                  const cooldownEnd = Date.now() + 60000; // 1분 쿨다운
-                  setAnswerCooldownUntil(cooldownEnd);
-                  if (typeof window !== 'undefined') {
-                    localStorage.setItem(`answer_cooldown_${problemId}`, String(cooldownEnd));
-                  }
-
-                  // ✅ 사용자 답변 DB 저장 (다른 사람들이 볼 수 있게)
-                  if (user) {
-                    await handleSaveUserAnswer(userGuess.trim(), similarity);
-                  }
-
-                  // ✅ 맞춘 기록 저장
-                  if (similarity >= 80 && user) {
-                    try {
-                      const { data: existingSolve } = await supabase
-                        .from('user_problem_solves')
-                        .select('id')
-                        .eq('user_id', user.id)
-                        .eq('problem_id', problemId)
-                        .maybeSingle();
-
-                      if (!existingSolve) {
-                        const { error: solveError } = await supabase
-                          .from('user_problem_solves')
-                          .insert({
-                            user_id: user.id,
-                            problem_id: problemId,
-                            similarity_score: Math.round(similarity),
-                          });
-                        if (solveError) console.error('정답 기록 저장 오류:', solveError);
-                      }
-                    } catch (error) {
-                      console.error('정답 수 증가 오류:', error);
-                    }
-                  }
-                } catch (error) {
-                  console.error('유사도 계산 오류:', error);
-                  showToast(t.problem.similarityCalculationFail, 'error');
-                } finally {
-                  setIsCalculatingSimilarity(false);
-                }
-              }}
-              onShowAnswerToggle={() => setShowAnswer(!showAnswer)}
-              onShowHintsChange={setShowHints}
-              onBugReport={() => {
-                if (userGuess && problem) {
-                  setBugReportType('wrong_similarity');
-                  setBugReportQuestion(null);
-                  setBugReportAnswer(null);
-                  setShowBugReportModal(true);
-                }
-              }}
-              showToast={showToast}
-              t={t}
             />
-            <UserAnswersFeed
+          </div>
+        )}
+
+        {quizType === 'soup' && (
+          <UserAnswersFeed
               lang={lang}
               problemId={problemId}
               user={user}
@@ -2225,10 +2135,8 @@ export default function ProblemClient({
               showToast={showToast}
               t={t}
             />
-          </>
         )}
-  
-        {/* DB 질문 목록 (관리자용) */}
+{/* DB 질문 목록 (관리자용) */}
         {isOwner && (
           <AdminQuestionList
             questions={questions}
@@ -2328,7 +2236,7 @@ export default function ProblemClient({
         <div className="fixed bottom-32 sm:bottom-36 right-4 z-40">
           <button
             onClick={() => setShowAnswer(true)}
-            className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2.5 px-4 rounded-lg shadow-lg transition-all duration-200 flex items-center gap-2 text-sm"
+            className="bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow-lg transition-all duration-200 flex items-center gap-2 text-sm"
             title="정답 보기"
           >
             <i className="ri-eye-line"></i>

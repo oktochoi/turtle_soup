@@ -13,8 +13,8 @@ interface QuizPlayBalanceProps {
 }
 
 const COLORS = [
-  'bg-teal-500',
-  'bg-cyan-500',
+  'bg-brass',
+  'bg-brass',
   'bg-blue-500',
   'bg-purple-500',
   'bg-pink-500',
@@ -72,22 +72,22 @@ export default function QuizPlayBalance({
               disabled={showAnswer}
               className={`p-6 rounded-lg transition-all text-center relative ${
                 isSelected
-                  ? 'bg-teal-600 hover:bg-teal-500 border-2 border-teal-400'
-                  : 'bg-slate-700 hover:bg-slate-600 border-2 border-transparent'
+                  ? 'bg-teal-600 hover:bg-brass border-2 border-teal-400'
+                  : 'bg-ink-600 hover:bg-slate-600 border-2 border-transparent'
               } ${showAnswer ? 'cursor-default' : 'cursor-pointer'}`}
             >
               <div className="text-white font-semibold text-lg mb-2">{option}</div>
               {showAnswer && stats && totalVotes > 0 && (
                 <div className="space-y-1">
                   <div className="text-2xl font-bold text-white">{percent}%</div>
-                  <div className="text-sm text-slate-300">
+                  <div className="text-sm text-fog">
                     {voteCount} {isKo ? '표' : 'votes'}
                   </div>
                 </div>
               )}
               {!showAnswer && isSelected && (
                 <div className="absolute top-2 right-2">
-                  <i className="ri-checkbox-circle-fill text-teal-400 text-2xl"></i>
+                  <i className="ri-checkbox-circle-fill text-brass text-2xl"></i>
                 </div>
               )}
             </button>
@@ -97,7 +97,7 @@ export default function QuizPlayBalance({
 
       {showAnswer && stats && totalVotes > 0 && (
         <div className="space-y-3 mt-6">
-          <div className="text-sm font-semibold text-slate-400 mb-3">
+          <div className="text-sm font-semibold text-fog mb-3">
             {isKo ? '전체 통계' : 'Overall Statistics'}
           </div>
           {options.map((option, index) => {
@@ -108,7 +108,7 @@ export default function QuizPlayBalance({
             return (
               <div key={index} className="space-y-1">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-slate-300">
+                  <span className="text-sm text-fog">
                     {String.fromCharCode(65 + index)}. {option}
                   </span>
                   <span className="text-sm font-semibold text-white">
@@ -116,13 +116,13 @@ export default function QuizPlayBalance({
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 h-4 bg-slate-700 rounded-full overflow-hidden">
+                  <div className="flex-1 h-4 bg-ink-600 rounded-full overflow-hidden">
                     <div
                       className={`h-full ${colorClass} transition-all`}
                       style={{ width: `${percent}%` }}
                     />
                   </div>
-                  <span className="text-xs text-slate-400 w-12 text-right">{percent}%</span>
+                  <span className="text-xs text-fog w-12 text-right">{percent}%</span>
                 </div>
               </div>
             );

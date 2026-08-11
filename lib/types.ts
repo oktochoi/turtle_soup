@@ -55,6 +55,26 @@ export type Problem = {
   user_id?: string;
   hints?: string[] | null; // 최대 3개의 힌트
   explanation?: string | null; // 해설/배경지식 (AdSense 품질 강화용)
+  /** Optional investigation fields (JSON columns or client-side; missing = safe fallback) */
+  category?: string | null;
+  key_clues?: Array<{
+    id?: string;
+    text: string;
+    keywords?: string[];
+    concepts?: string[];
+    importance?: 'normal' | 'important' | 'critical';
+    xp?: number;
+  }> | null;
+  keyClues?: Array<{
+    id?: string;
+    text: string;
+    keywords?: string[];
+    concepts?: string[];
+    importance?: 'normal' | 'important' | 'critical';
+    xp?: number;
+  }> | null;
+  solution_elements?: Array<{ id?: string; text: string; weight?: number }> | null;
+  solutionElements?: Array<{ id?: string; text: string; weight?: number }> | null;
   // 별점 관련 (계산된 값)
   average_rating?: number;
   rating_count?: number;

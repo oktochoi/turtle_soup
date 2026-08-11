@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { caseNumberFromId, difficultyStars } from '@/lib/investigation';
 
 type Problem = {
   id: string;
@@ -16,45 +17,43 @@ type Problem = {
 export default function ProblemsListClient({ problems, lang }: { problems: Problem[]; lang: string }) {
   if (!problems.length) {
     return (
-      <div className="text-center py-16 text-slate-400">
-        {lang === 'ko' ? '아직 문제가 없습니다.' : 'No puzzles yet.'}
+      <div className="text-center py-16 text-fog">
+        아직 사건이 없습니다.
       </div>
     );
   }
 
-  const getDifficultyLabel = (d: string) => {
-    if (lang === 'ko') return d === 'easy' ? '쉬움' : d === 'hard' ? '어려움' : '보통';
-    return d === 'easy' ? 'Easy' : d === 'hard' ? 'Hard' : 'Medium';
-  };
-
-  const getDifficultyColor = (d: string) => {
-    return d === 'easy' ? 'text-green-400 bg-green-400/10' : d === 'hard' ? 'text-red-400 bg-red-400/10' : 'text-yellow-400 bg-yellow-400/10';
-  };
-
   return (
-    <div className="space-y-4">
-      {problems.map((p) => (
-        <Link
-          key={p.id}
-          href={`/${lang}/problem/${p.id}`}
-          className="block bg-slate-800/60 rounded-xl p-5 border border-slate-700 hover:border-teal-500/50 transition-all hover:bg-slate-800"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-semibold text-white mb-2 truncate">{p.title}</h2>
-              <p className="text-slate-400 text-sm line-clamp-2">{p.content}</p>
+    <div className="space-y-3">
+      {problems.map((p) => {
+        const caseNo = caseNumberFromId(p.id);
+        const diff = (p.difficulty === 'easy' || p.difficulty === 'hard' ? p.difficulty : 'medium') as
+          | 'easy'
+          | 'medium'
+          | 'hard';
+        return (
+          <Link
+            key={p.id}
+            href={`/${lang}/problem/${p.id}`}
+            className="block surface rounded-xl p-5 transition hover:border-brass/45"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] tracking-[0.22em] text-teal-300/90 mb-1">CASE #{caseNo}</p>
+                <h2 className="font-display text-lg text-bone mb-2 truncate">{p.title}</h2>
+                <p className="text-fog text-sm line-clamp-2">{p.content}</p>
+              </div>
+              <span className="chip text-slate-300 border-slate-600 whitespace-nowrap">
+                {difficultyStars(diff)}
+              </span>
             </div>
-            <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${getDifficultyColor(p.difficulty)}`}>
-              {getDifficultyLabel(p.difficulty)}
-            </span>
-          </div>
-          <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
-            <span>👁️ {p.view_count || 0}</span>
-            <span>❤️ {p.like_count || 0}</span>
-            <span>💬 {p.comment_count || 0}</span>
-          </div>
-        </Link>
-      ))}
+            <div className="flex items-center justify-between gap-4 mt-3 text-xs text-fog-dim">
+              <span>플레이 {p.view_count || 0}</span>
+              <span className="text-teal-300/80">사건 수사 시작 →</span>
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 }

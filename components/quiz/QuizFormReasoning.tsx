@@ -29,7 +29,7 @@ export default function QuizFormReasoning({
     <>
       {/* 상황/이야기 */}
       <div>
-        <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+        <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
           <i className="ri-book-open-line mr-1"></i>
           {lang === 'ko' ? '상황/이야기' : 'Situation/Story'}
           <span className="text-red-400 ml-1">*</span>
@@ -38,17 +38,17 @@ export default function QuizFormReasoning({
           value={story}
           onChange={(e) => onStoryChange(e.target.value)}
           placeholder={lang === 'ko' ? '상황이나 이야기를 입력하세요' : 'Enter the situation or story'}
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-40 resize-none text-sm"
+          className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-40 resize-none text-sm"
           maxLength={2000}
         />
-        <div className="text-right text-xs text-slate-500 mt-1">
+        <div className="text-right text-xs text-fog-dim mt-1">
           {story.length} / 2000
         </div>
       </div>
 
       {/* 진실/정답 */}
       <div>
-        <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+        <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
           <i className="ri-checkbox-circle-line mr-1"></i>
           {lang === 'ko' ? '진실/정답' : 'Truth/Answer'}
           <span className="text-red-400 ml-1">*</span>
@@ -57,17 +57,17 @@ export default function QuizFormReasoning({
           value={truth}
           onChange={(e) => onTruthChange(e.target.value)}
           placeholder={lang === 'ko' ? '진실이나 정답을 입력하세요' : 'Enter the truth or answer'}
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-40 resize-none text-sm"
+          className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-40 resize-none text-sm"
           maxLength={2000}
         />
-        <div className="text-right text-xs text-slate-500 mt-1">
+        <div className="text-right text-xs text-fog-dim mt-1">
           {truth.length} / 2000
         </div>
       </div>
 
       {/* 힌트 (선택사항, 최대 3개) */}
       <div>
-        <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+        <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
           <i className="ri-lightbulb-line mr-1"></i>
           {lang === 'ko' ? '힌트 (선택사항, 최대 3개)' : 'Hints (Optional, up to 3)'}
         </label>
@@ -79,7 +79,7 @@ export default function QuizFormReasoning({
               value={hint}
               onChange={(e) => handleHintChange(index, e.target.value)}
               placeholder={lang === 'ko' ? `힌트 ${index + 1}` : `Hint ${index + 1}`}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+              className="w-full bg-ink-700 border border-brass/20 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
               maxLength={200}
             />
           ))}

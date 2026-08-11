@@ -90,10 +90,10 @@ export default function UserAnswersFeed({
   if (answers.length === 0) return null;
 
   return (
-    <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
+    <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-brass/20">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3 sm:mb-4">
         <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
-          <i className="ri-group-line text-cyan-400"></i>
+          <i className="ri-group-line text-brass"></i>
           {t.problem.userAnswersTitle}
         </h3>
         <div className="flex gap-1">
@@ -103,8 +103,8 @@ export default function UserAnswersFeed({
               onClick={() => setSortOption(opt)}
               className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
                 sortOption === opt
-                  ? 'bg-teal-500/30 text-teal-400 border border-teal-500/50'
-                  : 'bg-slate-800 text-slate-400 hover:text-slate-300 border border-slate-700'
+                  ? 'bg-brass/30 text-brass border border-brass/50'
+                  : 'bg-ink-700 text-fog hover:text-fog border border-brass/20'
               }`}
             >
               {opt === 'latest' ? t.problem.sortLatest : opt === 'popular' ? t.problem.sortPopular : t.problem.sortAccuracy}
@@ -124,7 +124,7 @@ export default function UserAnswersFeed({
           return (
             <div
               key={answer.id}
-              className="bg-slate-800/50 rounded-xl p-3 sm:p-4 border border-slate-700/50"
+              className="bg-ink-700/50 rounded-xl p-3 sm:p-4 border border-brass/20"
             >
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0">
@@ -134,16 +134,16 @@ export default function UserAnswersFeed({
                         <img
                           src={answerProfileImages.get(answer.id)!}
                           alt={answer.nickname}
-                          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-slate-600"
+                          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-brass/25"
                         />
                       ) : (
-                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm border border-slate-600">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-brass to-brass-600 flex items-center justify-center text-white font-bold text-sm border border-brass/25">
                           {answer.nickname.charAt(0).toUpperCase()}
                         </div>
                       )}
                     </Link>
                   ) : (
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm border border-slate-600">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-brass to-brass-600 flex items-center justify-center text-white font-bold text-sm border border-brass/25">
                       {answer.nickname.charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -152,12 +152,12 @@ export default function UserAnswersFeed({
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     {answerGameUserIds.get(answer.id) ? (
                       <Link href={`/${lang}/profile/${answerGameUserIds.get(answer.id)}`} className="hover:opacity-80">
-                        <span className="text-sm font-semibold text-cyan-400">{answer.nickname}</span>
+                        <span className="text-sm font-semibold text-brass">{answer.nickname}</span>
                       </Link>
                     ) : (
-                      <span className="text-sm font-semibold text-cyan-400">{answer.nickname}</span>
+                      <span className="text-sm font-semibold text-brass">{answer.nickname}</span>
                     )}
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-fog-dim">
                       {new Date(answer.created_at).toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US')}
                     </span>
                     {answer.similarity_score !== null && (
@@ -166,14 +166,14 @@ export default function UserAnswersFeed({
                       </span>
                     )}
                   </div>
-                  <p className="text-sm sm:text-base text-slate-200 break-words whitespace-pre-wrap mb-2">
+                  <p className="text-sm sm:text-base text-bone-muted break-words whitespace-pre-wrap mb-2">
                     {answer.answer_text}
                   </p>
                   <div className="flex items-center gap-3">
                     {isOwnAnswer && (
                       <button
                         onClick={() => onDeleteAnswer(answer.id)}
-                        className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-400 transition-colors"
+                        className="flex items-center gap-1 text-xs text-fog hover:text-red-400 transition-colors"
                         title={t.problem.deleteAnswer}
                       >
                         <i className="ri-delete-bin-line"></i>
@@ -183,7 +183,7 @@ export default function UserAnswersFeed({
                     {user && !isOwnAnswer && (
                       <button
                         onClick={() => setReportingAnswerId(reportingAnswerId === answer.id ? null : answer.id)}
-                        className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-400 transition-colors"
+                        className="flex items-center gap-1 text-xs text-fog hover:text-red-400 transition-colors"
                         title={t.problem.reportAnswer}
                       >
                         <i className="ri-flag-line"></i>
@@ -197,8 +197,8 @@ export default function UserAnswersFeed({
                         user
                           ? isLiked
                             ? 'text-pink-400'
-                            : 'text-slate-400 hover:text-pink-400'
-                          : 'text-slate-500 cursor-default'
+                            : 'text-fog hover:text-pink-400'
+                          : 'text-fog-dim cursor-default'
                       }`}
                       title={!user ? t.problem.loginToLikeReply : ''}
                     >
@@ -209,7 +209,7 @@ export default function UserAnswersFeed({
                       onClick={() => user ? (isReplying ? setReplyingToId(null) : setReplyingToId(answer.id)) : null}
                       disabled={!user}
                       className={`flex items-center gap-1 text-xs transition-colors ${
-                        user ? 'text-slate-400 hover:text-teal-400' : 'text-slate-500 cursor-default'
+                        user ? 'text-fog hover:text-brass' : 'text-fog-dim cursor-default'
                       }`}
                       title={!user ? t.problem.loginToLikeReply : ''}
                     >
@@ -220,8 +220,8 @@ export default function UserAnswersFeed({
 
                   {/* 신고 모달 */}
                   {reportingAnswerId === answer.id && (
-                    <div className="mt-3 p-3 bg-slate-900 rounded-lg border border-slate-700">
-                      <p className="text-xs font-semibold text-slate-300 mb-2">{t.problem.reportAnswerTitle}</p>
+                    <div className="mt-3 p-3 bg-ink-800 rounded-lg border border-brass/20">
+                      <p className="text-xs font-semibold text-fog mb-2">{t.problem.reportAnswerTitle}</p>
                       <div className="flex flex-wrap gap-2">
                         {(['spam', 'harassment', 'inappropriate_content', 'other'] as const).map((type) => (
                           <button
@@ -241,7 +241,7 @@ export default function UserAnswersFeed({
                       </div>
                       <button
                         onClick={() => setReportingAnswerId(null)}
-                        className="mt-2 text-xs text-slate-400 hover:text-slate-300"
+                        className="mt-2 text-xs text-fog hover:text-fog"
                       >
                         {t.common.cancel}
                       </button>
@@ -255,21 +255,21 @@ export default function UserAnswersFeed({
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
                         placeholder={t.problem.replyPlaceholder}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm resize-none"
+                        className="w-full bg-ink-800 border border-brass/20 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm resize-none"
                         rows={2}
                         maxLength={500}
                       />
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => { setReplyingToId(null); setReplyText(''); }}
-                          className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold"
+                          className="px-3 py-1.5 bg-ink-600 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold"
                         >
                           {t.common.cancel}
                         </button>
                         <button
                           onClick={() => handleSubmitReply(answer.id)}
                           disabled={!replyText.trim() || isSubmittingReply}
-                          className="px-3 py-1.5 bg-teal-500 hover:bg-teal-600 disabled:opacity-50 text-white rounded-lg text-xs font-semibold"
+                          className="px-3 py-1.5 bg-brass hover:bg-brass-600 disabled:opacity-50 text-white rounded-lg text-xs font-semibold"
                         >
                           {isSubmittingReply ? '...' : t.problem.writeReply}
                         </button>
@@ -282,20 +282,20 @@ export default function UserAnswersFeed({
                     <div className="mt-3">
                       <button
                         onClick={() => toggleReplies(answer.id)}
-                        className="text-xs text-slate-400 hover:text-teal-400 flex items-center gap-1"
+                        className="text-xs text-fog hover:text-brass flex items-center gap-1"
                       >
                         <i className={`ri-arrow-${isExpanded ? 'up' : 'down'}-s-line`}></i>
                         {lang === 'ko' ? `답글 ${replies.length}개` : `${replies.length} replies`}
                       </button>
                       {isExpanded && (
-                        <div className="mt-2 space-y-2 pl-4 border-l-2 border-slate-700">
+                        <div className="mt-2 space-y-2 pl-4 border-l-2 border-brass/20">
                           {replies.map((reply) => (
                             <div key={reply.id} className="text-sm">
-                              <span className="font-semibold text-slate-300">{reply.nickname}</span>
-                              <span className="text-slate-500 text-xs ml-2">
+                              <span className="font-semibold text-fog">{reply.nickname}</span>
+                              <span className="text-fog-dim text-xs ml-2">
                                 {new Date(reply.created_at).toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US')}
                               </span>
-                              <p className="text-slate-300 mt-0.5 break-words">{reply.text}</p>
+                              <p className="text-fog mt-0.5 break-words">{reply.text}</p>
                             </div>
                           ))}
                         </div>

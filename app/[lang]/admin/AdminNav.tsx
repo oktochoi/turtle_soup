@@ -19,7 +19,7 @@ export default function AdminNav() {
       <div className="sticky top-4 space-y-2">
         <Link
           href={`/${lang}`}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 transition-colors text-sm"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-fog hover:text-white hover:bg-ink-600/50 transition-colors text-sm"
         >
           <i className="ri-arrow-left-line"></i>
           {lang === 'ko' ? '홈으로' : 'Home'}
@@ -33,8 +33,8 @@ export default function AdminNav() {
                 href={item.href}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-teal-500/20 text-teal-400 border border-teal-500/50'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                    ? 'bg-brass/20 text-brass border border-brass/50'
+                    : 'text-fog hover:text-white hover:bg-ink-600/50'
                 }`}
               >
                 <i className={`${item.icon} text-lg`}></i>

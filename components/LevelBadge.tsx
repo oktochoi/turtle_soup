@@ -29,8 +29,8 @@ export default function LevelBadge({
 
   // 레벨에 따른 색상
   const getLevelColor = (lvl: number) => {
-    if (lvl >= 50) return 'from-purple-500 to-pink-500';
-    if (lvl >= 30) return 'from-blue-500 to-cyan-500';
+    if (lvl >= 50) return 'from-brass to-brass-600';
+    if (lvl >= 30) return 'from-blue-500 to-brass-600';
     if (lvl >= 20) return 'from-green-500 to-emerald-500';
     if (lvl >= 10) return 'from-yellow-500 to-orange-500';
     return 'from-slate-500 to-slate-600';
@@ -45,7 +45,7 @@ export default function LevelBadge({
         <span>{level}</span>
       </span>
       {showXP && currentXP > 0 && (
-        <span className="text-xs text-slate-400">
+        <span className="text-xs text-fog">
           +{currentXP} XP
         </span>
       )}

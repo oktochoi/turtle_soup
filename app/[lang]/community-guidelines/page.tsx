@@ -50,17 +50,17 @@ export default async function CommunityGuidelinesPage({
   const lastUpdated = '2025-01-17';
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <main className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 max-w-4xl">
-        <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 lg:p-10 border border-slate-700 shadow-xl">
-          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+        <div className="bg-ink-700/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 lg:p-10 border border-brass/20 shadow-xl">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-brass-300 to-brass bg-clip-text text-transparent">
             {isKo ? '커뮤니티 가이드라인' : 'Community Guidelines'}
           </h1>
-          <p className="text-slate-400 text-sm mb-8">
+          <p className="text-fog text-sm mb-8">
             {isKo ? '최종 업데이트' : 'Last updated'}: {lastUpdated}
           </p>
 
-          <div className="prose prose-invert max-w-none space-y-8 text-slate-300">
+          <div className="prose prose-invert max-w-none space-y-8 text-fog">
             <section>
               <p className="mb-4 text-lg">
                 {isKo
@@ -70,7 +70,7 @@ export default async function CommunityGuidelinesPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '1. 금지 행위' : '1. Prohibited Acts'}
               </h2>
               <div className="space-y-4">
@@ -149,7 +149,7 @@ export default async function CommunityGuidelinesPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '2. 신고 기능' : '2. Reporting Function'}
               </h2>
               <p className="mb-4">
@@ -177,7 +177,7 @@ export default async function CommunityGuidelinesPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '3. 제재 조치' : '3. Disciplinary Actions'}
               </h2>
               <p className="mb-4">
@@ -185,7 +185,7 @@ export default async function CommunityGuidelinesPage({
                   ? '가이드라인을 위반한 경우 다음과 같은 제재 조치가 취해질 수 있습니다.'
                   : 'If guidelines are violated, the following disciplinary actions may be taken.'}
               </p>
-              <div className="bg-slate-900/50 rounded-lg p-4 space-y-3">
+              <div className="bg-ink-800/50 rounded-lg p-4 space-y-3">
                 <div>
                   <h3 className="font-semibold text-yellow-400 mb-1">
                     {isKo ? '1차 경고' : 'First Warning'}
@@ -230,7 +230,7 @@ export default async function CommunityGuidelinesPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '4. 건전한 커뮤니티를 위한 권장 사항' : '4. Recommendations for a Healthy Community'}
               </h2>
               <ul className="list-disc pl-6 space-y-2">
@@ -263,7 +263,7 @@ export default async function CommunityGuidelinesPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '5. 문의 및 제안' : '5. Inquiries and Suggestions'}
               </h2>
               <p className="mb-4">
@@ -274,7 +274,7 @@ export default async function CommunityGuidelinesPage({
               <div className="flex flex-wrap gap-3">
                 <Link
                   href={`/${locale}/contact`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-teal-500/20 text-teal-400 border border-teal-500/50 rounded-lg hover:bg-teal-500/30 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-brass/20 text-brass border border-brass/50 rounded-lg hover:bg-brass/30 transition-colors"
                 >
                   <i className="ri-mail-line"></i>
                   <span>{isKo ? '문의하기' : 'Contact Us'}</span>
@@ -282,8 +282,8 @@ export default async function CommunityGuidelinesPage({
               </div>
             </section>
 
-            <section className="bg-teal-500/10 border border-teal-500/30 rounded-lg p-6">
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+            <section className="bg-brass/10 border border-brass/30 rounded-lg p-6">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '함께 만들어가는 건강한 커뮤니티' : 'Building a Healthy Community Together'}
               </h2>
               <p>

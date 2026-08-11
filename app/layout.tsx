@@ -1,39 +1,29 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Pacifico } from "next/font/google";
+import { Noto_Serif_KR, IBM_Plex_Sans_KR } from "next/font/google";
 import "./globals.css";
 
-const pacifico = Pacifico({
-  weight: '400',
+const display = Noto_Serif_KR({
+  weight: ['500', '700'],
   subsets: ['latin'],
   display: 'swap',
   preload: true,
-  variable: '--font-pacifico',
+  variable: '--font-display',
 });
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-  display: "swap",
+const body = IBM_Plex_Sans_KR({
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  display: 'swap',
   preload: true,
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  display: "swap",
-  preload: true,
+  variable: '--font-body',
 });
 
 const SITE_URL = "https://turtle-soup-rust.vercel.app";
 
-// 루트 레이아웃 - middleware가 /를 /ko로 리다이렉트하므로 여기는 거의 사용되지 않음
-// 실제 레이아웃은 app/[lang]/layout.tsx에서 처리됨
-// 하지만 Next.js는 루트 레이아웃에 <html>과 <body> 태그를 요구함
-
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "퀴즈천국",
-  description: "생각할수록 빠져드는 퀴즈 놀이터",
+  title: "바다거북스프",
+  description: "질문으로 비밀을 푸는 추리 퀴즈",
   icons: {
     icon: [
       { url: "/favicon.ico", type: "image/x-icon" },
@@ -43,23 +33,23 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    title: "퀴즈천국",
-    description: "밸런스 게임 · 심리 퀴즈 · 선택의 재미",
+    title: "바다거북스프",
+    description: "질문으로 비밀을 푸는 추리 퀴즈",
     url: SITE_URL,
-    siteName: "퀴즈천국",
+    siteName: "바다거북스프",
     images: [
       {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "퀴즈천국",
+        alt: "바다거북스프",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "퀴즈천국",
-    description: "밸런스 게임 · 심리 퀴즈 · 선택의 재미",
+    title: "바다거북스프",
+    description: "질문으로 비밀을 푸는 추리 퀴즈",
     images: ["/og.png"],
   },
 };
@@ -73,7 +63,6 @@ export default function RootLayout({
     <html lang="ko" suppressHydrationWarning={true}>
       <head>
         <meta name="google-adsense-account" content="ca-pub-4462339094246168" />
-        {/* GSC/GA4 placeholders: 실제 ID로 교체 시 측정 신호 활성화 */}
         <meta name="google-site-verification" content="4j3cTkVACL2lF9s0CFfg6x9kHsVdndQdbKI5atxdBGQ" />
         <meta name="google-site-verification" content="GSC_VERIFICATION_TOKEN" />
         <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID" />
@@ -88,9 +77,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${pacifico.variable} antialiased`}
-      >
+      <body className={`${display.variable} ${body.variable} antialiased`}>
         {children}
       </body>
     </html>

@@ -31,7 +31,7 @@ export default function GuessInput({ onSubmit, hasSubmitted, userGuess }: GuessI
           <i className="ri-checkbox-circle-line text-green-400 text-xl sm:text-2xl"></i>
         </div>
         <h3 className="font-semibold text-green-400 mb-1 text-xs sm:text-sm">{t.room.correctAnswer}</h3>
-        <p className="text-xs sm:text-sm text-slate-400">{t.room.congrats}</p>
+        <p className="text-xs sm:text-sm text-fog">{t.room.congrats}</p>
       </div>
     );
   }
@@ -40,14 +40,14 @@ export default function GuessInput({ onSubmit, hasSubmitted, userGuess }: GuessI
   const showStatusMessage = hasSubmitted && userGuess?.judged && !userGuess.correct;
 
   return (
-    <div className="bg-slate-800 rounded-xl p-3 sm:p-4 border border-slate-700">
+    <div className="bg-ink-700 rounded-xl p-3 sm:p-4 border border-brass/20">
       {showStatusMessage && (
         <div className="bg-gradient-to-br from-red-500/10 to-rose-500/10 rounded-lg p-3 mb-3 sm:mb-4 border border-red-500/30">
           <div className="flex items-center gap-2">
             <i className="ri-close-circle-line text-red-400 text-sm sm:text-base"></i>
             <div>
               <h4 className="font-semibold text-red-400 text-xs sm:text-sm">{t.room.wrongAnswer}</h4>
-              <p className="text-xs text-slate-400">{t.room.thinkAgain}</p>
+              <p className="text-xs text-fog">{t.room.thinkAgain}</p>
             </div>
           </div>
         </div>
@@ -58,7 +58,7 @@ export default function GuessInput({ onSubmit, hasSubmitted, userGuess }: GuessI
             <i className="ri-check-double-line text-purple-400 text-sm sm:text-base"></i>
             <div>
               <h4 className="font-semibold text-purple-400 text-xs sm:text-sm">{t.room.answerSubmitted}</h4>
-              <p className="text-xs text-slate-400">{t.room.waitForJudgment}</p>
+              <p className="text-xs text-fog">{t.room.waitForJudgment}</p>
             </div>
           </div>
         </div>
@@ -73,15 +73,15 @@ export default function GuessInput({ onSubmit, hasSubmitted, userGuess }: GuessI
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={t.room.guessPlaceholder}
-        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none h-24 sm:h-32 text-xs sm:text-sm mb-2 sm:mb-3"
+        className="w-full bg-ink-800 border border-brass/20 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none h-24 sm:h-32 text-xs sm:text-sm mb-2 sm:mb-3"
         maxLength={500}
       />
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-slate-500">{text.length} / 500</span>
+        <span className="text-xs text-fog-dim">{text.length} / 500</span>
         <button
           onClick={handleSubmit}
           disabled={!text.trim()}
-          className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 sm:px-6 py-2 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm whitespace-nowrap"
+          className="bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white px-4 sm:px-6 py-2 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm whitespace-nowrap"
         >
           <i className="ri-send-plane-fill mr-1"></i>
           {t.room.submit}

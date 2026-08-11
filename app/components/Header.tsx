@@ -1,26 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/hooks/useAuth';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
 import NotificationBell from '../components/NotificationBell';
 import { useTranslations } from '@/hooks/useTranslations';
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { user, isLoading: authLoading } = useAuth();
   const t = useTranslations();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userNickname, setUserNickname] = useState<string | null>(null);
   const [gameUserId, setGameUserId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  
-  // 현재 언어 추출
+
   const currentLang = pathname?.split('/')[1] || 'ko';
 
   useEffect(() => {
@@ -32,45 +29,37 @@ export default function Header() {
 
       try {
         const supabase = createClient();
-        // game_users 테이블에서 유저 정보 가져오기
         const { data: gameUser, error: gameUserError } = await supabase
           .from('game_users')
           .select('id, nickname')
           .eq('auth_user_id', user.id)
           .maybeSingle();
-        
+
         if (gameUserError) {
           console.error('게임 유저 로드 오류:', gameUserError);
         }
-        
+
         if (gameUser) {
           setGameUserId(gameUser.id);
           setUserNickname(gameUser.nickname);
         } else {
-          // game_users에 없으면 public.users에서 확인
           const { data: userProfile, error: profileError } = await supabase
             .from('users')
             .select('nickname')
             .eq('id', user.id)
             .maybeSingle();
-          
+
           if (profileError) {
             console.error('프로필 로드 오류:', profileError);
           }
-          
-          if (userProfile?.nickname) {
-            setUserNickname(userProfile.nickname);
-          } else {
-            // 닉네임이 없으면 기본값 사용
-            setUserNickname(currentLang === 'ko' ? '사용자' : 'User');
-          }
+
+          setUserNickname(userProfile?.nickname || '사용자');
         }
       } catch (error: any) {
-        // AbortError는 무해한 에러이므로 무시 (컴포넌트 언마운트 시 발생 가능)
         if (error?.name !== 'AbortError' && error?.message?.includes('aborted') === false) {
           console.error('프로필 로드 오류:', error);
         }
-        setUserNickname(currentLang === 'ko' ? '사용자' : 'User');
+        setUserNickname('사용자');
       }
     };
 
@@ -92,7 +81,7 @@ export default function Header() {
           .eq('id', user.id)
           .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') { // PGRST116은 "no rows returned" 에러 (정상)
+        if (error && error.code !== 'PGRST116') {
           console.error('관리자 권한 확인 오류:', error.message || error);
           setIsAdmin(false);
           return;
@@ -100,7 +89,6 @@ export default function Header() {
 
         setIsAdmin(userData?.is_admin || false);
       } catch (error: any) {
-        // AbortError는 무해한 에러이므로 무시
         if (error?.name !== 'AbortError' && error?.message?.includes('aborted') === false) {
           console.error('관리자 권한 확인 오류:', error?.message || error);
         }
@@ -114,20 +102,17 @@ export default function Header() {
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    // useAuth 훅이 자동으로 인증 상태를 업데이트합니다
     router.push(`/${currentLang}`);
     router.refresh();
   };
 
-  const isActive = (path: string, isNoticeLink?: boolean) => {
+  const isActive = (path: string) => {
     const pathWithoutQuery = path.split('?')[0];
     const pathWithLang = `/${currentLang}${pathWithoutQuery === '/' ? '' : pathWithoutQuery}`;
     if (pathWithoutQuery === '/') {
       return pathname === `/${currentLang}` || pathname === `/${currentLang}/`;
     }
-    const pathMatches = pathname?.startsWith(pathWithLang);
-    const category = searchParams.get('category');
-    return pathMatches;
+    return pathname?.startsWith(pathWithLang);
   };
 
   const getLocalizedPath = (path: string) => {
@@ -135,219 +120,161 @@ export default function Header() {
   };
 
   const navLinks = [
-    { href: '/rooms', label: t.nav.multiplayer, activeColor: 'bg-teal-500' },
-    { href: '/play', label: t.nav.problems, activeColor: 'bg-purple-500' },
-    { href: '/create-problem', label: t.nav.playGame, activeColor: 'bg-pink-500' },
-    { href: '/ranking', label: t.nav.ranking, activeColor: 'bg-yellow-500' },
-    { href: '/guide', label: t.nav.tutorial, activeColor: 'bg-cyan-500' },
+    { href: '/problems', label: '문제' },
+    { href: '/rooms', label: t.nav.multiplayer },
+    { href: '/ranking', label: t.nav.ranking },
+    { href: '/guide', label: t.nav.tutorial },
   ];
 
   return (
-    <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-50">
-      <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
-        <div className="flex items-center justify-between">
-          <Link href={getLocalizedPath('/')} className="flex items-center gap-2" aria-label={currentLang === 'ko' ? '홈으로' : 'Home'}>
-            <i className="ri-question-line text-teal-400 text-xl sm:text-2xl" aria-hidden></i>
+    <header className="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/90 backdrop-blur-md">
+      <div className="page-shell py-3 sm:py-4">
+        <div className="flex items-center justify-between gap-4">
+          <Link
+            href={getLocalizedPath('/')}
+            className="group flex items-center gap-2 min-w-0"
+            aria-label="홈으로"
+          >
+            <i className="ri-question-line text-teal-400 text-xl sm:text-2xl" aria-hidden />
             <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
-              {currentLang === 'ko' ? '바다거북스프' : 'Lateral Thinking Mystery Puzzles'}
+              바다거북스프
             </span>
           </Link>
-          
-          {/* 데스크톱 네비게이션 */}
-          <nav className="hidden md:flex items-center gap-2 lg:gap-3" aria-label={currentLang === 'ko' ? '메인 메뉴' : 'Main navigation'}>
+
+          <nav className="hidden md:flex items-center gap-1" aria-label="메인 메뉴">
             {navLinks.map((link) => (
-              <Link key={link.href} href={getLocalizedPath(link.href)} aria-label={link.label}>
-                <button
-                  type="button"
-                  className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all ${
-                    isActive(link.href)
-                      ? `${link.activeColor} text-white`
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                  }`}
-                >
-                  {link.label}
-                </button>
+              <Link
+                key={link.href}
+                href={getLocalizedPath(link.href)}
+                className={isActive(link.href) ? 'nav-link-active' : 'nav-link'}
+              >
+                {link.label}
               </Link>
             ))}
-            
-            {/* 언어 전환 버튼 */}
-            <LanguageSwitcher />
-            
-            {/* 알림 벨 */}
+
             {user && <NotificationBell lang={currentLang} />}
-            
-            {/* 로그인/로그아웃 버튼 (CLS 방지: 영역 높이 고정) */}
+
             {authLoading ? (
-              <div className="min-h-[40px] flex items-center px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold bg-slate-800 text-slate-400 ml-2">
-                <i className="ri-loader-4-line animate-spin" aria-hidden></i>
+              <div className="ml-2 flex h-10 w-10 items-center justify-center text-slate-400">
+                <i className="ri-loader-4-line animate-spin" aria-hidden />
               </div>
             ) : user ? (
-              <div className="min-h-[40px] flex items-center gap-3 ml-2">
+              <div className="ml-2 flex items-center gap-2">
                 {isAdmin && (
-                  <div className="flex items-center gap-2">
-                    <Link href={getLocalizedPath('/admin/dashboard')}>
-                      <button className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-teal-500/20 text-teal-400 border border-teal-500/50 hover:bg-teal-500/30">
-                        <i className="ri-dashboard-line mr-1"></i>
-                        {currentLang === 'ko' ? '대시보드' : 'Dashboard'}
-                      </button>
-                    </Link>
-                    <Link href={getLocalizedPath('/admin/reports')}>
-                      <button className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30">
-                        <i className="ri-shield-user-line mr-1"></i>
-                        {currentLang === 'ko' ? '신고 관리' : 'Reports'}
-                      </button>
-                    </Link>
-                    <Link href={getLocalizedPath('/admin/bug-reports')}>
-                      <button className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-purple-500/20 text-purple-400 border border-purple-500/50 hover:bg-purple-500/30">
-                        <i className="ri-bug-line mr-1"></i>
-                        {currentLang === 'ko' ? '버그 리포트' : 'Bug Reports'}
-                      </button>
-                    </Link>
-                  </div>
-                )}
-                {gameUserId && (
-                  <Link href={getLocalizedPath(`/profile/${gameUserId}`)}>
-                    <button className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-slate-800 text-slate-300 hover:bg-slate-700">
-                      {t.common.myPage}
-                    </button>
+                  <Link href={getLocalizedPath('/admin/dashboard')} className="nav-link text-teal-300">
+                    관리
                   </Link>
                 )}
-                <span className="text-sm text-slate-300 font-medium">
-                  {userNickname || (currentLang === 'ko' ? '사용자' : 'User')}{currentLang === 'ko' ? '님' : ''}
-                </span>
-                <button
-                  onClick={handleSignOut}
-                  className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30"
-                >
+                {gameUserId && (
+                  <Link href={getLocalizedPath(`/profile/${gameUserId}`)} className="nav-link">
+                    {t.common.myPage}
+                  </Link>
+                )}
+                <span className="hidden lg:inline text-sm text-slate-400">{userNickname || '사용자'}</span>
+                <button type="button" onClick={handleSignOut} className="btn-ghost !py-1.5 !px-3 text-xs">
                   {t.common.logout}
                 </button>
               </div>
             ) : (
-              <div className="min-h-[40px] flex items-center ml-2">
-                <Link href={getLocalizedPath('/auth/login')}>
-                  <button className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg text-sm font-semibold transition-all bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600">
-                    {t.common.login}
-                  </button>
-                </Link>
-              </div>
+              <Link href={getLocalizedPath('/auth/login')} className="btn-primary ml-2 !py-1.5 !px-4 text-xs">
+                {t.common.login}
+              </Link>
             )}
           </nav>
 
-          {/* 모바일 햄버거 버튼 */}
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all"
-            aria-label={isMobileMenuOpen ? (currentLang === 'ko' ? '메뉴 닫기' : 'Close menu') : (currentLang === 'ko' ? '메뉴 열기' : 'Open menu')}
+            className="md:hidden btn-ghost !p-2"
+            aria-label={isMobileMenuOpen ? '메뉴 닫기' : '메뉴 열기'}
             aria-expanded={isMobileMenuOpen}
             aria-controls="mobile-nav"
           >
-            <i className={`ri-${isMobileMenuOpen ? 'close' : 'menu'}-line text-xl`} aria-hidden></i>
+            <i className={`ri-${isMobileMenuOpen ? 'close' : 'menu'}-line text-xl`} aria-hidden />
           </button>
         </div>
 
-        {/* 모바일 메뉴 */}
         {isMobileMenuOpen && (
-          <nav id="mobile-nav" className="md:hidden mt-4 pb-2 border-t border-slate-700 pt-4" aria-label={currentLang === 'ko' ? '모바일 메뉴' : 'Mobile menu'}>
-            <div className="flex flex-col gap-2">
+          <nav
+            id="mobile-nav"
+            className="md:hidden mt-4 border-t border-slate-800 pt-4"
+            aria-label="모바일 메뉴"
+          >
+            <div className="flex flex-col gap-1">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={getLocalizedPath(link.href)}
                   onClick={() => setIsMobileMenuOpen(false)}
+                  className={isActive(link.href) ? 'nav-link-active' : 'nav-link'}
                 >
-                  <button
-                    type="button"
-                    className={`w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left ${
-                      isActive(link.href)
-                        ? `${link.activeColor} text-white`
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                    }`}
-                    aria-label={link.label}
-                  >
-                    {link.label}
-                  </button>
+                  {link.label}
                 </Link>
               ))}
-              
-              {/* 모바일 로그인/로그아웃 버튼 */}
-              <div className="border-t border-slate-700 pt-2 mt-2 min-h-[44px]">
-                {authLoading ? (
-                  <div className="px-4 py-3 text-sm text-slate-400 text-center min-h-[44px] flex items-center justify-center">
-                    <i className="ri-loader-4-line animate-spin" aria-hidden></i>
-                  </div>
-                ) : user ? (
-                  <>
-                    {isAdmin && (
-                      <>
-                        <Link
-                          href={getLocalizedPath('/admin/dashboard')}
-                          onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                          <button className="w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left bg-teal-500/20 text-teal-400 border border-teal-500/50 hover:bg-teal-500/30 mb-2">
-                            <i className="ri-dashboard-line mr-2"></i>
-                            {currentLang === 'ko' ? '대시보드' : 'Dashboard'}
-                          </button>
-                        </Link>
-                        <Link
-                          href={getLocalizedPath('/admin/reports')}
-                          onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                          <button className="w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30 mb-2">
-                            <i className="ri-shield-user-line mr-2"></i>
-                            {currentLang === 'ko' ? '신고 관리' : 'Reports'}
-                          </button>
-                        </Link>
-                        <Link
-                          href={getLocalizedPath('/admin/bug-reports')}
-                          onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                          <button className="w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left bg-purple-500/20 text-purple-400 border border-purple-500/50 hover:bg-purple-500/30 mb-2">
-                            <i className="ri-bug-line mr-2"></i>
-                            {currentLang === 'ko' ? '버그 리포트' : 'Bug Reports'}
-                          </button>
-                        </Link>
-                      </>
-                    )}
-                    {gameUserId && (
+
+              <div className="divider my-3" />
+
+              {authLoading ? (
+                <div className="px-3 py-3 text-slate-400 text-center">
+                  <i className="ri-loader-4-line animate-spin" aria-hidden />
+                </div>
+              ) : user ? (
+                <>
+                  {isAdmin && (
+                    <>
                       <Link
-                        href={getLocalizedPath(`/profile/${gameUserId}`)}
+                        href={getLocalizedPath('/admin/dashboard')}
                         onClick={() => setIsMobileMenuOpen(false)}
+                        className="nav-link"
                       >
-                        <button className="w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left bg-slate-800 text-slate-300 hover:bg-slate-700 mb-2">
-                          {t.common.myPage}
-                        </button>
+                        대시보드
                       </Link>
-                    )}
-                    <div className="px-4 py-2 text-sm text-slate-300 font-medium">
-                      {userNickname || (currentLang === 'ko' ? '사용자' : 'User')}{currentLang === 'ko' ? '님' : ''}
-                    </div>
-                    <button
-                      onClick={() => {
-                        handleSignOut();
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30"
-                    >
-                      {t.common.logout}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div className="px-4 py-2 mb-2">
-                      <LanguageSwitcher />
-                    </div>
+                      <Link
+                        href={getLocalizedPath('/admin/reports')}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="nav-link"
+                      >
+                        신고 관리
+                      </Link>
+                      <Link
+                        href={getLocalizedPath('/admin/bug-reports')}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="nav-link"
+                      >
+                        버그 리포트
+                      </Link>
+                    </>
+                  )}
+                  {gameUserId && (
                     <Link
-                      href={getLocalizedPath('/auth/login')}
+                      href={getLocalizedPath(`/profile/${gameUserId}`)}
                       onClick={() => setIsMobileMenuOpen(false)}
+                      className="nav-link"
                     >
-                      <button className="w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600">
-                        {t.common.login}
-                      </button>
+                      {t.common.myPage}
                     </Link>
-                  </>
-                )}
-              </div>
+                  )}
+                  <p className="px-3 py-2 text-sm text-slate-400">{userNickname || '사용자'}님</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSignOut();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="btn-danger w-full justify-start"
+                  >
+                    {t.common.logout}
+                  </button>
+                </>
+              ) : (
+                <Link
+                  href={getLocalizedPath('/auth/login')}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="btn-primary w-full"
+                >
+                  {t.common.login}
+                </Link>
+              )}
             </div>
           </nav>
         )}
@@ -355,4 +282,3 @@ export default function Header() {
     </header>
   );
 }
-

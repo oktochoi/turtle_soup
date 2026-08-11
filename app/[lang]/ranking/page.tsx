@@ -364,26 +364,26 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
     if (rank === 1) return 'from-yellow-500/20 to-yellow-600/20 border-yellow-500/50';
     if (rank === 2) return 'from-slate-400/20 to-slate-500/20 border-slate-400/50';
     if (rank === 3) return 'from-orange-600/20 to-orange-700/20 border-orange-600/50';
-    return 'from-slate-800/50 to-slate-800/50 border-slate-700';
+    return 'from-slate-800/50 to-slate-800/50 border-brass/20';
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
-          <p className="text-slate-400">{t.ranking.loading}</p>
+          <p className="text-fog">{t.ranking.loading}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-4xl">
         <div className="mb-6">
           <Link href={`/${lang}`}>
-            <button className="text-slate-400 hover:text-white transition-colors text-xs sm:text-sm">
+            <button className="text-fog hover:text-white transition-colors text-xs sm:text-sm">
               <i className="ri-arrow-left-line mr-2"></i>
               {t.common.back}
             </button>
@@ -394,11 +394,11 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
             {t.ranking.title}
           </h1>
-          <p className="text-slate-400 text-sm sm:text-base">{t.ranking.description}</p>
+          <p className="text-fog text-sm sm:text-base">{t.ranking.description}</p>
         </div>
 
         {/* 탭 */}
-        <div className="flex flex-wrap gap-2 mb-6 bg-slate-800/50 rounded-lg p-1 border border-slate-700">
+        <div className="flex flex-wrap gap-2 mb-6 bg-ink-700/50 rounded-lg p-1 border border-brass/20">
           <button
             onClick={() => {
               setActiveTab('solves');
@@ -406,8 +406,8 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
             }}
             className={`flex-1 min-w-0 py-2 px-3 sm:px-4 rounded-md transition-all font-medium text-sm sm:text-base ${
               activeTab === 'solves'
-                ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-lg'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-gradient-to-r from-brass to-brass-600 text-white shadow-lg'
+                : 'text-fog hover:text-white'
             }`}
           >
             <i className="ri-checkbox-circle-line mr-1 sm:mr-2"></i>
@@ -420,8 +420,8 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
             }}
             className={`flex-1 min-w-0 py-2 px-3 sm:px-4 rounded-md transition-all font-medium text-sm sm:text-base ${
               activeTab === 'hearts'
-                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-gradient-to-r from-brass to-brass-600 text-white shadow-lg'
+                : 'text-fog hover:text-white'
             }`}
           >
             <i className="ri-heart-line mr-1 sm:mr-2"></i>
@@ -435,7 +435,7 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
             className={`flex-1 min-w-0 py-2 px-3 sm:px-4 rounded-md transition-all font-medium text-sm sm:text-base ${
               activeTab === 'follows'
                 ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg'
-                : 'text-slate-400 hover:text-white'
+                : 'text-fog hover:text-white'
             }`}
           >
             <i className="ri-user-follow-line mr-1 sm:mr-2"></i>
@@ -448,7 +448,7 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
           <div className="space-y-3">
             {/* 자신의 등수 표시 */}
             {myRank && myRank.data && 'solve_count' in myRank.data && (
-              <div className="bg-gradient-to-r from-teal-500/20 to-cyan-500/20 rounded-xl p-4 border border-teal-500/50 backdrop-blur-sm mb-4">
+              <div className="bg-gradient-to-r from-brass/20 to-brass-600/20 rounded-xl p-4 border border-brass/50 backdrop-blur-sm mb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <span className="text-2xl font-bold text-white min-w-[3rem] text-center">
@@ -457,9 +457,9 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
                     <div>
                       <p className="text-lg font-semibold text-white flex items-center gap-2">
                         {(myRank.data as ProblemSolveRanking).nickname || (myRank.data as ProblemSolveRanking).user_id.substring(0, 8)}
-                        <span className="text-xs bg-teal-500/30 text-teal-300 px-2 py-0.5 rounded">나</span>
+                        <span className="text-xs bg-brass/30 text-brass-300 px-2 py-0.5 rounded">나</span>
                       </p>
-                      <p className="text-sm text-slate-400">
+                      <p className="text-sm text-fog">
                         {(myRank.data as ProblemSolveRanking).solve_count} {t.ranking.problems}
                       </p>
                     </div>
@@ -469,9 +469,9 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
             )}
             
             {solveRanking.length === 0 ? (
-              <div className="text-center py-12 bg-slate-800/50 rounded-xl border border-slate-700">
+              <div className="text-center py-12 bg-ink-700/50 rounded-xl border border-brass/20">
                 <i className="ri-inbox-line text-4xl text-slate-600 mb-4"></i>
-                <p className="text-slate-400">{t.ranking.noSolves}</p>
+                <p className="text-fog">{t.ranking.noSolves}</p>
               </div>
             ) : (
               <>
@@ -496,7 +496,7 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
                               <p className="text-lg font-semibold text-white">
                                 {userItem.nickname || userItem.user_id.substring(0, 8)}
                               </p>
-                              <p className="text-sm text-slate-400">
+                              <p className="text-sm text-fog">
                                 {userItem.solve_count} {t.ranking.problems}
                               </p>
                             </div>
@@ -512,17 +512,17 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
                     <button
                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                       disabled={currentPage === 1}
-                      className="px-4 py-2 bg-slate-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-all"
+                      className="px-4 py-2 bg-ink-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-ink-600 transition-all"
                     >
                       <i className="ri-arrow-left-line"></i>
                     </button>
-                    <span className="text-slate-400 px-4">
+                    <span className="text-fog px-4">
                       {currentPage} / {Math.ceil(solveRanking.length / ITEMS_PER_PAGE)}
                     </span>
                     <button
                       onClick={() => setCurrentPage(prev => Math.min(Math.ceil(solveRanking.length / ITEMS_PER_PAGE), prev + 1))}
                       disabled={currentPage >= Math.ceil(solveRanking.length / ITEMS_PER_PAGE)}
-                      className="px-4 py-2 bg-slate-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-all"
+                      className="px-4 py-2 bg-ink-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-ink-600 transition-all"
                     >
                       <i className="ri-arrow-right-line"></i>
                     </button>
@@ -549,7 +549,7 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
                         {(myRank.data as ProblemAuthorRanking).author}
                         <span className="text-xs bg-purple-500/30 text-purple-300 px-2 py-0.5 rounded">나</span>
                       </p>
-                      <p className="text-sm text-slate-400">
+                      <p className="text-sm text-fog">
                         <i className="ri-heart-fill text-red-400 mr-1"></i>
                         {(myRank.data as ProblemAuthorRanking).total_likes} {t.ranking.hearts} · {(myRank.data as ProblemAuthorRanking).problem_count} {t.ranking.problems}
                       </p>
@@ -560,9 +560,9 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
             )}
             
             {problemRanking.length === 0 ? (
-              <div className="text-center py-12 bg-slate-800/50 rounded-xl border border-slate-700">
+              <div className="text-center py-12 bg-ink-700/50 rounded-xl border border-brass/20">
                 <i className="ri-inbox-line text-4xl text-slate-600 mb-4"></i>
-                <p className="text-slate-400">{t.ranking.noHearts}</p>
+                <p className="text-fog">{t.ranking.noHearts}</p>
               </div>
             ) : (
               <>
@@ -585,7 +585,7 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
                             </span>
                             <div>
                               <p className="text-lg font-semibold text-white">{author.author}</p>
-                              <p className="text-sm text-slate-400">
+                              <p className="text-sm text-fog">
                                 <i className="ri-heart-fill text-red-400 mr-1"></i>
                                 {author.total_likes} {t.ranking.hearts} · {author.problem_count} {t.ranking.problems}
                               </p>
@@ -602,17 +602,17 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
                     <button
                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                       disabled={currentPage === 1}
-                      className="px-4 py-2 bg-slate-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-all"
+                      className="px-4 py-2 bg-ink-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-ink-600 transition-all"
                     >
                       <i className="ri-arrow-left-line"></i>
                     </button>
-                    <span className="text-slate-400 px-4">
+                    <span className="text-fog px-4">
                       {currentPage} / {Math.ceil(problemRanking.length / ITEMS_PER_PAGE)}
                     </span>
                     <button
                       onClick={() => setCurrentPage(prev => Math.min(Math.ceil(problemRanking.length / ITEMS_PER_PAGE), prev + 1))}
                       disabled={currentPage >= Math.ceil(problemRanking.length / ITEMS_PER_PAGE)}
-                      className="px-4 py-2 bg-slate-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-all"
+                      className="px-4 py-2 bg-ink-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-ink-600 transition-all"
                     >
                       <i className="ri-arrow-right-line"></i>
                     </button>
@@ -635,7 +635,7 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
                     </span>
                     <Link href={`/${lang}/profile/${myFollowRank.data.user_id}`} className="flex items-center gap-3 hover:opacity-90">
                       {myFollowRank.data.profile_image_url ? (
-                        <img src={myFollowRank.data.profile_image_url} alt="" className="w-10 h-10 rounded-full object-cover bg-slate-700" />
+                        <img src={myFollowRank.data.profile_image_url} alt="" className="w-10 h-10 rounded-full object-cover bg-ink-600" />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center text-white font-bold">
                           {myFollowRank.data.nickname.charAt(0).toUpperCase()}
@@ -646,7 +646,7 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
                           {myFollowRank.data.nickname}
                           <span className="text-xs bg-amber-500/30 text-amber-300 px-2 py-0.5 rounded">나</span>
                         </p>
-                        <p className="text-sm text-slate-400">
+                        <p className="text-sm text-fog">
                           <i className="ri-user-follow-line mr-1"></i>
                           {myFollowRank.data.follower_count} {t.ranking.followers}
                         </p>
@@ -657,9 +657,9 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
               </div>
             )}
             {followRanking.length === 0 ? (
-              <div className="text-center py-12 bg-slate-800/50 rounded-xl border border-slate-700">
+              <div className="text-center py-12 bg-ink-700/50 rounded-xl border border-brass/20">
                 <i className="ri-user-follow-line text-4xl text-slate-600 mb-4"></i>
-                <p className="text-slate-400">{t.ranking.noFollowers}</p>
+                <p className="text-fog">{t.ranking.noFollowers}</p>
               </div>
             ) : (
               <>
@@ -681,7 +681,7 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
                               {getRankIcon(rank)}
                             </span>
                             {item.profile_image_url ? (
-                              <img src={item.profile_image_url} alt="" className="w-10 h-10 rounded-full object-cover bg-slate-700" />
+                              <img src={item.profile_image_url} alt="" className="w-10 h-10 rounded-full object-cover bg-ink-600" />
                             ) : (
                               <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center text-white font-bold">
                                 {item.nickname.charAt(0).toUpperCase()}
@@ -689,13 +689,13 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
                             )}
                             <div>
                               <p className="text-lg font-semibold text-white">{item.nickname}</p>
-                              <p className="text-sm text-slate-400">
+                              <p className="text-sm text-fog">
                                 <i className="ri-user-follow-line mr-1"></i>
                                 {item.follower_count} {t.ranking.followers}
                               </p>
                             </div>
                           </div>
-                          <i className="ri-arrow-right-s-line text-slate-400 text-xl"></i>
+                          <i className="ri-arrow-right-s-line text-fog text-xl"></i>
                         </div>
                       </Link>
                     );
@@ -705,17 +705,17 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
                     <button
                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                       disabled={currentPage === 1}
-                      className="px-4 py-2 bg-slate-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-all"
+                      className="px-4 py-2 bg-ink-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-ink-600 transition-all"
                     >
                       <i className="ri-arrow-left-line"></i>
                     </button>
-                    <span className="text-slate-400 px-4">
+                    <span className="text-fog px-4">
                       {currentPage} / {Math.ceil(followRanking.length / ITEMS_PER_PAGE)}
                     </span>
                     <button
                       onClick={() => setCurrentPage(prev => Math.min(Math.ceil(followRanking.length / ITEMS_PER_PAGE), prev + 1))}
                       disabled={currentPage >= Math.ceil(followRanking.length / ITEMS_PER_PAGE)}
-                      className="px-4 py-2 bg-slate-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-all"
+                      className="px-4 py-2 bg-ink-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-ink-600 transition-all"
                     >
                       <i className="ri-arrow-right-line"></i>
                     </button>

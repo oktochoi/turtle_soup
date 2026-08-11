@@ -133,7 +133,7 @@ export default function NotificationBell({ lang }: { lang: string }) {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-slate-400 hover:text-white transition-colors"
+        className="relative p-2 text-fog hover:text-white transition-colors"
       >
         <i className="ri-notification-3-line text-xl"></i>
         {unreadCount > 0 && (
@@ -150,17 +150,17 @@ export default function NotificationBell({ lang }: { lang: string }) {
             onClick={() => setIsOpen(false)}
           ></div>
           <div 
-            className="absolute right-0 mt-2 w-80 sm:w-96 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 max-h-[80vh] overflow-hidden flex flex-col"
+            className="absolute right-0 mt-2 w-80 sm:w-96 bg-ink-700 border border-brass/20 rounded-xl shadow-xl z-50 max-h-[80vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+            <div className="p-4 border-b border-brass/20 flex items-center justify-between">
               <h3 className="font-semibold text-white">
                 {lang === 'ko' ? '알림' : 'Notifications'}
               </h3>
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="text-xs text-teal-400 hover:text-teal-300"
+                  className="text-xs text-brass hover:text-brass-300"
                 >
                   {lang === 'ko' ? '모두 읽음' : 'Mark all as read'}
                 </button>
@@ -169,11 +169,11 @@ export default function NotificationBell({ lang }: { lang: string }) {
 
             <div className="overflow-y-auto flex-1">
               {isLoading ? (
-                <div className="p-4 text-center text-slate-400">
+                <div className="p-4 text-center text-fog">
                   {lang === 'ko' ? '로딩 중...' : 'Loading...'}
                 </div>
               ) : notifications.length === 0 ? (
-                <div className="p-4 text-center text-slate-400">
+                <div className="p-4 text-center text-fog">
                   {lang === 'ko' ? '알림이 없습니다' : 'No notifications'}
                 </div>
               ) : (
@@ -182,8 +182,8 @@ export default function NotificationBell({ lang }: { lang: string }) {
                     <button
                       key={notification.id}
                       onClick={() => handleNotificationClick(notification)}
-                      className={`w-full p-4 text-left hover:bg-slate-700/50 transition-colors ${
-                        !notification.is_read ? 'bg-slate-700/30' : ''
+                      className={`w-full p-4 text-left hover:bg-ink-600/50 transition-colors ${
+                        !notification.is_read ? 'bg-ink-600/30' : ''
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -194,10 +194,10 @@ export default function NotificationBell({ lang }: { lang: string }) {
                           <p className="text-sm font-medium text-white mb-1">
                             {notification.title}
                           </p>
-                          <p className="text-xs text-slate-400 line-clamp-2">
+                          <p className="text-xs text-fog line-clamp-2">
                             {notification.message}
                           </p>
-                          <p className="text-xs text-slate-500 mt-1">
+                          <p className="text-xs text-fog-dim mt-1">
                             {new Date(notification.created_at).toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US', {
                               month: 'short',
                               day: 'numeric',

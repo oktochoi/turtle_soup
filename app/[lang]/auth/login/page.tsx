@@ -108,16 +108,16 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-brass-300 to-brass bg-clip-text text-transparent">
             {t.auth.login}
           </h1>
-          <p className="text-slate-400 text-sm">{t.auth.welcomeMessage}</p>
+          <p className="text-fog text-sm">{t.auth.welcomeMessage}</p>
         </div>
 
-        <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-slate-700 shadow-xl">
+        <div className="bg-ink-700/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-brass/20 shadow-xl">
           {error && (
             <div className="bg-red-500/10 border border-red-500/50 text-red-400 rounded-lg p-3 text-sm mb-6">
               {error}
@@ -166,7 +166,7 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
           {/* 이메일/비밀번호 로그인 폼 */}
           <form onSubmit={handleEmailLogin} className="mb-6 space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-fog mb-2">
                 {lang === 'ko' ? '이메일' : 'Email'}
               </label>
               <input
@@ -177,12 +177,12 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
                 placeholder={lang === 'ko' ? '이메일을 입력하세요' : 'Enter your email'}
                 required
                 disabled={isLoading}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-fog mb-2">
                 {lang === 'ko' ? '비밀번호' : 'Password'}
               </label>
               <input
@@ -193,14 +193,14 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
                 placeholder={lang === 'ko' ? '비밀번호를 입력하세요' : 'Enter your password'}
                 required
                 disabled={isLoading}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-ink-800 border border-brass/20 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-teal-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-teal-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center">
@@ -218,13 +218,13 @@ export default function LoginPage({ params }: { params: Promise<{ lang: string }
         </div>
 
         <div className="mt-6 text-center space-y-2">
-          <p className="text-slate-400 text-sm">
+          <p className="text-fog text-sm">
             {lang === 'ko' ? '계정이 없으신가요?' : "Don't have an account?"}{' '}
-            <Link href={`/${lang}/auth/signup`} className="text-teal-400 hover:text-teal-300 font-semibold transition-colors">
+            <Link href={`/${lang}/auth/signup`} className="text-brass hover:text-brass-300 font-semibold transition-colors">
               {lang === 'ko' ? '회원가입' : 'Sign Up'}
             </Link>
           </p>
-          <Link href={`/${lang}`} className="text-slate-400 hover:text-white text-sm transition-colors block">
+          <Link href={`/${lang}`} className="text-fog hover:text-white text-sm transition-colors block">
             <i className="ri-arrow-left-line mr-2"></i>
             {t.common.home}
           </Link>

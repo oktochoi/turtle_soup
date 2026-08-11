@@ -46,7 +46,7 @@ export default function AnswerInputSection({
 }: AnswerInputSectionProps) {
   const isCooldown = cooldownRemaining > 0;
   return (
-    <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
+    <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-brass/20">
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
           <i className="ri-checkbox-circle-line text-purple-400"></i>
@@ -73,7 +73,7 @@ export default function AnswerInputSection({
         </button>
       </div>
 
-      <p className="text-xs sm:text-sm text-slate-400 mb-3 sm:mb-4">
+      <p className="text-xs sm:text-sm text-fog mb-3 sm:mb-4">
         {t.problem.submitAnswerDescription}
       </p>
 
@@ -84,19 +84,19 @@ export default function AnswerInputSection({
           onChange={(e) => {
             onUserGuessChange(e.target.value);
           }}
-          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 h-24 sm:h-32 resize-none text-sm sm:text-base"
+          className="w-full bg-ink-800 border border-brass/20 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 h-24 sm:h-32 resize-none text-sm sm:text-base"
           maxLength={500}
         />
 
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-fog-dim">
             {userGuess.length} / 500
           </span>
 
           <button
             onClick={onSubmitAnswer}
             disabled={!userGuess.trim() || isCalculatingSimilarity || isCooldown}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 sm:px-6 py-2 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm whitespace-nowrap touch-manipulation"
+            className="bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white px-4 sm:px-6 py-2 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm whitespace-nowrap touch-manipulation"
           >
             {isCalculatingSimilarity ? (
               <>
@@ -172,7 +172,7 @@ export default function AnswerInputSection({
               </div>
             </div>
 
-            <p className="text-xs sm:text-sm text-slate-300 mt-2">
+            <p className="text-xs sm:text-sm text-fog mt-2">
               {similarityScore >= 80
                 ? t.problem.highMatchDesc
                 : similarityScore >= 60
@@ -187,7 +187,7 @@ export default function AnswerInputSection({
           hints &&
           Array.isArray(hints) &&
           hints.length > 0 && (
-            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
+            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-brass/20">
               <h3 className="text-sm sm:text-base font-semibold mb-3 text-yellow-400">
                 <i className="ri-lightbulb-line mr-2"></i>
                 {lang === 'ko' ? '힌트' : 'Hints'}
@@ -197,16 +197,16 @@ export default function AnswerInputSection({
                 {hints.map((hint, index) => (
                   <details key={index} className="group">
                     <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
-                      <div className="bg-slate-800/50 rounded-lg border border-slate-700 hover:border-yellow-500/30 transition-colors px-4 py-2.5 flex items-center justify-between">
-                        <span className="text-sm sm:text-base text-slate-300">
+                      <div className="bg-ink-700/50 rounded-lg border border-brass/20 hover:border-yellow-500/30 transition-colors px-4 py-2.5 flex items-center justify-between">
+                        <span className="text-sm sm:text-base text-fog">
                           <i className="ri-lightbulb-flash-line mr-2 text-yellow-400"></i>
                           {lang === 'ko' ? `힌트 ${index + 1}` : `Hint ${index + 1}`}
                         </span>
-                        <i className="ri-arrow-down-s-line text-slate-400 group-open:rotate-180 transition-transform"></i>
+                        <i className="ri-arrow-down-s-line text-fog group-open:rotate-180 transition-transform"></i>
                       </div>
                     </summary>
-                    <div className="px-4 pb-3 pt-2 border border-slate-700 border-t-0 rounded-b-lg bg-slate-800/50">
-                      <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                    <div className="px-4 pb-3 pt-2 border border-brass/20 border-t-0 rounded-b-lg bg-ink-700/50">
+                      <p className="text-xs sm:text-sm text-fog leading-relaxed">
                         {hint}
                       </p>
                     </div>
@@ -217,11 +217,11 @@ export default function AnswerInputSection({
           )}
 
         {/* 정답: details/summary로 HTML에 포함 (AdSense 인덱싱) + 접기(UX 스포일러 방지) */}
-        <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-700">
+        <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-brass/20">
           {problem && (
             <details className="group">
               <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
-                <div className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2.5 sm:py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation">
+                <div className="w-full bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white font-semibold py-2.5 sm:py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation">
                   <i className="ri-eye-line group-open:hidden"></i>
                   <i className="ri-eye-off-line hidden group-open:inline"></i>
                   <span className="group-open:hidden">{t.problem.showAnswer}</span>
@@ -243,16 +243,16 @@ export default function AnswerInputSection({
           {problem && (problem as any).explanation && (
             <details className="mt-4 sm:mt-6 group">
               <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
-                <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 hover:border-teal-500/30 transition-colors flex items-center justify-between">
-                  <span className="font-semibold text-teal-400 text-sm sm:text-base flex items-center gap-2">
+                <div className="bg-ink-700/60 backdrop-blur-sm rounded-xl p-4 border border-brass/20 hover:border-brass/30 transition-colors flex items-center justify-between">
+                  <span className="font-semibold text-brass text-sm sm:text-base flex items-center gap-2">
                     <i className="ri-book-open-line"></i>
                     {lang === 'ko' ? '해설 및 추리 포인트 보기' : 'View Explanation & Deduction Points'}
                   </span>
-                  <i className="ri-arrow-down-s-line text-xl text-slate-400 group-open:rotate-180 transition-transform"></i>
+                  <i className="ri-arrow-down-s-line text-xl text-fog group-open:rotate-180 transition-transform"></i>
                 </div>
               </summary>
-              <div className="mt-2 bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-slate-700/50 border-t-0 rounded-t-none">
-                <p className="text-xs sm:text-sm lg:text-base leading-relaxed whitespace-pre-wrap text-slate-300">
+              <div className="mt-2 bg-ink-700/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-brass/20 border-t-0 rounded-t-none">
+                <p className="text-xs sm:text-sm lg:text-base leading-relaxed whitespace-pre-wrap text-fog">
                   {(problem as any).explanation}
                 </p>
               </div>

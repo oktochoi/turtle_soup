@@ -1342,10 +1342,10 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
-          <p className="text-slate-400">{t.room.loadingRoom}</p>
+          <p className="text-fog">{t.room.loadingRoom}</p>
         </div>
       </div>
     );
@@ -1353,13 +1353,13 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center px-4">
-        <div className="bg-slate-800 rounded-2xl p-8 max-w-md w-full border border-slate-700 shadow-2xl text-center">
+      <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white flex items-center justify-center px-4">
+        <div className="bg-ink-700 rounded-2xl p-8 max-w-md w-full border border-brass/20 shadow-2xl text-center">
           <i className="ri-error-warning-line text-5xl text-red-400 mb-4"></i>
           <h2 className="text-2xl font-bold mb-2 text-white">{error}</h2>
           <button
             onClick={() => router.push(`/${lang}`)}
-            className="mt-6 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200"
+            className="mt-6 bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200"
           >
             {t.common.backToHome}
           </button>
@@ -1370,12 +1370,12 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
 
   if (showPasswordModal) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center px-4">
-        <div className="bg-slate-800 rounded-2xl p-6 sm:p-8 max-w-md w-full border border-slate-700 shadow-2xl">
+      <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white flex items-center justify-center px-4">
+        <div className="bg-ink-700 rounded-2xl p-6 sm:p-8 max-w-md w-full border border-brass/20 shadow-2xl">
           <div className="text-center mb-6">
-            <i className="ri-lock-line text-4xl sm:text-5xl text-teal-400 mb-4"></i>
+            <i className="ri-lock-line text-4xl sm:text-5xl text-brass mb-4"></i>
             <h2 className="text-xl sm:text-2xl font-bold mb-2">{t.room.password}</h2>
-            <p className="text-slate-400 text-sm">{t.room.passwordRequired}</p>
+            <p className="text-fog text-sm">{t.room.passwordRequired}</p>
           </div>
           {error && (
             <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm text-center">
@@ -1390,7 +1390,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
               setEnteredPassword(e.target.value);
               setError('');
             }}
-            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-4 text-sm"
+            className="w-full bg-ink-800 border border-brass/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-4 text-sm"
             onKeyPress={(e) => {
               if (e.key === 'Enter') {
                 handlePasswordSubmit();
@@ -1401,7 +1401,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
           <div className="flex gap-3">
             <button
               onClick={handlePasswordSubmit}
-              className="flex-1 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-xl transition-all duration-200"
+              className="flex-1 bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white font-semibold py-3 rounded-xl transition-all duration-200"
             >
               {t.common.confirm}
             </button>
@@ -1412,7 +1412,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
                 setError('');
                 router.push(`/${lang}/rooms`);
               }}
-              className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-xl transition-all duration-200"
+              className="flex-1 bg-ink-600 hover:bg-slate-600 text-white font-semibold py-3 rounded-xl transition-all duration-200"
             >
               {t.common.cancel}
             </button>
@@ -1424,15 +1424,15 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">
       <div className="container mx-auto px-3 sm:px-4 py-4 max-w-6xl">
         {/* 방 정보 카드 (생성 시간, 최근 대화 시간) */}
-        <div className="mb-3 sm:mb-4 bg-slate-800/50 backdrop-blur-md rounded-lg p-3 sm:p-4 border border-slate-700/50">
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-slate-400">
+        <div className="mb-3 sm:mb-4 bg-ink-700/50 backdrop-blur-md rounded-lg p-3 sm:p-4 border border-brass/20">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-fog">
             {roomCreatedAt && (
               <div className="flex items-center gap-1.5">
-                <i className="ri-time-line text-teal-400"></i>
-                <span className="text-slate-300">
+                <i className="ri-time-line text-brass"></i>
+                <span className="text-fog">
                   {lang === 'ko' ? '생성' : 'Created'}: {roomCreatedAt.toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US', {
                     year: 'numeric',
                     month: 'short',
@@ -1445,8 +1445,8 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
             )}
             {lastChatAt && (
               <div className="flex items-center gap-1.5">
-                <i className="ri-chat-3-line text-cyan-400"></i>
-                <span className="text-slate-300">
+                <i className="ri-chat-3-line text-brass"></i>
+                <span className="text-fog">
                   {lang === 'ko' ? '최근 대화' : 'Last Chat'}: {lastChatAt.toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US', {
                     year: 'numeric',
                     month: 'short',
@@ -1459,8 +1459,8 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
             )}
             {!lastChatAt && roomCreatedAt && (
               <div className="flex items-center gap-1.5">
-                <i className="ri-chat-3-line text-slate-500"></i>
-                <span className="text-slate-500">
+                <i className="ri-chat-3-line text-fog-dim"></i>
+                <span className="text-fog-dim">
                   {lang === 'ko' ? '아직 대화가 없습니다' : 'No chat yet'}
                 </span>
               </div>
@@ -1477,10 +1477,10 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
                   <i className="ri-group-line mr-2"></i>
                   {lang === 'ko' ? '친구 초대하기' : 'Invite Friends'}
                 </h3>
-                <div className="bg-slate-900/50 rounded-lg p-3 sm:p-4 border border-slate-700 mb-3">
+                <div className="bg-ink-800/50 rounded-lg p-3 sm:p-4 border border-brass/20 mb-3">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                     <div className="flex-1">
-                      <span className="text-xs sm:text-sm text-slate-400 block mb-1">{t.room.roomCode}</span>
+                      <span className="text-xs sm:text-sm text-fog block mb-1">{t.room.roomCode}</span>
                       <div className="font-mono font-bold text-green-400 text-2xl sm:text-3xl lg:text-4xl tracking-wider">
                         {roomCode}
                       </div>
@@ -1497,7 +1497,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={handleShareRoom}
-                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all text-xs sm:text-sm touch-manipulation active:scale-95"
+                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-ink-600/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all text-xs sm:text-sm touch-manipulation active:scale-95"
                   >
                     <i className="ri-link mr-1.5"></i>
                     {lang === 'ko' ? '링크 복사' : 'Copy Link'}
@@ -1515,18 +1515,18 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
                         handleShareRoom();
                       }
                     }}
-                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all text-xs sm:text-sm touch-manipulation active:scale-95"
+                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-ink-600/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all text-xs sm:text-sm touch-manipulation active:scale-95"
                   >
                     <i className="ri-share-line mr-1.5"></i>
                     {lang === 'ko' ? '공유하기' : 'Share'}
                   </button>
                 </div>
               </div>
-              <div className="bg-slate-800/50 rounded-lg p-3 sm:p-4 border border-slate-700 min-w-[120px] sm:min-w-[140px]">
+              <div className="bg-ink-700/50 rounded-lg p-3 sm:p-4 border border-brass/20 min-w-[120px] sm:min-w-[140px]">
                 <div className="text-center">
-                  <div className="text-xs sm:text-sm text-slate-400 mb-1">{lang === 'ko' ? '참가자' : 'Players'}</div>
-                  <div className="text-2xl sm:text-3xl font-bold text-teal-400">{players.length}</div>
-                  <div className="text-xs text-slate-500 mt-1">/ 8</div>
+                  <div className="text-xs sm:text-sm text-fog mb-1">{lang === 'ko' ? '참가자' : 'Players'}</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-brass">{players.length}</div>
+                  <div className="text-xs text-fog-dim mt-1">/ 8</div>
                 </div>
               </div>
             </div>
@@ -1536,30 +1536,30 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
         <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {!isHost && (
-              <div className="bg-slate-800 px-3 sm:px-4 py-2 rounded-lg border border-slate-700 flex items-center gap-2">
+              <div className="bg-ink-700 px-3 sm:px-4 py-2 rounded-lg border border-brass/20 flex items-center gap-2">
                 <div>
-                  <span className="text-slate-400 text-xs">{t.room.roomCode}</span>
-                  <div className="font-mono font-bold text-teal-400 text-base sm:text-lg">{roomCode}</div>
+                  <span className="text-fog text-xs">{t.room.roomCode}</span>
+                  <div className="font-mono font-bold text-brass text-base sm:text-lg">{roomCode}</div>
                 </div>
                 <button
                   onClick={handleCopyRoomCode}
-                  className="ml-2 p-1.5 hover:bg-slate-700 rounded-lg transition-colors touch-manipulation"
+                  className="ml-2 p-1.5 hover:bg-ink-600 rounded-lg transition-colors touch-manipulation"
                   title={t.room.copyRoomCode}
                 >
-                  <i className="ri-file-copy-line text-teal-400 text-sm"></i>
+                  <i className="ri-file-copy-line text-brass text-sm"></i>
                 </button>
                 <button
                   onClick={handleShareRoom}
-                  className="ml-2 p-1.5 hover:bg-slate-700 rounded-lg transition-colors touch-manipulation"
+                  className="ml-2 p-1.5 hover:bg-ink-600 rounded-lg transition-colors touch-manipulation"
                   title={t.room.shareRoomLink}
                 >
-                  <i className="ri-share-line text-teal-400 text-sm"></i>
+                  <i className="ri-share-line text-brass text-sm"></i>
                 </button>
               </div>
             )}
             {isHost && (
-              <div className="bg-gradient-to-r from-teal-500/20 to-cyan-500/20 px-3 py-2 rounded-lg border border-teal-500/50">
-                <span className="text-teal-400 text-xs font-semibold">
+              <div className="bg-gradient-to-r from-brass/20 to-brass-600/20 px-3 py-2 rounded-lg border border-brass/50">
+                <span className="text-brass text-xs font-semibold">
                   <i className="ri-vip-crown-line mr-1"></i>
                   {t.room.host}
                 </span>
@@ -1591,14 +1591,14 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
             <div className={`px-3 py-1 rounded-full text-xs border ${
               maxQuestions !== null && questions.length >= maxQuestions 
                 ? 'bg-orange-500/20 border-orange-500/50' 
-                : 'bg-slate-800 border-slate-700'
+                : 'bg-ink-700 border-brass/20'
             }`}>
               <span className={`font-bold ${
                 maxQuestions !== null && questions.length >= maxQuestions 
                   ? 'text-orange-400' 
-                  : 'text-teal-400'
+                  : 'text-brass'
               }`}>{questions.length}</span>
-              <span className="text-slate-500">
+              <span className="text-fog-dim">
                 {maxQuestions === null ? ` / ${t.room.unlimited}` : ` / ${maxQuestions}`}
               </span>
             </div>
@@ -1619,7 +1619,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
                       </div>
                       <div className="flex-1">
                         <h3 className="font-semibold text-sm text-orange-400 mb-1">{t.room.questionLimitReached}</h3>
-                        <p className="text-xs text-slate-300">
+                        <p className="text-xs text-fog">
                           {lang === 'ko' 
                             ? `최대 질문 개수(${maxQuestions}개)에 도달했습니다. 이제 정답을 추측해보세요!`
                             : `Maximum questions (${maxQuestions}) reached. Now try to guess the answer!`}
@@ -1640,7 +1640,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold text-sm text-purple-400 mb-1">{t.room.spectatorMode}</h3>
-                    <p className="text-xs text-slate-300">
+                    <p className="text-xs text-fog">
                       {t.room.spectatorModeDesc}
                     </p>
                   </div>
@@ -1666,9 +1666,9 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
           <div className="space-y-3 sm:space-y-4">
             {/* 참가자 리스트 */}
             {players.length > 0 && (
-              <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-slate-700/50">
-                <h3 className="text-xs sm:text-sm font-semibold text-slate-300 mb-2 sm:mb-3 flex items-center gap-2">
-                  <i className="ri-group-line text-teal-400 text-sm sm:text-base"></i>
+              <div className="bg-ink-700/50 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-brass/20">
+                <h3 className="text-xs sm:text-sm font-semibold text-fog mb-2 sm:mb-3 flex items-center gap-2">
+                  <i className="ri-group-line text-brass text-sm sm:text-base"></i>
                   {lang === 'ko' ? '참가자' : 'Players'} ({players.length})
                 </h3>
                 <div className="space-y-1.5 sm:space-y-2">
@@ -1679,8 +1679,8 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
                         key={idx}
                         className={`flex items-center justify-between p-2 sm:p-2.5 rounded-lg ${
                           player.is_host
-                            ? 'bg-gradient-to-r from-teal-500/20 to-cyan-500/20 border border-teal-500/30'
-                            : 'bg-slate-700/30'
+                            ? 'bg-gradient-to-r from-brass/20 to-brass-600/20 border border-brass/30'
+                            : 'bg-ink-600/30'
                         }`}
                       >
                         <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
@@ -1691,7 +1691,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
                             <Link 
                               href={`/${lang}/profile/${playerUserId}`}
                               className={`text-xs sm:text-sm truncate hover:underline cursor-pointer ${
-                                player.is_host ? 'text-teal-400 font-semibold' : 'text-slate-300'
+                                player.is_host ? 'text-brass font-semibold' : 'text-fog'
                               }`}
                               title={lang === 'ko' ? '프로필 보기 (신고 가능)' : 'View profile (can report)'}
                             >
@@ -1699,7 +1699,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
                             </Link>
                           ) : (
                             <span className={`text-xs sm:text-sm truncate ${
-                              player.is_host ? 'text-teal-400 font-semibold' : 'text-slate-300'
+                              player.is_host ? 'text-brass font-semibold' : 'text-fog'
                             }`}>
                               {player.nickname}
                             </span>
@@ -1742,7 +1742,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
                 className={`w-full py-2.5 sm:py-3 rounded-lg font-semibold transition-all duration-200 touch-manipulation active:scale-95 text-xs sm:text-sm ${
                   isReady
                     ? 'bg-green-500 hover:bg-green-600 text-white'
-                    : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                    : 'bg-ink-600 hover:bg-slate-600 text-fog'
                 }`}
               >
                 {isReady ? (
@@ -1777,12 +1777,12 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
                 <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl p-4 border border-purple-500/30 mb-4">
                   <button
                     onClick={handleEndGame}
-                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 text-sm sm:text-base touch-manipulation"
+                    className="w-full bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 text-sm sm:text-base touch-manipulation"
                   >
                     <i className="ri-stop-circle-line mr-2"></i>
                     {t.room.endGameButton}
                   </button>
-                  <p className="text-xs text-slate-400 mt-2 text-center">
+                  <p className="text-xs text-fog mt-2 text-center">
                     {t.room.endGameDesc}
                   </p>
                 </div>

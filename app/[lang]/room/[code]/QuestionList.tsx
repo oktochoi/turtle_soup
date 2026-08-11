@@ -42,7 +42,7 @@ export default function QuestionList({ questions, selectedId, onSelect, isHost =
   const getAnswerBadge = (answer: 'yes' | 'no' | 'irrelevant' | null) => {
     if (!answer) {
       return (
-        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-700 text-slate-400 whitespace-nowrap">
+        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-ink-600 text-fog whitespace-nowrap">
           {t.room.waiting}
         </span>
       );
@@ -68,23 +68,23 @@ export default function QuestionList({ questions, selectedId, onSelect, isHost =
   };
 
   return (
-    <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-      <div className="p-3 sm:p-4 border-b border-slate-700 flex items-center gap-2">
+    <div className="bg-ink-700 rounded-xl border border-brass/20 overflow-hidden">
+      <div className="p-3 sm:p-4 border-b border-brass/20 flex items-center gap-2">
         <div className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center flex-shrink-0">
-          <i className="ri-chat-3-line text-teal-400 text-sm sm:text-base"></i>
+          <i className="ri-chat-3-line text-brass text-sm sm:text-base"></i>
         </div>
         <h3 className="font-semibold text-xs sm:text-sm">{t.room.questionList}</h3>
         {isHost && (
-          <span className="text-xs text-slate-400 ml-2" title={t.room.clickQuestionToAnswer}>
+          <span className="text-xs text-fog ml-2" title={t.room.clickQuestionToAnswer}>
             <i className="ri-information-line mr-1"></i>
             {t.room.clickQuestionToAnswer}
           </span>
         )}
-        <span className="ml-auto text-xs text-slate-500">{questions.length}{lang === 'ko' ? t.room.questionsCount : ''}</span>
+        <span className="ml-auto text-xs text-fog-dim">{questions.length}{lang === 'ko' ? t.room.questionsCount : ''}</span>
       </div>
       <div ref={listRef} className="max-h-64 sm:max-h-96 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3">
         {sortedQuestions.length === 0 ? (
-          <div className="text-center py-6 sm:py-8 text-slate-500 text-xs sm:text-sm">
+          <div className="text-center py-6 sm:py-8 text-fog-dim text-xs sm:text-sm">
             <i className="ri-chat-off-line text-2xl sm:text-3xl mb-2"></i>
             <p>{t.room.noQuestionsYet}</p>
           </div>
@@ -95,12 +95,12 @@ export default function QuestionList({ questions, selectedId, onSelect, isHost =
               onClick={() => onSelect && onSelect(q.id)}
               className={`p-3 sm:p-4 rounded-lg transition-all duration-200 ${
                 selectedId === q.id
-                  ? 'bg-teal-500/20 border-2 border-teal-500'
-                  : 'bg-slate-900 border border-slate-700 hover:border-slate-600'
+                  ? 'bg-brass/20 border-2 border-brass'
+                  : 'bg-ink-800 border border-brass/20 hover:border-brass/25'
               } ${onSelect ? 'cursor-pointer' : ''}`}
             >
               <div className="flex items-start justify-between gap-2 sm:gap-3 mb-2 flex-wrap">
-                <span className="text-xs font-semibold text-cyan-400">{q.nickname}</span>
+                <span className="text-xs font-semibold text-brass">{q.nickname}</span>
                 {getAnswerBadge(q.answer)}
               </div>
               <p className="text-xs sm:text-sm text-white leading-relaxed break-words">{q.text}</p>

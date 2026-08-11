@@ -24,7 +24,7 @@ export default function ProblemCTABar({
   showAnswer = false,
 }: ProblemCTABarProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 via-slate-800 to-slate-800/95 backdrop-blur-md border-t border-slate-700/50 z-50 shadow-2xl">
+    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-ink-800 via-ink-700 to-slate-800/95 backdrop-blur-md border-t border-brass/20 z-50 shadow-2xl">
       <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 max-w-4xl">
         {/* Primary 버튼: 이 문제로 방 만들기 (정답 확인 칸이 보일 때만 표시) */}
         {showAnswer && (
@@ -52,14 +52,14 @@ export default function ProblemCTABar({
           <button
             onClick={onPreviousClick}
             disabled={!hasPrevious}
-            className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all duration-200 touch-manipulation active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-700/80"
+            className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 bg-ink-600/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all duration-200 touch-manipulation active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-ink-600/80"
           >
             <i className="ri-arrow-left-line text-base sm:text-lg"></i>
             <span className="text-xs sm:text-sm font-medium">{lang === 'ko' ? '이전 문제' : 'Previous'}</span>
           </button>
           <button
             onClick={onInviteClick}
-            className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all duration-200 touch-manipulation active:scale-95"
+            className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 bg-ink-600/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all duration-200 touch-manipulation active:scale-95"
           >
             <i className="ri-share-line text-base sm:text-lg"></i>
             <span className="text-xs sm:text-sm font-medium">{lang === 'ko' ? '초대 링크' : 'Invite'}</span>
@@ -67,7 +67,7 @@ export default function ProblemCTABar({
           <button
             onClick={onNextClick}
             disabled={!hasNext}
-            className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all duration-200 touch-manipulation active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-700/80"
+            className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-2 sm:py-2.5 bg-ink-600/80 hover:bg-slate-600 active:bg-slate-500 text-white rounded-lg transition-all duration-200 touch-manipulation active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-ink-600/80"
           >
             <i className="ri-arrow-right-line text-base sm:text-lg"></i>
             <span className="text-xs sm:text-sm font-medium">{lang === 'ko' ? '다음 문제' : 'Next'}</span>

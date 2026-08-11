@@ -3,51 +3,120 @@
 @tailwind components;
 @tailwind utilities;
 
-/* CLS 방지: 폰트 로딩 전후 레이아웃 고정 */
+:root {
+  --ink: #0f172a;
+  --ink-800: #0f172a;
+  --ink-700: #1e293b;
+  --brass: #14b8a6;
+  --brass-soft: #5eead4;
+  --bone: #f1f5f9;
+  --bone-muted: #cbd5e1;
+  --fog: #94a3b8;
+  --line: rgba(148, 163, 184, 0.2);
+  --surface: rgba(30, 41, 59, 0.72);
+}
+
 @layer base {
   html {
     font-size: 16px;
-    line-height: 1.5;
+    line-height: 1.55;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
   }
+
   body {
-    font-size: 1rem;
-    line-height: 1.5;
+    @apply bg-slate-950 text-slate-100 font-sans antialiased;
+    background-image: linear-gradient(180deg, #020617 0%, #0f172a 45%, #020617 100%);
+    min-height: 100vh;
+  }
+
+  ::selection {
+    background: rgba(20, 184, 166, 0.35);
+    color: #f8fafc;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display), 'Noto Serif KR', serif;
+    letter-spacing: -0.02em;
+  }
+
+  a {
+    @apply transition-colors duration-200;
   }
 }
 
-@keyframes turtleFloat {
-  0%, 100% {
-    transform: translateY(0) rotate(0deg);
+@layer components {
+  .page-shell {
+    @apply relative mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
   }
-  25% {
-    transform: translateY(-8px) rotate(-2deg);
-  }
-  50% {
-    transform: translateY(-12px) rotate(0deg);
-  }
-  75% {
-    transform: translateY(-8px) rotate(2deg);
-  }
-}
 
-.animate-turtle-float {
-  animation: turtleFloat 2s ease-in-out infinite;
+  .surface {
+    @apply border border-slate-700/80 bg-slate-900/70;
+  }
+
+  .surface-raised {
+    @apply surface shadow-soft;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-teal-500 text-slate-950 hover:bg-teal-400;
+  }
+
+  .btn-ghost {
+    @apply btn border border-slate-600 bg-transparent text-slate-200 hover:border-teal-400/50 hover:bg-slate-800/80;
+  }
+
+  .btn-danger {
+    @apply btn border border-red-500/40 bg-red-950/40 text-red-300 hover:bg-red-900/50;
+  }
+
+  .nav-link {
+    @apply rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-white;
+  }
+
+  .nav-link-active {
+    @apply nav-link bg-teal-500 text-white hover:bg-teal-500 hover:text-white;
+  }
+
+  .field {
+    @apply w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none transition focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/30;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-teal-500/30 bg-slate-900/90 px-2.5 py-1 text-xs font-medium text-teal-300;
+  }
+
+  .section-title {
+    @apply font-display text-xl sm:text-2xl text-white;
+  }
+
+  .section-lead {
+    @apply mt-1 max-w-2xl text-xs sm:text-sm text-slate-400;
+  }
+
+  .divider {
+    @apply border-t border-slate-800;
+  }
+
+  .ink-panel {
+    @apply relative overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-900/80;
+  }
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -55,33 +124,69 @@
   }
 }
 
-@keyframes gradient {
-  0%, 100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
 .animate-fade-in {
-  animation: fadeIn 0.6s ease-out;
+  animation: fadeIn 0.55s ease-out;
 }
 
 .animate-fade-in-up {
-  animation: fadeInUp 0.8s ease-out;
+  animation: fadeInUp 0.7s ease-out both;
 }
 
 .animate-fade-in-up.delay-200 {
-  animation-delay: 0.2s;
-  animation-fill-mode: both;
+  animation-delay: 0.15s;
 }
 
-.animate-gradient {
-  animation: gradient 3s ease infinite;
+/* 광고 컨테이너 */
+.ad-banner-300x250,
+.ad-native-banner,
+.ad-social-bar {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  isolation: isolate;
 }
 
-/* 밸런스 게임: 라운드 전환 시 슬라이드 + 페이드 */
+.ad-banner-300x250 iframe,
+.ad-native-banner iframe,
+.ad-social-bar iframe {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+@media (max-width: 768px) {
+  .ad-banner-300x250,
+  .ad-native-banner {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .ad-banner-300x250 > div,
+  .ad-banner-300x250 iframe,
+  .ad-native-banner > div,
+  .ad-native-banner iframe {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}
+
+.ad-banner-300x250,
+.ad-native-banner {
+  z-index: 1 !important;
+}
+
+.ad-social-bar {
+  z-index: 50 !important;
+}
+
+.ad-banner-300x250 > *,
+.ad-native-banner > *,
+.ad-social-bar > * {
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
 @keyframes balanceRoundIn {
   from {
     opacity: 0;
@@ -94,67 +199,4 @@
 }
 .balance-round-enter {
   animation: balanceRoundIn 0.35s ease-out forwards;
-}
-
-/* 광고 컨테이너 스타일 - UI를 막지 않도록 제한 */
-.ad-banner-300x250,
-.ad-native-banner,
-.ad-social-bar {
-  position: relative;
-  overflow: hidden;
-  z-index: 1;
-  isolation: isolate;
-}
-
-/* 광고 iframe이 컨테이너를 벗어나지 않도록 제한 */
-.ad-banner-300x250 iframe,
-.ad-native-banner iframe,
-.ad-social-bar iframe {
-  max-width: 100% !important;
-  max-height: 100% !important;
-  overflow: hidden !important;
-  position: relative !important;
-}
-
-/* 모바일에서 광고 크기 제한 */
-@media (max-width: 768px) {
-  .ad-banner-300x250 {
-    max-width: 100% !important;
-    width: 100% !important;
-  }
-  
-  .ad-banner-300x250 > div,
-  .ad-banner-300x250 iframe {
-    max-width: 100% !important;
-    width: 100% !important;
-  }
-  
-  .ad-native-banner {
-    max-width: 100% !important;
-    width: 100% !important;
-  }
-  
-  .ad-native-banner > div,
-  .ad-native-banner iframe {
-    max-width: 100% !important;
-    width: 100% !important;
-  }
-}
-
-/* 광고가 다른 UI 요소 위에 표시되지 않도록 z-index 제한 */
-.ad-banner-300x250,
-.ad-native-banner {
-  z-index: 1 !important;
-}
-
-.ad-social-bar {
-  z-index: 50 !important;
-}
-
-/* 광고 컨테이너 내부 요소가 벗어나지 않도록 */
-.ad-banner-300x250 > *,
-.ad-native-banner > *,
-.ad-social-bar > * {
-  max-width: 100% !important;
-  overflow: hidden !important;
 }

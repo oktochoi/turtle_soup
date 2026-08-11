@@ -7,6 +7,13 @@
  * Pipeline:
  *   질문 → normalize → embedding retrieval (Top-K evidence) → NLI → YES/NO/IRRELEVANT
  *
+ * 판정 정책:
+ *   entailment  → YES
+ *   contradiction → NO
+ *   neutral → Story relevance 검사
+ *     related   → NO
+ *     unrelated → IRRELEVANT
+ *
  * NLI 모델: Xenova/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7
  * Embedding: 기존 V9의 MiniLM 재사용
  */
@@ -27,6 +34,16 @@ export interface Evidence {
   source: 'content' | 'answer';
 }
 
+export type DecisionReason =
+  | 'entailment'
+  | 'contradiction'
+  | 'neutral_but_story_related'
+  | 'neutral_and_unrelated'
+  | 'weak_nli_but_story_related'
+  | 'no_evidence'
+  | 'empty_question'
+  | 'ssr';
+
 export interface NLIJudgeResult {
   label: JudgeResult;
   rawLabel: 'entailment' | 'contradiction' | 'neutral';
@@ -36,6 +53,10 @@ export interface NLIJudgeResult {
   entailmentScore: number;
   contradictionScore: number;
   neutralScore: number;
+  bestAnswerSimilarity: number;
+  bestContentSimilarity: number;
+  relatedToStory: boolean;
+  decisionReason: DecisionReason;
   invert: boolean;
   model: string;
   inferenceMs: number;
@@ -48,6 +69,13 @@ export interface AIComparisonLog {
   v10Result: string;
   nliLabel?: string;
   nliConfidence?: number;
+  entailmentScore?: number;
+  contradictionScore?: number;
+  neutralScore?: number;
+  bestAnswerSimilarity?: number;
+  bestContentSimilarity?: number;
+  relatedToStory?: boolean;
+  decisionReason?: string;
   evidence?: string;
   retrievalSimilarity?: number;
   inferenceMs?: number;
@@ -57,10 +85,21 @@ export interface AIComparisonLog {
 
 export const V10_CONFIG = {
   TOP_K: 3,
-  MIN_RETRIEVAL_SIMILARITY: 0.25,
-  MIN_ENTAILMENT_CONFIDENCE: 0.50,
-  MIN_CONTRADICTION_CONFIDENCE: 0.50,
-  MIN_DECISION_MARGIN: 0.10,
+  /** NLI에 넣을 evidence 최소 유사도 (너무 약한 문장은 제외) */
+  MIN_RETRIEVAL_SIMILARITY: 0.20,
+
+  MIN_ENTAILMENT_CONFIDENCE: 0.60,
+  MIN_CONTRADICTION_CONFIDENCE: 0.55,
+
+  /** Story relevance: answer/content embedding max sim */
+  RELATED_ANSWER_THRESHOLD: 0.32,
+  RELATED_CONTENT_THRESHOLD: 0.32,
+
+  /** Top evidence 유사도가 이 이상이면 관련으로 보조 판단 */
+  RELATED_EVIDENCE_THRESHOLD: 0.30,
+
+  MIN_DECISION_MARGIN: 0.08,
+
   NLI_MODEL_ID: 'Xenova/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7',
 } as const;
 
@@ -96,7 +135,6 @@ async function getNLIPipeline(): Promise<NLIPipelineType> {
       const { pipeline, env } = await import('@huggingface/transformers');
       env.allowLocalModels = false;
 
-      // WebGPU → WASM fallback
       let device: string = 'wasm';
       try {
         if (typeof navigator !== 'undefined' && 'gpu' in navigator) {
@@ -107,7 +145,7 @@ async function getNLIPipeline(): Promise<NLIPipelineType> {
           }
         }
       } catch {
-        // WebGPU not available, fallback to WASM
+        // WebGPU not available → WASM
       }
 
       const classifier = await pipeline(
@@ -148,7 +186,7 @@ export function releaseNLIModel(): void {
   nliLoadProgress = 0;
 }
 
-// ─── Text utilities (reuse V9 normalize) ─────────────────────
+// ─── Text utilities ──────────────────────────────────────────
 
 function normalizeText(text: string): string {
   return (text ?? '')
@@ -174,13 +212,8 @@ function splitSentences(text: string): string[] {
   return results;
 }
 
-/**
- * 질문을 간단한 평서형으로 변환 (방식 A + 최소 방식 B)
- * 과도한 regex 없이 의문 어미를 제거하는 수준.
- */
 function questionToHypothesis(question: string): string {
   let h = normalizeText(question);
-  // 한국어 의문 어미 제거
   h = h.replace(/\?+$/g, '');
   h = h.replace(/(인가요|인가|인지요|인지|입니까|습니까|나요|세요|할까요|할까|인건가요|인건가|건가요|건가|는가요|는가|은가요|은가)[\s.?!]*$/g, '');
   h = h.replace(/(했나요|했습니까|했는가|했을까요|했을까|됐나요|됐습니까|있나요|있습니까|있는가|었나요|었습니까|였나요|였습니까)[\s.?!]*$/g, '');
@@ -189,44 +222,71 @@ function questionToHypothesis(question: string): string {
 
 // ─── Evidence Retrieval ──────────────────────────────────────
 
-async function retrieveTopEvidence(
+interface RetrievalResult {
+  evidence: Evidence[];
+  bestAnswerSimilarity: number;
+  bestContentSimilarity: number;
+}
+
+async function retrieveEvidence(
   question: string,
   knowledge: ProblemKnowledge,
   topK: number = V10_CONFIG.TOP_K
-): Promise<Evidence[]> {
+): Promise<RetrievalResult> {
   const contentSentences = splitSentences(knowledge.content || '');
   const answerSentences = splitSentences(knowledge.answer || '');
 
-  if (contentSentences.length === 0 && answerSentences.length === 0) return [];
+  if (contentSentences.length === 0 && answerSentences.length === 0) {
+    return { evidence: [], bestAnswerSimilarity: 0, bestContentSimilarity: 0 };
+  }
 
   const questionVec = await getEmbedding(question);
-
   const allCandidates: Evidence[] = [];
+  let bestAnswerSimilarity = 0;
+  let bestContentSimilarity = 0;
 
-  // Embed content sentences
   for (const s of contentSentences) {
     try {
       const vec = await getEmbedding(s);
       const sim = cosineSimilarity(questionVec, vec);
+      bestContentSimilarity = Math.max(bestContentSimilarity, sim);
       allCandidates.push({ text: s, similarity: sim, source: 'content' });
     } catch { /* skip */ }
   }
 
-  // Embed answer sentences
   for (const s of answerSentences) {
     try {
       const vec = await getEmbedding(s);
       const sim = cosineSimilarity(questionVec, vec);
+      bestAnswerSimilarity = Math.max(bestAnswerSimilarity, sim);
       allCandidates.push({ text: s, similarity: sim, source: 'answer' });
     } catch { /* skip */ }
   }
 
-  // Sort by similarity desc, take top K
   allCandidates.sort((a, b) => b.similarity - a.similarity);
 
-  return allCandidates
-    .filter(e => e.similarity >= V10_CONFIG.MIN_RETRIEVAL_SIMILARITY)
+  const evidence = allCandidates
+    .filter((e) => e.similarity >= V10_CONFIG.MIN_RETRIEVAL_SIMILARITY)
     .slice(0, topK);
+
+  // NLI용 evidence가 비어도 top1은 남겨 두면 약한 관련성 판단에 도움
+  if (evidence.length === 0 && allCandidates.length > 0) {
+    evidence.push(allCandidates[0]);
+  }
+
+  return { evidence, bestAnswerSimilarity, bestContentSimilarity };
+}
+
+function isRelatedToStory(
+  bestAnswerSimilarity: number,
+  bestContentSimilarity: number,
+  topEvidenceSim: number
+): boolean {
+  return (
+    bestAnswerSimilarity >= V10_CONFIG.RELATED_ANSWER_THRESHOLD ||
+    bestContentSimilarity >= V10_CONFIG.RELATED_CONTENT_THRESHOLD ||
+    topEvidenceSim >= V10_CONFIG.RELATED_EVIDENCE_THRESHOLD
+  );
 }
 
 // ─── NLI classification ──────────────────────────────────────
@@ -240,8 +300,6 @@ interface NLIScores {
 async function runNLI(premise: string, hypothesis: string): Promise<NLIScores> {
   const classifier = await getNLIPipeline();
 
-  // zero-shot-classification with hypothesis_template
-  // The pipeline internally constructs premise-hypothesis pairs
   const result = await classifier(premise, ['entailment', 'contradiction', 'neutral'], {
     hypothesis_template: hypothesis + ' 따라서 {}.',
     multi_label: true,
@@ -261,7 +319,75 @@ async function runNLI(premise: string, hypothesis: string): Promise<NLIScores> {
   return scores;
 }
 
-// ─── Main V10 judge function ─────────────────────────────────
+// ─── Decision policy ─────────────────────────────────────────
+
+function decideLabel(args: {
+  bestEntailment: number;
+  bestContradiction: number;
+  bestNeutral: number;
+  relatedToStory: boolean;
+}): { label: JudgeResult; rawLabel: 'entailment' | 'contradiction' | 'neutral'; confidence: number; reason: DecisionReason } {
+  const { bestEntailment, bestContradiction, bestNeutral, relatedToStory } = args;
+
+  const marginOk =
+    bestEntailment - Math.max(bestContradiction, bestNeutral) >= V10_CONFIG.MIN_DECISION_MARGIN ||
+    bestEntailment >= V10_CONFIG.MIN_ENTAILMENT_CONFIDENCE + 0.05;
+
+  // 1) Entailment → YES
+  if (
+    bestEntailment >= V10_CONFIG.MIN_ENTAILMENT_CONFIDENCE &&
+    bestEntailment > bestContradiction &&
+    marginOk
+  ) {
+    return {
+      label: 'yes',
+      rawLabel: 'entailment',
+      confidence: bestEntailment,
+      reason: 'entailment',
+    };
+  }
+
+  // 2) Contradiction → NO
+  if (
+    bestContradiction >= V10_CONFIG.MIN_CONTRADICTION_CONFIDENCE &&
+    bestContradiction >= bestEntailment
+  ) {
+    return {
+      label: 'no',
+      rawLabel: 'contradiction',
+      confidence: bestContradiction,
+      reason: 'contradiction',
+    };
+  }
+
+  // 3) Neutral / weak NLI → Story relevance
+  const rawLabel: 'entailment' | 'contradiction' | 'neutral' =
+    bestNeutral >= bestEntailment && bestNeutral >= bestContradiction
+      ? 'neutral'
+      : bestContradiction >= bestEntailment
+        ? 'contradiction'
+        : 'entailment';
+
+  const confidence = Math.max(bestEntailment, bestContradiction, bestNeutral);
+
+  if (relatedToStory) {
+    return {
+      label: 'no',
+      rawLabel,
+      confidence,
+      reason: rawLabel === 'neutral' ? 'neutral_but_story_related' : 'weak_nli_but_story_related',
+    };
+  }
+
+  return {
+    label: 'irrelevant',
+    rawLabel,
+    confidence,
+    reason: 'neutral_and_unrelated',
+  };
+}
+
+// ─── Main V10 judge ──────────────────────────────────────────
 
 export async function judgeQuestionV10(
   questionRaw: string,
@@ -269,42 +395,107 @@ export async function judgeQuestionV10(
 ): Promise<NLIJudgeResult> {
   const startMs = performance.now();
 
-  // Browser guard
   if (typeof window === 'undefined') {
-    return makeIrrelevantResult(0, false, 'SSR environment');
+    return makeResult({
+      label: 'irrelevant',
+      rawLabel: 'neutral',
+      confidence: 0,
+      evidence: [],
+      entailmentScore: 0,
+      contradictionScore: 0,
+      neutralScore: 0,
+      bestAnswerSimilarity: 0,
+      bestContentSimilarity: 0,
+      relatedToStory: false,
+      decisionReason: 'ssr',
+      invert: false,
+      inferenceMs: 0,
+    });
   }
 
   const q0 = normalizeText(questionRaw);
   if (!q0 || q0.length < 4) {
-    return makeIrrelevantResult(performance.now() - startMs, false, 'Question too short');
+    return makeResult({
+      label: 'irrelevant',
+      rawLabel: 'neutral',
+      confidence: 0,
+      evidence: [],
+      entailmentScore: 0,
+      contradictionScore: 0,
+      neutralScore: 0,
+      bestAnswerSimilarity: 0,
+      bestContentSimilarity: 0,
+      relatedToStory: false,
+      decisionReason: 'empty_question',
+      invert: false,
+      inferenceMs: performance.now() - startMs,
+    });
   }
 
   if (!knowledge.content && !knowledge.answer) {
-    return makeIrrelevantResult(performance.now() - startMs, false, 'No content/answer');
+    return makeResult({
+      label: 'irrelevant',
+      rawLabel: 'neutral',
+      confidence: 0,
+      evidence: [],
+      entailmentScore: 0,
+      contradictionScore: 0,
+      neutralScore: 0,
+      bestAnswerSimilarity: 0,
+      bestContentSimilarity: 0,
+      relatedToStory: false,
+      decisionReason: 'no_evidence',
+      invert: false,
+      inferenceMs: performance.now() - startMs,
+    });
   }
 
-  // 1) Negation detection (reuse V9)
   const { normalized: qNorm, invert } = normalizeNegationQuestion(q0);
-
-  // 2) Convert to hypothesis
   const hypothesis = questionToHypothesis(qNorm);
 
-  // 3) Ensure embedding model is loaded
   await initEmbeddingModel();
 
-  // 4) Retrieve top evidence
-  const evidence = await retrieveTopEvidence(qNorm, knowledge, V10_CONFIG.TOP_K);
+  const { evidence, bestAnswerSimilarity, bestContentSimilarity } = await retrieveEvidence(
+    qNorm,
+    knowledge,
+    V10_CONFIG.TOP_K
+  );
+
+  const topEvidenceSim = evidence[0]?.similarity ?? 0;
+  const relatedToStory = isRelatedToStory(
+    bestAnswerSimilarity,
+    bestContentSimilarity,
+    topEvidenceSim
+  );
 
   if (evidence.length === 0) {
-    return makeIrrelevantResult(performance.now() - startMs, invert, 'No evidence found');
+    // evidence 없음 → 관련성만으로 보수적 판단
+    const label: JudgeResult = relatedToStory ? 'no' : 'irrelevant';
+    return makeResult({
+      label,
+      rawLabel: 'neutral',
+      confidence: 0,
+      evidence: [],
+      entailmentScore: 0,
+      contradictionScore: 0,
+      neutralScore: 0,
+      bestAnswerSimilarity,
+      bestContentSimilarity,
+      relatedToStory,
+      decisionReason: relatedToStory ? 'weak_nli_but_story_related' : 'no_evidence',
+      invert,
+      inferenceMs: performance.now() - startMs,
+    });
   }
 
-  // 5) Run NLI on each evidence, compute weighted scores
+  // NLI: 가중 점수 = nliConfidence * retrievalSimilarity
   let bestEntailment = 0;
   let bestContradiction = 0;
   let bestNeutral = 0;
-  let bestEvidence: Evidence | undefined;
-  let bestRawLabel: 'entailment' | 'contradiction' | 'neutral' = 'neutral';
+  let bestEvidence: Evidence | undefined = evidence[0];
+  let rawEntail = 0;
+  let rawContra = 0;
+  let rawNeutral = 0;
 
   for (const ev of evidence) {
     try {
@@ -316,94 +507,66 @@ export async function judgeQuestionV10(
 
       if (wEntail > bestEntailment) {
         bestEntailment = wEntail;
-        if (wEntail >= bestContradiction && wEntail >= bestNeutral) {
-          bestEvidence = ev;
-          bestRawLabel = 'entailment';
-        }
+        rawEntail = nliScores.entailment;
+        if (wEntail >= bestContradiction && wEntail >= bestNeutral) bestEvidence = ev;
       }
       if (wContra > bestContradiction) {
         bestContradiction = wContra;
-        if (wContra > bestEntailment && wContra >= bestNeutral) {
-          bestEvidence = ev;
-          bestRawLabel = 'contradiction';
-        }
+        rawContra = nliScores.contradiction;
+        if (wContra > bestEntailment && wContra >= bestNeutral) bestEvidence = ev;
       }
       if (wNeutral > bestNeutral) {
         bestNeutral = wNeutral;
-        if (wNeutral > bestEntailment && wNeutral > bestContradiction) {
-          bestEvidence = ev;
-          bestRawLabel = 'neutral';
-        }
+        rawNeutral = nliScores.neutral;
+        if (wNeutral > bestEntailment && wNeutral > bestContradiction) bestEvidence = ev;
       }
     } catch (e) {
       console.warn('[V10] NLI inference error for evidence:', e);
     }
   }
 
-  // 6) Determine label
-  const maxScore = Math.max(bestEntailment, bestContradiction, bestNeutral);
-  let label: JudgeResult;
-  let rawLabel: 'entailment' | 'contradiction' | 'neutral';
-  let confidence: number;
+  // 판정에는 raw NLI confidence도 함께 고려 (가중치만으로 threshold가 과소 평가되는 것 방지)
+  // → max(weighted, raw * topEvidenceSim) 형태로 안정화
+  const entailForDecision = Math.max(bestEntailment, rawEntail * Math.max(topEvidenceSim, 0.5));
+  const contraForDecision = Math.max(bestContradiction, rawContra * Math.max(topEvidenceSim, 0.5));
+  const neutralForDecision = Math.max(bestNeutral, rawNeutral * Math.max(topEvidenceSim, 0.5));
 
-  if (bestEntailment >= bestContradiction && bestEntailment >= bestNeutral) {
-    rawLabel = 'entailment';
-    confidence = bestEntailment;
-    label = confidence >= V10_CONFIG.MIN_ENTAILMENT_CONFIDENCE * (bestEvidence?.similarity || 0.5)
-      ? 'yes' : 'irrelevant';
-  } else if (bestContradiction >= bestEntailment && bestContradiction >= bestNeutral) {
-    rawLabel = 'contradiction';
-    confidence = bestContradiction;
-    label = confidence >= V10_CONFIG.MIN_CONTRADICTION_CONFIDENCE * (bestEvidence?.similarity || 0.5)
-      ? 'no' : 'irrelevant';
-  } else {
-    rawLabel = 'neutral';
-    confidence = bestNeutral;
-    label = 'irrelevant';
-  }
+  let decision = decideLabel({
+    bestEntailment: entailForDecision,
+    bestContradiction: contraForDecision,
+    bestNeutral: neutralForDecision,
+    relatedToStory,
+  });
 
-  // Check margin
-  const secondBest = [bestEntailment, bestContradiction, bestNeutral]
-    .sort((a, b) => b - a)[1] || 0;
-  if (maxScore - secondBest < V10_CONFIG.MIN_DECISION_MARGIN && label !== 'irrelevant') {
-    label = 'irrelevant';
-  }
-
-  // 7) Apply invert
+  // negation invert: YES ↔ NO, IRRELEVANT 유지
+  let label = decision.label;
   if (invert) {
     if (label === 'yes') label = 'no';
     else if (label === 'no') label = 'yes';
   }
 
-  const inferenceMs = performance.now() - startMs;
-
-  return {
+  return makeResult({
     label,
-    rawLabel,
-    confidence,
+    rawLabel: decision.rawLabel,
+    confidence: decision.confidence,
     evidence,
     selectedEvidence: bestEvidence,
-    entailmentScore: bestEntailment,
-    contradictionScore: bestContradiction,
-    neutralScore: bestNeutral,
+    entailmentScore: entailForDecision,
+    contradictionScore: contraForDecision,
+    neutralScore: neutralForDecision,
+    bestAnswerSimilarity,
+    bestContentSimilarity,
+    relatedToStory,
+    decisionReason: decision.reason,
     invert,
-    model: V10_CONFIG.NLI_MODEL_ID,
-    inferenceMs,
-  };
+    inferenceMs: performance.now() - startMs,
+  });
 }
 
-function makeIrrelevantResult(inferenceMs: number, invert: boolean, _reason?: string): NLIJudgeResult {
+function makeResult(partial: Omit<NLIJudgeResult, 'model'>): NLIJudgeResult {
   return {
-    label: 'irrelevant',
-    rawLabel: 'neutral',
-    confidence: 0,
-    evidence: [],
-    entailmentScore: 0,
-    contradictionScore: 0,
-    neutralScore: 0,
-    invert,
+    ...partial,
     model: V10_CONFIG.NLI_MODEL_ID,
-    inferenceMs,
   };
 }
 
@@ -437,16 +600,23 @@ export function logComparison(log: AIComparisonLog): void {
   if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
     console.log(
       `\n==========================\n` +
-      `AI V10 DEBUG\n\n` +
-      `Question:\n${log.question}\n\n` +
-      `V9: ${log.v9Result}\n` +
-      `V10: ${log.v10Result}\n\n` +
-      (log.evidence ? `Evidence:\n${log.evidence}\n\n` : '') +
-      (log.retrievalSimilarity != null ? `Retrieval similarity: ${log.retrievalSimilarity.toFixed(3)}\n` : '') +
-      (log.nliLabel ? `NLI label: ${log.nliLabel}\n` : '') +
-      (log.nliConfidence != null ? `NLI confidence: ${log.nliConfidence.toFixed(3)}\n` : '') +
-      (log.inferenceMs != null ? `Time: ${Math.round(log.inferenceMs)}ms\n` : '') +
-      `==========================\n`
+        `AI V10 DEBUG\n\n` +
+        `Question:\n${log.question}\n\n` +
+        `V9: ${log.v9Result}\n` +
+        `V10: ${log.v10Result}\n\n` +
+        `NLI:\n` +
+        `  raw: ${log.nliLabel ?? '-'}\n` +
+        `  entailment: ${log.entailmentScore?.toFixed(3) ?? '-'}\n` +
+        `  contradiction: ${log.contradictionScore?.toFixed(3) ?? '-'}\n` +
+        `  neutral: ${log.neutralScore?.toFixed(3) ?? '-'}\n\n` +
+        `Answer similarity: ${log.bestAnswerSimilarity?.toFixed(3) ?? '-'}\n` +
+        `Content similarity: ${log.bestContentSimilarity?.toFixed(3) ?? '-'}\n` +
+        `relatedToStory: ${log.relatedToStory ?? '-'}\n\n` +
+        (log.evidence ? `Evidence:\n${log.evidence}\n\n` : '') +
+        `Final: ${log.v10Result?.toUpperCase()}\n` +
+        `Reason: ${log.decisionReason ?? '-'}\n` +
+        (log.inferenceMs != null ? `Time: ${Math.round(log.inferenceMs)}ms\n` : '') +
+        `==========================\n`
     );
   }
 }
@@ -476,6 +646,13 @@ export async function analyzeWithComparison(
       v10Result: v10Result.label,
       nliLabel: v10Result.rawLabel,
       nliConfidence: v10Result.confidence,
+      entailmentScore: v10Result.entailmentScore,
+      contradictionScore: v10Result.contradictionScore,
+      neutralScore: v10Result.neutralScore,
+      bestAnswerSimilarity: v10Result.bestAnswerSimilarity,
+      bestContentSimilarity: v10Result.bestContentSimilarity,
+      relatedToStory: v10Result.relatedToStory,
+      decisionReason: v10Result.decisionReason,
       evidence: v10Result.selectedEvidence?.text,
       retrievalSimilarity: v10Result.selectedEvidence?.similarity,
       inferenceMs: v10Result.inferenceMs,
@@ -486,8 +663,6 @@ export async function analyzeWithComparison(
 
   return { v9: v9Result, v10: v10Result };
 }
-
-// ─── Initialize V10 (preload NLI model) ──────────────────────
 
 export async function initializeV10(): Promise<void> {
   if (typeof window === 'undefined') return;

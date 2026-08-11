@@ -49,19 +49,19 @@ export default async function TermsPage({
   const lastUpdated = '2025-01-17';
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <main className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 max-w-4xl">
-        <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 lg:p-10 border border-slate-700 shadow-xl">
-          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+        <div className="bg-ink-700/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 lg:p-10 border border-brass/20 shadow-xl">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-brass-300 to-brass bg-clip-text text-transparent">
             {isKo ? '이용약관' : 'Terms of Service'}
           </h1>
-          <p className="text-slate-400 text-sm mb-8">
+          <p className="text-fog text-sm mb-8">
             {isKo ? '최종 업데이트' : 'Last updated'}: {lastUpdated}
           </p>
 
-          <div className="prose prose-invert max-w-none space-y-8 text-slate-300">
+          <div className="prose prose-invert max-w-none space-y-8 text-fog">
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '제1조 (목적)' : 'Article 1 (Purpose)'}
               </h2>
               <p>
@@ -72,7 +72,7 @@ export default async function TermsPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '제2조 (정의)' : 'Article 2 (Definitions)'}
               </h2>
               <ul className="list-disc pl-6 space-y-2">
@@ -104,7 +104,7 @@ export default async function TermsPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '제3조 (약관의 게시와 개정)' : 'Article 3 (Posting and Amendment of Terms)'}
               </h2>
               <p className="mb-4">
@@ -120,7 +120,7 @@ export default async function TermsPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '제4조 (회원가입)' : 'Article 4 (Membership Registration)'}
               </h2>
               <p className="mb-4">
@@ -153,7 +153,7 @@ export default async function TermsPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '제5조 (서비스의 제공 및 변경)' : 'Article 5 (Provision and Change of Service)'}
               </h2>
               <p className="mb-4">
@@ -172,7 +172,7 @@ export default async function TermsPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '제6조 (서비스의 중단)' : 'Article 6 (Suspension of Service)'}
               </h2>
               <p className="mb-4">
@@ -188,7 +188,7 @@ export default async function TermsPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '제7조 (회원의 의무)' : 'Article 7 (Member Obligations)'}
               </h2>
               <p className="mb-4">
@@ -246,7 +246,7 @@ export default async function TermsPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '제8조 (콘텐츠의 저작권)' : 'Article 8 (Copyright of Content)'}
               </h2>
               <p className="mb-4">
@@ -267,7 +267,7 @@ export default async function TermsPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '제9조 (면책조항)' : 'Article 9 (Disclaimer)'}
               </h2>
               <p className="mb-4">
@@ -288,7 +288,7 @@ export default async function TermsPage({
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">
+              <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '제10조 (준거법 및 관할법원)' : 'Article 10 (Governing Law and Jurisdiction)'}
               </h2>
               <p className="mb-4">

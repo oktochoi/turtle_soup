@@ -41,7 +41,7 @@ export default function QuizFormImage({
 
       {/* 정답 */}
       <div>
-        <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+        <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
           <i className="ri-checkbox-circle-line mr-1"></i>
           {lang === 'ko' ? '정답' : 'Answer'}
         </label>
@@ -50,7 +50,7 @@ export default function QuizFormImage({
           value={answer}
           onChange={(e) => onAnswerChange(e.target.value)}
           placeholder={lang === 'ko' ? '정답을 입력하세요' : 'Enter the answer'}
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+          className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
           maxLength={200}
         />
       </div>
@@ -58,7 +58,7 @@ export default function QuizFormImage({
       {/* 설명 */}
       {onExplanationChange && (
         <div>
-          <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+          <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
             <i className="ri-information-line mr-1"></i>
             {lang === 'ko' ? '설명 (선택사항)' : 'Explanation (Optional)'}
           </label>
@@ -66,7 +66,7 @@ export default function QuizFormImage({
             value={explanation}
             onChange={(e) => onExplanationChange(e.target.value)}
             placeholder={lang === 'ko' ? '정답의 이유와 설명을 입력하세요' : 'Enter the explanation for the answer'}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
+            className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
             maxLength={300}
           />
         </div>

@@ -23,7 +23,7 @@ import { triggerEvent } from '@/lib/progress-client';
 export default function CreateProblem({ params }: { params: Promise<{ lang: string }> }) {
   const resolvedParams = use(params);
   const lang = resolvedParams.lang || 'ko';
-  const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
+  const currentLang = 'ko';
   const router = useRouter();
   const t = useTranslations();
   const { user, isLoading: authLoading } = useAuth();
@@ -66,7 +66,7 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
 
   useEffect(() => {
     if (!authLoading && !user) {
-      alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Login required.');
+      alert('로그인이 필요합니다.');
       router.push(`/${lang}/auth/login`);
       return;
     }
@@ -91,67 +91,67 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
 
   const handleSubmit = async () => {
     if (!user) {
-      alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Login required.');
+      alert('로그인이 필요합니다.');
       router.push(`/${lang}/auth/login`);
       return;
     }
 
     if (!quizType) {
-      alert(lang === 'ko' ? '퀴즈 유형을 선택해주세요.' : 'Please select a quiz type.');
+      alert('퀴즈 유형을 선택해주세요.');
       return;
     }
 
     // 유형별 필수 항목 검증
     if (!title.trim()) {
-      alert(lang === 'ko' ? '제목을 입력해주세요.' : 'Please enter a title.');
+      alert('제목을 입력해주세요.');
       return;
     }
 
     if (quizType === 'soup') {
       if (!content.trim() || !answer.trim()) {
-        alert(lang === 'ko' ? '모든 필수 항목을 입력해주세요.' : 'Please fill in all required fields.');
+        alert('모든 필수 항목을 입력해주세요.');
         return;
       }
     } else if (quizType === 'nonsense') {
       if (!answer.trim()) {
-        alert(lang === 'ko' ? '정답을 입력해주세요.' : 'Please enter answer.');
+        alert('정답을 입력해주세요.');
         return;
       }
     } else if (quizType === 'mcq') {
       if (options.some(opt => !opt.trim())) {
-        alert(lang === 'ko' ? '모든 선택지를 입력해주세요.' : 'Please enter all options.');
+        alert('모든 선택지를 입력해주세요.');
         return;
       }
     } else if (quizType === 'ox') {
       // OX 퀴즈는 질문 없이 제목만 사용
     } else if (quizType === 'image') {
       if (!imageFile && !imageUrl) {
-        alert(lang === 'ko' ? '이미지를 업로드해주세요.' : 'Please upload an image.');
+        alert('이미지를 업로드해주세요.');
         return;
       }
       if (!answer.trim()) {
-        alert(lang === 'ko' ? '정답을 입력해주세요.' : 'Please enter an answer.');
+        alert('정답을 입력해주세요.');
         return;
       }
     } else if (quizType === 'balance') {
       if (balanceOptions.some(opt => !opt.trim())) {
-        alert(lang === 'ko' ? '모든 선택지를 입력해주세요.' : 'Please enter all options.');
+        alert('모든 선택지를 입력해주세요.');
         return;
       }
     } else if (quizType === 'logic') {
       if (!logicContent.trim() || !answer.trim()) {
-        alert(lang === 'ko' ? '내용과 정답을 모두 입력해주세요.' : 'Please enter content and answer.');
+        alert('내용과 정답을 모두 입력해주세요.');
         return;
       }
     } else if (quizType === 'fill_blank') {
       if (!fillBlankAnswer.trim()) {
-        alert(lang === 'ko' ? '정답을 입력해주세요.' : 'Please enter answer.');
+        alert('정답을 입력해주세요.');
         return;
       }
     }
 
     if (!isSupabaseConfigured()) {
-      alert(lang === 'ko' ? 'Supabase가 설정되지 않았습니다.' : 'Supabase is not configured.');
+      alert('Supabase가 설정되지 않았습니다.');
       return;
     }
 
@@ -168,7 +168,7 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         .eq('id', user.id)
         .maybeSingle();
       
-      const authorName = userData?.nickname || user.id.substring(0, 8) || (lang === 'ko' ? '사용자' : 'User');
+      const authorName = userData?.nickname || user.id.substring(0, 8) || ('사용자');
       
       // 퀴즈 타입별 콘텐츠 데이터 준비
       let quizContent: any = {};
@@ -419,9 +419,7 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
       // 버킷이 없어서 이미지 업로드가 실패한 경우 사용자에게 안내
       if (imageFile && bucketNotFound) {
         alert(
-          lang === 'ko' 
-            ? '✅ 문제는 성공적으로 생성되었습니다!\n\n⚠️ 하지만 이미지를 업로드할 수 없었습니다.\n\n📦 Supabase 대시보드에서 다음을 수행해주세요:\n1. Storage 메뉴로 이동\n2. Buckets 탭 클릭\n3. "New bucket" 버튼 클릭\n4. 이름: quiz-images\n5. Public bucket: 체크 ✅\n6. File size limit: 5MB (선택사항)\n7. Create 버튼 클릭\n\n버킷을 생성한 후 다시 이미지를 업로드해주세요!'
-            : '✅ Problem created successfully!\n\n⚠️ However, image upload failed.\n\n📦 Please create a storage bucket in Supabase Dashboard:\n1. Go to Storage menu\n2. Click Buckets tab\n3. Click "New bucket"\n4. Name: quiz-images\n5. Check "Public bucket" ✅\n6. File size limit: 5MB (optional)\n7. Click Create\n\nAfter creating the bucket, you can upload images!'
+          '✅ 문제는 성공적으로 생성되었습니다!\n\n⚠️ 하지만 이미지를 업로드할 수 없었습니다.\n\n📦 Supabase 대시보드에서 다음을 수행해주세요:\n1. Storage 메뉴로 이동\n2. Buckets 탭 클릭\n3. "New bucket" 버튼 클릭\n4. 이름: quiz-images\n5. Public bucket: 체크 ✅\n6. File size limit: 5MB (선택사항)\n7. Create 버튼 클릭\n\n버킷을 생성한 후 다시 이미지를 업로드해주세요!'
         );
       }
       
@@ -483,11 +481,11 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
   if (isLoading) {
     const pageMsg = (t.problem as any)?.[`loadingPageMessage${(loadingPageIndex % 3) + 1}`] ?? t.common.loading;
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
-          <p className="text-slate-400">{t.common.loading}</p>
-          <p className="text-slate-500 text-sm mt-2">{pageMsg}</p>
+          <p className="text-fog">{t.common.loading}</p>
+          <p className="text-fog-dim text-sm mt-2">{pageMsg}</p>
         </div>
       </div>
     );
@@ -498,11 +496,11 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-3xl">
         <div className="mb-4 sm:mb-6">
           <Link href={`/${lang}`}>
-            <button className="text-slate-400 hover:text-white transition-colors text-xs sm:text-sm">
+            <button className="text-fog hover:text-white transition-colors text-xs sm:text-sm">
               <i className="ri-arrow-left-line mr-2"></i>
               {t.common.back}
             </button>
@@ -510,48 +508,34 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         </div>
 
         <div className="text-center mb-4 sm:mb-6 lg:mb-8">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
-            {lang === 'ko' ? '문제 만들기' : 'Create Problem'}
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 bg-gradient-to-r from-brass-300 to-brass bg-clip-text text-transparent">
+            {'문제 만들기'}
           </h1>
         </div>
 
         {/* 고전 퍼즐 안내 */}
-        <div className="mb-4 sm:mb-5 rounded-xl border border-slate-700 bg-slate-800/60 p-4 text-xs sm:text-sm text-slate-200 space-y-2">
-          <p className="font-semibold text-slate-100">
-            {lang === 'ko'
-              ? '고전 바다거북스프·논리 퍼즐 운영 원칙'
-              : 'Classic Turtle Soup / Logic Puzzle Policy'}
+        <div className="mb-4 sm:mb-5 rounded-xl border border-brass/20 bg-ink-700/60 p-4 text-xs sm:text-sm text-bone-muted space-y-2">
+          <p className="font-semibold text-bone">
+            고전 바다거북스프·논리 퍼즐 운영 원칙
           </p>
-          <ul className="list-disc list-inside space-y-1 text-slate-300">
+          <ul className="list-disc list-inside space-y-1 text-fog">
             <li>
-              {lang === 'ko'
-                ? '아이디어·사고 구조 중심의 퍼즐은 저작권 침해가 아니며, 특정 문장을 그대로 복제하지 않는 한 문제가 없습니다.'
-                : 'Idea/logic-based puzzles are not copyright infringement unless you copy exact wording.'}
+              아이디어·사고 구조 중심의 퍼즐은 저작권 침해가 아니며, 특정 문장을 그대로 복제하지 않는 한 문제가 없습니다.
             </li>
             <li>
-              {lang === 'ko'
-                ? '대부분의 고전 퍼즐은 원작자를 특정할 수 없으므로 개인 원작자 표기는 하지 않습니다.'
-                : 'Most classic puzzles have no verifiable single author, so we do not name individuals.'}
+              대부분의 고전 퍼즐은 원작자를 특정할 수 없으므로 개인 원작자 표기는 하지 않습니다.
             </li>
             <li>
-              {lang === 'ko'
-                ? '출처 표기 예시: Classic Turtle Soup (Public Domain), Classic Logic Puzzle (Unknown)'
-                : 'Source examples: Classic Turtle Soup (Public Domain), Classic Logic Puzzle (Unknown)'}
+              출처 표기 예시: Classic Turtle Soup (Public Domain), Classic Logic Puzzle (Unknown)
             </li>
             <li>
-              {lang === 'ko'
-                ? '신뢰 가능한 집합 출처만 사용: 위키백과 등'
-                : 'Use only reputable aggregate sources (e.g., Wikipedia).'}
+              신뢰 가능한 집합 출처만 사용: 위키백과 등
             </li>
-            <li className="text-slate-200 font-medium">
-              {lang === 'ko'
-                ? '본 플랫폼의 일부 문제는 전 세계적으로 공유되어 온 고전 바다거북스프 및 논리 퍼즐을 바탕으로 재구성되었습니다.'
-                : 'Some puzzles here are reconstructed from globally shared classic Turtle Soup and logic puzzles.'}
+            <li className="text-bone-muted font-medium">
+              본 플랫폼의 일부 문제는 전 세계적으로 공유되어 온 고전 바다거북스프 및 논리 퍼즐을 바탕으로 재구성되었습니다.
             </li>
-            <li className="text-slate-200 font-medium">
-              {lang === 'ko'
-                ? '본 플랫폼의 퍼즐 콘텐츠는 저작권상 명확한 법적 문제 없이 운영 가능하며, 윤리적 투명성을 위해 “고전 퍼즐 기반”임을 명시하는 방식을 채택합니다.'
-                : 'Our puzzles are operated without copyright issues; we state they are “classic puzzle-based” for transparency.'}
+            <li className="text-bone-muted font-medium">
+              본 플랫폼의 퍼즐 콘텐츠는 저작권상 명확한 법적 문제 없이 운영 가능하며, 윤리적 투명성을 위해 “고전 퍼즐 기반”임을 명시하는 방식을 채택합니다.
             </li>
           </ul>
         </div>
@@ -559,23 +543,21 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         <div className="space-y-4 sm:space-y-5 lg:space-y-6">
           {/* 바다거북 스프 만들기 버튼 */}
           {!showSoupForm && (
-            <div className="bg-gradient-to-r from-teal-500/20 to-cyan-500/20 border border-teal-500/30 rounded-xl p-4">
+            <div className="bg-gradient-to-r from-brass/20 to-brass-600/20 border border-brass/30 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm sm:text-base font-semibold text-white mb-1">
-                    {lang === 'ko' ? '🥣 바다거북 스프 게임 만들기' : '🥣 Create Turtle Soup Game'}
+                    {'🥣 바다거북 스프 게임 만들기'}
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-300">
-                    {lang === 'ko' 
-                      ? 'Yes/No 질문으로 진실을 추리하는 게임을 만들어보세요'
-                      : 'Create a game where players guess the truth with Yes/No questions'}
+                  <p className="text-xs sm:text-sm text-fog">
+                    Yes/No 질문으로 진실을 추리하는 게임을 만들어보세요
                   </p>
                 </div>
                 <button
                   onClick={() => setShowSoupForm(true)}
-                  className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all duration-200 touch-manipulation whitespace-nowrap"
+                  className="bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all duration-200 touch-manipulation whitespace-nowrap"
                 >
-                  {lang === 'ko' ? '만들기' : 'Create'}
+                  {'만들기'}
                 </button>
               </div>
             </div>
@@ -586,16 +568,16 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
             <>
               {/* 제목 */}
               <div>
-                <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-                  {lang === 'ko' ? '제목' : 'Title'}
+                <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
+                  {'제목'}
                   <span className="text-red-400 ml-1">*</span>
                 </label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder={lang === 'ko' ? '문제 제목을 입력하세요' : 'Enter problem title'}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm sm:text-base"
+                  placeholder={'문제 제목을 입력하세요'}
+                  className="w-full bg-ink-700 border border-brass/20 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm sm:text-base"
                   maxLength={100}
                 />
               </div>
@@ -618,12 +600,12 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-teal-500/50 mt-4 sm:mt-6 lg:mt-8 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base touch-manipulation"
+                className="w-full bg-gradient-to-r from-brass to-brass-600 hover:from-brass-600 hover:to-brass-700 text-white font-semibold py-3 sm:py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-teal-500/50 mt-4 sm:mt-6 lg:mt-8 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base touch-manipulation"
               >
                 <i className={isSubmitting ? 'ri-loader-4-line animate-spin mr-2' : 'ri-add-circle-line mr-2'}></i>
                 {isSubmitting
-                  ? ((t.problem as any)?.[`createLoadingMessage${(loadingMessageIndex % 6) + 1}`] ?? (lang === 'ko' ? '문제 생성 중...' : 'Creating...'))
-                  : (lang === 'ko' ? '문제 만들기' : 'Create Problem')}
+                  ? ((t.problem as any)?.[`createLoadingMessage${(loadingMessageIndex % 6) + 1}`] ?? ('문제 생성 중...'))
+                  : ('문제 만들기')}
               </button>
             </>
           )}

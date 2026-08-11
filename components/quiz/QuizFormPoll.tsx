@@ -40,7 +40,7 @@ export default function QuizFormPoll({
     <>
       {/* 질문 (선택사항) */}
       <div>
-        <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
+        <label className="block text-xs sm:text-sm font-medium mb-2 text-fog">
           <i className="ri-question-line mr-1"></i>
           {lang === 'ko' ? '질문 (선택사항)' : 'Question (Optional)'}
         </label>
@@ -48,7 +48,7 @@ export default function QuizFormPoll({
           value={question}
           onChange={(e) => onQuestionChange(e.target.value)}
           placeholder={lang === 'ko' ? '투표 질문을 입력하세요 (선택사항)' : 'Enter the poll question (optional)'}
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
+          className="w-full bg-ink-700 border border-brass/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent h-24 resize-none text-sm"
           maxLength={300}
         />
       </div>
@@ -56,7 +56,7 @@ export default function QuizFormPoll({
       {/* 선택지 (최소 2개, 최대 10개) */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-xs sm:text-sm font-medium text-slate-300">
+          <label className="block text-xs sm:text-sm font-medium text-fog">
             <i className="ri-list-check mr-1"></i>
             {lang === 'ko' ? '선택지 (최소 2개, 최대 10개)' : 'Options (Minimum 2, Maximum 10)'}
             <span className="text-red-400 ml-1">*</span>
@@ -65,7 +65,7 @@ export default function QuizFormPoll({
             <button
               type="button"
               onClick={handleAddOption}
-              className="text-xs bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 rounded-lg transition-colors"
+              className="text-xs bg-brass hover:bg-brass-600 text-white px-3 py-1 rounded-lg transition-colors"
             >
               <i className="ri-add-line mr-1"></i>
               {lang === 'ko' ? '추가' : 'Add'}
@@ -75,13 +75,13 @@ export default function QuizFormPoll({
         <div className="space-y-2">
           {options.map((option, index) => (
             <div key={index} className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 w-6">{index + 1}.</span>
+              <span className="text-xs text-fog w-6">{index + 1}.</span>
               <input
                 type="text"
                 value={option}
                 onChange={(e) => handleOptionChange(index, e.target.value)}
                 placeholder={lang === 'ko' ? `선택지 ${index + 1}` : `Option ${index + 1}`}
-                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                className="flex-1 bg-ink-700 border border-brass/20 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
                 maxLength={200}
               />
               {options.length > 2 && (

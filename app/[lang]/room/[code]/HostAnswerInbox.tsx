@@ -23,8 +23,8 @@ export default function HostAnswerInbox({ guesses, onJudge, gameEnded, lang }: H
   const unjudgedGuesses = guesses.filter(g => !g.judged);
 
   return (
-    <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
-      <div className="p-3 sm:p-4 border-b border-slate-700 flex items-center gap-2">
+    <div className="bg-ink-700/50 rounded-xl border border-brass/20 overflow-hidden">
+      <div className="p-3 sm:p-4 border-b border-brass/20 flex items-center gap-2">
         <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-purple-500/20 rounded-lg flex-shrink-0">
           <i className="ri-inbox-line text-purple-400 text-sm sm:text-base"></i>
         </div>
@@ -34,11 +34,11 @@ export default function HostAnswerInbox({ guesses, onJudge, gameEnded, lang }: H
             {unjudgedGuesses.length}
           </span>
         )}
-        <span className="ml-auto text-xs sm:text-sm text-slate-500">{guesses.length}{lang === 'ko' ? t.room.questionsCount : ''}</span>
+        <span className="ml-auto text-xs sm:text-sm text-fog-dim">{guesses.length}{lang === 'ko' ? t.room.questionsCount : ''}</span>
       </div>
       <div className="max-h-64 sm:max-h-96 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3">
         {guesses.length === 0 ? (
-          <div className="text-center py-8 text-slate-500 text-xs sm:text-sm">
+          <div className="text-center py-8 text-fog-dim text-xs sm:text-sm">
             <i className="ri-inbox-line text-2xl sm:text-3xl mb-2"></i>
             <p>{t.room.noAnswersSubmitted}</p>
           </div>
@@ -51,7 +51,7 @@ export default function HostAnswerInbox({ guesses, onJudge, gameEnded, lang }: H
                   ? guess.correct
                     ? 'bg-green-500/10 border-green-500/50 hover:border-green-500/70'
                     : 'bg-red-500/10 border-red-500/50 hover:border-red-500/70'
-                  : 'bg-slate-900 border-slate-700 hover:border-purple-500/50'
+                  : 'bg-ink-800 border-brass/20 hover:border-purple-500/50'
               }`}
             >
               <div className="flex items-start gap-2 mb-2 flex-wrap">

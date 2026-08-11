@@ -46,7 +46,7 @@ export default function QuizPlayImage({
         </div>
       )}
 
-      <div className="relative w-full max-w-2xl mx-auto aspect-video rounded-lg overflow-hidden border border-slate-700">
+      <div className="relative w-full max-w-2xl mx-auto aspect-video rounded-lg overflow-hidden border border-brass/20">
         <Image
           src={imageUrl}
           alt={isKo ? '퀴즈 이미지' : 'Quiz Image'}
@@ -65,12 +65,12 @@ export default function QuizPlayImage({
             onChange={(e) => setInputAnswer(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
             placeholder={isKo ? '정답을 입력하세요' : 'Enter your answer'}
-            className="w-full p-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-teal-500"
+            className="w-full p-3 bg-ink-700 border border-brass/25 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-brass"
           />
           <button
             onClick={handleSubmit}
             disabled={!inputAnswer.trim()}
-            className="w-full p-3 bg-teal-600 hover:bg-teal-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all"
+            className="w-full p-3 bg-teal-600 hover:bg-brass disabled:bg-ink-600 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all"
           >
             {isKo ? '정답 제출' : 'Submit Answer'}
           </button>
@@ -85,7 +85,7 @@ export default function QuizPlayImage({
                 {isKo ? '정답입니다!' : 'Correct!'}
               </div>
               {userAnswer && (
-                <div className="text-slate-300">
+                <div className="text-fog">
                   {isKo ? '입력한 답: ' : 'Your answer: '}
                   <span className="font-semibold">{userAnswer}</span>
                 </div>
@@ -98,7 +98,7 @@ export default function QuizPlayImage({
                   {isKo ? '오답입니다.' : 'Incorrect.'}
                 </div>
                 {userAnswer && userAnswer.trim() !== '-' && (
-                  <div className="text-slate-300">
+                  <div className="text-fog">
                     {isKo ? '입력한 답: ' : 'Your answer: '}
                     <span className="font-semibold">{userAnswer}</span>
                   </div>
@@ -108,15 +108,15 @@ export default function QuizPlayImage({
               {!showCorrectAnswer ? (
                 <button
                   onClick={() => setShowCorrectAnswer(true)}
-                  className="w-full p-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg transition-all"
+                  className="w-full p-3 bg-ink-600 hover:bg-slate-600 text-white font-semibold rounded-lg transition-all"
                 >
                   {isKo ? '정답을 확인하시겠습니까?' : 'Would you like to see the correct answer?'}
                 </button>
               ) : (
-                <div className="p-4 rounded-lg bg-slate-800 border border-slate-600">
-                  <div className="text-slate-300">
+                <div className="p-4 rounded-lg bg-ink-700 border border-brass/25">
+                  <div className="text-fog">
                     {isKo ? '정답: ' : 'Correct answer: '}
-                    <span className="font-semibold text-teal-400">{answer}</span>
+                    <span className="font-semibold text-brass">{answer}</span>
                   </div>
                 </div>
               )}
@@ -129,15 +129,15 @@ export default function QuizPlayImage({
       {explanation && (
         <details className="mt-4 group">
           <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
-            <div className="bg-slate-800 rounded-lg border border-slate-600 hover:border-teal-500/30 transition-colors px-4 py-2.5 flex items-center justify-between">
-              <span className="text-sm font-semibold text-teal-400">
+            <div className="bg-ink-700 rounded-lg border border-brass/25 hover:border-brass/30 transition-colors px-4 py-2.5 flex items-center justify-between">
+              <span className="text-sm font-semibold text-brass">
                 {isKo ? '해설 보기' : 'View Explanation'}
               </span>
-              <i className="ri-arrow-down-s-line text-slate-400 group-open:rotate-180 transition-transform"></i>
+              <i className="ri-arrow-down-s-line text-fog group-open:rotate-180 transition-transform"></i>
             </div>
           </summary>
-          <div className="mt-2 p-4 bg-slate-800 rounded-lg border border-slate-600 border-t-0 rounded-t-none">
-            <div className="text-sm text-slate-300">{explanation}</div>
+          <div className="mt-2 p-4 bg-ink-700 rounded-lg border border-brass/25 border-t-0 rounded-t-none">
+            <div className="text-sm text-fog">{explanation}</div>
           </div>
         </details>
       )}

@@ -12,113 +12,69 @@ export default function SocialBottomBar() {
       name: 'YouTube',
       url: 'https://youtube.com/@funzip.1.8?si=8LIPCwY5tYiEHoX9',
       icon: 'ri-youtube-fill',
-      color: 'text-red-500 hover:text-red-400',
-      bgColor: 'hover:bg-red-500/10',
     },
     {
       name: 'TikTok',
       url: 'https://www.tiktok.com/@funzip.1.7?_r=1&_d=f1a1mbhbm4dafh&sec_uid=MS4wLjABAAAA9z1f4X8isSHjpdbgM6BRdxs6n40Xze6fFkjhGvXd2FCWkkUTumqX2asT_UqQHhm_&share_author_id=7592308534436938770&sharer_language=ko&source=h5_t&u_code=f1a7gk3jh50g5g&timestamp=1768462146&user_id=7592308534436938770&sec_user_id=MS4wLjABAAAA9z1f4X8isSHjpdbgM6BRdxs6n40Xze6fFkjhGvXd2FCWkkUTumqX2asT_UqQHhm_&item_author_type=1&utm_source=copy&utm_campaign=client_share&utm_medium=android&share_iid=7592308369671849746&share_link_id=07bc8e',
       icon: 'ri-tiktok-fill',
-      color: 'text-black dark:text-white hover:text-pink-500',
-      bgColor: 'hover:bg-pink-500/10',
     },
     {
       name: 'Instagram',
       url: 'https://www.instagram.com/funzip.1.7?igsh=M3hoeHhnanh6Nmtq',
       icon: 'ri-instagram-fill',
-      color: 'text-pink-500 hover:text-pink-400',
-      bgColor: 'hover:bg-pink-500/10',
     },
     {
       name: 'KakaoTalk',
       url: 'https://open.kakao.com/o/gci21wai',
       icon: 'ri-chat-3-fill',
-      color: 'text-yellow-400 hover:text-yellow-300',
-      bgColor: 'hover:bg-yellow-400/10',
     },
   ];
 
+  const legalLinks = [
+    { href: `/${lang}/guide`, label: '소개' },
+    { href: `/${lang}/guide`, label: '가이드' },
+    { href: `/${lang}/faq`, label: 'FAQ' },
+    { href: `/${lang}/privacy`, label: '개인정보' },
+    { href: `/${lang}/terms`, label: '이용약관' },
+    { href: `/${lang}/contact`, label: '문의' },
+  ];
+
   return (
-    <footer className="w-full bg-slate-900 border-t border-slate-700/50 mt-auto">
-      <div className="container mx-auto px-4 py-6 sm:py-8">
+    <footer className="mt-auto border-t border-slate-800 bg-slate-950">
+      <div className="page-shell py-8 sm:py-10">
         <div className="flex flex-col items-center gap-6">
-          {/* 소셜 링크 */}
-          <div className="flex items-center justify-center gap-4 sm:gap-6 md:gap-8">
+          <div className="text-center">
+            <p className="text-lg font-semibold text-white">바다거북스프</p>
+            <p className="mt-1 text-sm text-slate-400">질문으로 진실을 밝혀내는 추리 놀이터</p>
+          </div>
+
+          <div className="flex items-center justify-center gap-3 sm:gap-5">
             {socialLinks.map((link) => (
               <a
                 key={link.name}
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`
-                  flex flex-col items-center justify-center
-                  px-4 sm:px-5 py-3 sm:py-4
-                  rounded-lg
-                  transition-all duration-200
-                  ${link.bgColor}
-                  ${link.color}
-                  group
-                  min-w-[70px] sm:min-w-[90px]
-                `}
+                className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-700 text-slate-400 transition hover:border-teal-500/40 hover:text-teal-300"
                 title={link.name}
+                aria-label={link.name}
               >
-                <i className={`${link.icon} text-2xl sm:text-3xl mb-2 transition-transform group-hover:scale-110`}></i>
-                <span className="text-xs sm:text-sm font-medium opacity-80 group-hover:opacity-100">
-                  {link.name}
-                </span>
+                <i className={`${link.icon} text-xl`} aria-hidden />
               </a>
             ))}
           </div>
-          
-          {/* 법적 링크 및 정보 링크 */}
-          <div className="w-full pt-4 border-t border-slate-700/50">
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs sm:text-sm">
-              <Link 
-                href={`/${lang}/guide`}
-                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
-              >
-                {lang === 'ko' ? '사이트 소개' : 'About'}
+
+          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-slate-400">
+            {legalLinks.map((link) => (
+              <Link key={link.label} href={link.href} className="hover:text-white transition-colors">
+                {link.label}
               </Link>
-              <span className="text-slate-600">|</span>
-              <Link 
-                href={`/${lang}/guide`}
-                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
-              >
-                {lang === 'ko' ? '게임 가이드' : 'Guide'}
-              </Link>
-              <span className="text-slate-600">|</span>
-              <Link 
-                href={`/${lang}/faq`}
-                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
-              >
-                {lang === 'ko' ? 'FAQ' : 'FAQ'}
-              </Link>
-              <span className="text-slate-600">|</span>
-              <Link 
-                href={`/${lang}/privacy`}
-                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
-              >
-                {lang === 'ko' ? '개인정보처리방침' : 'Privacy'}
-              </Link>
-              <span className="text-slate-600">|</span>
-              <Link 
-                href={`/${lang}/terms`}
-                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
-              >
-                {lang === 'ko' ? '이용약관' : 'Terms'}
-              </Link>
-              <span className="text-slate-600">|</span>
-              <Link 
-                href={`/${lang}/contact`}
-                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
-              >
-                {lang === 'ko' ? '문의하기' : 'Contact'}
-              </Link>
-            </div>
-          </div>
+            ))}
+          </nav>
+
+          <p className="text-xs text-slate-500">© {new Date().getFullYear()} 바다거북스프</p>
         </div>
       </div>
     </footer>
   );
 }
-

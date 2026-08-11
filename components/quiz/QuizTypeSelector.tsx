@@ -17,7 +17,7 @@ export default function QuizTypeSelector({
 }: QuizTypeSelectorProps) {
   return (
     <div className="space-y-4">
-      <label className="block text-xs sm:text-sm font-medium mb-3 text-slate-300">
+      <label className="block text-xs sm:text-sm font-medium mb-3 text-fog">
         <i className="ri-file-question-line mr-1"></i>
         {lang === 'ko' ? '문제 유형' : 'Problem Type'}
       </label>
@@ -35,14 +35,14 @@ export default function QuizTypeSelector({
               className={`
                 relative p-3 sm:p-4 rounded-xl border-2 transition-all
                 ${isSelected
-                  ? 'border-teal-500 bg-teal-500/10 shadow-lg shadow-teal-500/20'
-                  : 'border-slate-700 bg-slate-800/50 hover:border-slate-600 hover:bg-slate-800'
+                  ? 'border-brass bg-brass/10 shadow-lg shadow-teal-500/20'
+                  : 'border-brass/20 bg-ink-700/50 hover:border-brass/25 hover:bg-ink-700'
                 }
                 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
               `}
             >
               <div className="text-center">
-                <div className={`text-xl sm:text-2xl mb-1 sm:mb-2 ${isSelected ? 'text-teal-400' : 'text-slate-400'}`}>
+                <div className={`text-xl sm:text-2xl mb-1 sm:mb-2 ${isSelected ? 'text-brass' : 'text-fog'}`}>
                   {type === 'soup' && <i className="ri-bowl-line"></i>}
                   {type === 'reasoning' && <i className="ri-search-line"></i>}
                   {type === 'nonsense' && <i className="ri-lightbulb-flash-line"></i>}
@@ -56,7 +56,7 @@ export default function QuizTypeSelector({
                   {type === 'fill_blank' && <i className="ri-edit-line"></i>}
                   {type === 'order' && <i className="ri-list-ordered"></i>}
                 </div>
-                <div className={`text-xs font-semibold ${isSelected ? 'text-teal-300' : 'text-slate-300'}`}>
+                <div className={`text-xs font-semibold ${isSelected ? 'text-brass-300' : 'text-fog'}`}>
                   {lang === 'ko' ? metadata.name : metadata.nameEn}
                 </div>
                 {isSelected && (
@@ -70,7 +70,7 @@ export default function QuizTypeSelector({
         })}
       </div>
       {selectedType && (
-        <p className="text-xs text-slate-400 mt-2">
+        <p className="text-xs text-fog mt-2">
           {lang === 'ko' ? QUIZ_TYPE_METADATA[selectedType].description : QUIZ_TYPE_METADATA[selectedType].description}
         </p>
       )}
