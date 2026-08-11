@@ -77,7 +77,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
 
   const loadProblems = async () => {
     try {
-      const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
+      const currentLang = 'ko';
       
       let data: any[] | null = null;
       let error: any = null;
@@ -206,20 +206,9 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                         type === 'fill_blank' ? '빈칸 퀴즈' :
                         type === 'liar' ? '라이어 게임' :
                         type === 'mafia' ? '마피아' : type;
-        const typeNameEn = type === 'soup' ? 'turtle soup' :
-                          type === 'nonsense' ? 'nonsense quiz' :
-                          type === 'mcq' ? 'multiple choice' :
-                          type === 'ox' ? 'ox quiz' :
-                          type === 'image' ? 'image quiz' :
-                          type === 'balance' ? 'balance game' :
-                          type === 'logic' ? 'logic puzzle' :
-                          type === 'fill_blank' ? 'fill blank' :
-                          type === 'liar' ? 'liar game' :
-                          type === 'mafia' ? 'mafia' : type;
         return p.title.toLowerCase().includes(query) ||
                p.content.toLowerCase().includes(query) ||
                typeName.toLowerCase().includes(query) ||
-               typeNameEn.toLowerCase().includes(query) ||
                type.toLowerCase().includes(query) ||
                (p.tags && Array.isArray(p.tags) && p.tags.some(tag => tag.toLowerCase().includes(query)));
       });
@@ -288,11 +277,11 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
               <Link href={`/${lang}/play`}>
                 <button className="text-slate-400 hover:text-white transition-colors text-xs sm:text-sm">
                   <i className="ri-arrow-left-line mr-2"></i>
-                  {lang === 'ko' ? '게임 선택' : 'Select Game'}
+                  {'게임 선택'}
                 </button>
               </Link>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
-                {t.problem.problemList}
+                {'바다거북스프 문제 모음'}
               </h1>
             </div>
             <Link href={`/${lang}/create-problem`}>
@@ -303,22 +292,31 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
             </Link>
           </div>
 
-          {/* 설명 텍스트 (AdSense 품질 강화) */}
+          {/* SEO 카테고리 내부 링크 */}
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
+            {[
+              { href: `/${lang}/problems/legend`, label: '🏆 레전드 문제', color: 'from-amber-500/20 to-yellow-500/20 border-amber-500/30 hover:border-amber-400/60' },
+              { href: `/${lang}/problems/hard`, label: '🔥 어려운 문제', color: 'from-red-500/20 to-orange-500/20 border-red-500/30 hover:border-red-400/60' },
+              { href: `/${lang}/problems/scary`, label: '👻 공포·반전', color: 'from-purple-500/20 to-violet-500/20 border-purple-500/30 hover:border-purple-400/60' },
+              { href: `/${lang}/problems/easy`, label: '🌱 쉬운 문제', color: 'from-green-500/20 to-emerald-500/20 border-green-500/30 hover:border-green-400/60' },
+              { href: `/${lang}/problems/latest`, label: '✨ 최신 문제', color: 'from-cyan-500/20 to-teal-500/20 border-cyan-500/30 hover:border-cyan-400/60' },
+            ].map((cat) => (
+              <Link key={cat.href} href={cat.href} className={`block text-center py-2.5 px-3 rounded-xl bg-gradient-to-r ${cat.color} border text-white text-sm font-medium transition-all duration-200`}>
+                {cat.label}
+              </Link>
+            ))}
+          </div>
+
+          {/* 설명 텍스트 */}
           <div className="mt-4 p-4 sm:p-5 bg-slate-800/60 rounded-xl border border-slate-700/50 text-slate-300 text-sm sm:text-base leading-relaxed space-y-3">
             <p>
-              {lang === 'ko'
-                ? '바다거북스프 문제 목록입니다. 예/아니오 질문만으로 진실을 추리하는 바다거북스프형 퍼즐부터 객관식, OX, 논리 퍼즐, 밸런스 게임까지 다양한 퀴즈를 즐길 수 있습니다. 각 문제를 클릭하면 AI가 질문에 자동으로 답변해주는 오프라인 모드로 혼자서 추리를 즐길 수 있습니다.'
-                : 'Browse Turtle Soup problems. From classic yes/no deduction puzzles to multiple choice, OX quizzes, logic puzzles, and balance games—enjoy a variety of quizzes. Click any problem to play offline mode where AI automatically answers your questions.'}
+              {'바다거북스프 문제를 찾고 계신가요? 레전드 문제부터 어려운 문제, 공포·반전 문제까지 다양한 바다거북스프 문제를 직접 풀어볼 수 있습니다. AI가 질문에 자동으로 답변해주는 솔로 모드로 혼자서도 추리를 즐길 수 있습니다.'}
             </p>
             <p>
-              {lang === 'ko'
-                ? '바다거북스프 퍼즐은 장소, 등장인물, 시간, 행동 순서를 체계적으로 좁혀가는 것이 핵심입니다. 초반에는 넓은 범위를 묻고, 정보가 모이면 구체적으로 좁혀가세요. 추리 팁은 튜토리얼 페이지에서 확인할 수 있습니다.'
-                : 'Turtle Soup puzzles require systematically narrowing down location, characters, time, and action order. Ask broad questions first, then narrow down as information accumulates. Check the tutorial page for deduction tips.'}
+              {'바다거북스프 퍼즐은 장소, 등장인물, 시간, 행동 순서를 체계적으로 좁혀가는 것이 핵심입니다. 초반에는 넓은 범위를 묻고, 정보가 모이면 구체적으로 좁혀가세요. 추리 팁은 튜토리얼 페이지에서 확인할 수 있습니다.'}
             </p>
             <p>
-              {lang === 'ko'
-                ? '친구들과 함께 플레이하고 싶다면 방 만들기에서 멀티플레이어 모드를 선택하세요. 문제를 만들고 싶다면 위의 "문제 만들기" 버튼을 클릭하세요.'
-                : 'Want to play with friends? Select multiplayer mode in Create Room. To create your own problem, click the "Create Problem" button above.'}
+              {'친구들과 함께 플레이하고 싶다면 방 만들기에서 멀티플레이어 모드를 선택하세요. 문제를 만들고 싶다면 위의 "문제 만들기" 버튼을 클릭하세요.'}
             </p>
           </div>
         </div>
@@ -341,7 +339,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
             {/* 관리자 채택 필터 */}
             <div>
               <label className="block text-xs sm:text-sm font-medium mb-2 text-slate-300">
-                {lang === 'ko' ? '관리자 채택' : 'Featured'}:
+                관리자 채택:
               </label>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -363,7 +361,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                   }`}
                 >
                   <i className="ri-star-fill mr-1"></i>
-                  {lang === 'ko' ? '관리자 채택' : 'Featured'}
+                  {'관리자 채택'}
                 </button>
               </div>
             </div>
@@ -646,7 +644,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
                         {(problem as any).status === 'featured' && (
                           <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded text-xs font-medium border border-amber-500/30 flex items-center gap-1 whitespace-nowrap">
                             <i className="ri-star-fill text-amber-400"></i>
-                            {lang === 'ko' ? '관리자 채택' : 'Featured'}
+                            {'관리자 채택'}
                           </span>
                         )}
                       </div>
@@ -730,10 +728,7 @@ export default function ProblemsPage({ params }: { params: Promise<{ lang: strin
             {/* 결과 개수 */}
             {!isLoading && (
               <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-slate-400">
-                {lang === 'ko' 
-                  ? `총 ${filteredProblems.length}개의 문제 (${(currentPage - 1) * itemsPerPage + 1}-${Math.min(currentPage * itemsPerPage, filteredProblems.length)} / ${filteredProblems.length})`
-                  : `Total ${filteredProblems.length} problems (${(currentPage - 1) * itemsPerPage + 1}-${Math.min(currentPage * itemsPerPage, filteredProblems.length)} / ${filteredProblems.length})`
-                }
+                {`총 ${filteredProblems.length}개의 문제 (${(currentPage - 1) * itemsPerPage + 1}-${Math.min(currentPage * itemsPerPage, filteredProblems.length)} / ${filteredProblems.length})`}
               </div>
             )}
           </>

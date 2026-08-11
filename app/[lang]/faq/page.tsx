@@ -17,21 +17,31 @@ export async function generateMetadata({
     title: locale === 'ko' ? '자주 묻는 질문' : 'FAQ',
     description: locale === 'ko'
       ? '바다거북스프 게임에 대한 자주 묻는 질문과 답변을 확인하세요.'
-      : 'Check frequently asked questions and answers about Pelican Soup Riddle.',
+      : 'Check frequently asked questions and answers about Turtle Soup Riddle.',
     alternates: {
       canonical: baseUrl,
       languages: {
         ko: `${siteUrl}/ko/faq`,
         en: `${siteUrl}/en/faq`,
+        'x-default': `${siteUrl}/ko/faq`,
       },
     },
     openGraph: {
       title: locale === 'ko' ? '자주 묻는 질문' : 'FAQ',
       description: locale === 'ko'
         ? '바다거북스프 FAQ'
-        : 'Pelican Soup Riddle FAQ',
+        : 'Turtle Soup Riddle FAQ',
       url: baseUrl,
       locale: locale === 'ko' ? 'ko_KR' : 'en_US',
+      images: [{ url: `${siteUrl}/og.png`, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: locale === 'ko' ? '자주 묻는 질문' : 'FAQ',
+      description: locale === 'ko'
+        ? '바다거북스프 게임에 대한 자주 묻는 질문과 답변을 확인하세요.'
+        : 'Check frequently asked questions and answers about Turtle Soup Riddle.',
+      images: [`${siteUrl}/og.png`],
     },
   };
 }
@@ -107,7 +117,7 @@ export default async function FAQPage({
       question: isKo ? '무료로 사용할 수 있나요?' : 'Is it free to use?',
       answer: isKo
         ? '네, 바다거북스프는 완전 무료로 사용할 수 있습니다. 문제 풀기, 방 만들기, 문제 생성, 맞추기 게임, 커뮤니티 등 모든 기능을 추가 비용 없이 이용하실 수 있습니다. 향후 유료 기능이 추가될 경우 기존 무료 기능은 그대로 유지됩니다.'
-        : 'Yes, Pelican Soup Riddle is completely free to use. All features—solving problems, creating rooms, creating problems, guess games, community—are available at no additional cost. If paid features are added in the future, existing free features will remain unchanged.',
+        : 'Yes, Turtle Soup Riddle is completely free to use. All features—solving problems, creating rooms, creating problems, guess games, community—are available at no additional cost. If paid features are added in the future, existing free features will remain unchanged.',
     },
   ];
 

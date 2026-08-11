@@ -17,21 +17,31 @@ export async function generateMetadata({
     title: locale === 'ko' ? '게임 이용 가이드' : 'Game Guide',
     description: locale === 'ko'
       ? '바다거북스프 게임 플레이 방법을 자세히 알아보세요. 멀티플레이어와 오프라인 모드 모두 지원합니다.'
-      : 'Learn how to play Pelican Soup Riddle in detail. Both multiplayer and offline modes are supported.',
+      : 'Learn how to play Turtle Soup Riddle in detail. Both multiplayer and offline modes are supported.',
     alternates: {
       canonical: baseUrl,
       languages: {
         ko: `${siteUrl}/ko/guide`,
         en: `${siteUrl}/en/guide`,
+        'x-default': `${siteUrl}/ko/guide`,
       },
     },
     openGraph: {
       title: locale === 'ko' ? '게임 이용 가이드' : 'Game Guide',
       description: locale === 'ko'
         ? '바다거북스프 게임 가이드'
-        : 'Pelican Soup Riddle Game Guide',
+        : 'Turtle Soup Riddle Game Guide',
       url: baseUrl,
       locale: locale === 'ko' ? 'ko_KR' : 'en_US',
+      images: [{ url: `${siteUrl}/og.png`, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: locale === 'ko' ? '게임 이용 가이드' : 'Game Guide',
+      description: locale === 'ko'
+        ? '바다거북스프 게임 플레이 방법을 자세히 알아보세요.'
+        : 'Learn how to play Turtle Soup Riddle in detail.',
+      images: [`${siteUrl}/og.png`],
     },
   };
 }
@@ -68,7 +78,7 @@ export default async function GuidePage({
               <p className="mb-4">
                 {isKo
                   ? '바다거북스프는 추리와 질문을 통해 진실을 밝혀내는 게임입니다. 호스트가 설정한 이야기와 진실을 플레이어들이 질문을 통해 추리합니다.'
-                  : 'Pelican Soup Riddle is a game where you uncover the truth through deduction and questions. Players deduce the story and truth set by the host through questions.'}
+                  : 'Turtle Soup Riddle is a game where you uncover the truth through deduction and questions. Players deduce the story and truth set by the host through questions.'}
               </p>
               <div className="bg-teal-500/10 border border-teal-500/30 rounded-lg p-4 mb-4">
                 <p className="text-sm">
@@ -417,11 +427,11 @@ export default async function GuidePage({
             <div className="mt-8 pt-6 border-t border-slate-700">
               <div className="flex flex-wrap gap-3">
                 <Link
-                  href={`/${locale}/tutorial`}
+                  href={`/${locale}/faq`}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-teal-500/20 text-teal-400 border border-teal-500/50 rounded-lg hover:bg-teal-500/30 transition-colors"
                 >
-                  <i className="ri-play-circle-line"></i>
-                  <span>{isKo ? '튜토리얼 보기' : 'View Tutorial'}</span>
+                  <i className="ri-questionnaire-line"></i>
+                  <span>{isKo ? 'FAQ 보기' : 'View FAQ'}</span>
                 </Link>
                 <Link
                   href={`/${locale}/problems`}

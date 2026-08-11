@@ -74,7 +74,7 @@ export default function SocialBottomBar() {
           <div className="w-full pt-4 border-t border-slate-700/50">
             <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs sm:text-sm">
               <Link 
-                href={`/${lang}/about`}
+                href={`/${lang}/guide`}
                 className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
               >
                 {lang === 'ko' ? '사이트 소개' : 'About'}
@@ -92,20 +92,6 @@ export default function SocialBottomBar() {
                 className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
               >
                 {lang === 'ko' ? 'FAQ' : 'FAQ'}
-              </Link>
-              <span className="text-slate-600">|</span>
-              <Link 
-                href={`/${lang}/community?category=notice`}
-                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
-              >
-                {lang === 'ko' ? '공지사항' : 'Notice'}
-              </Link>
-              <span className="text-slate-600">|</span>
-              <Link 
-                href={`/${lang}/community-guidelines`}
-                className="text-slate-300 hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800"
-              >
-                {lang === 'ko' ? '커뮤니티 가이드라인' : 'Guidelines'}
               </Link>
               <span className="text-slate-600">|</span>
               <Link 

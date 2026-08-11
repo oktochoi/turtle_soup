@@ -17,7 +17,7 @@ export async function generateMetadata({
     title: locale === 'ko' ? '문의하기' : 'Contact Us',
     description: locale === 'ko'
       ? '바다거북스프 게임에 대한 문의사항을 보내주세요. 빠르게 답변드리겠습니다.'
-      : 'Send us your inquiries about Pelican Soup Riddle. We will respond quickly.',
+      : 'Send us your inquiries about Turtle Soup Riddle. We will respond quickly.',
     alternates: {
       canonical: baseUrl,
       languages: {
@@ -29,7 +29,7 @@ export async function generateMetadata({
       title: locale === 'ko' ? '문의하기' : 'Contact Us',
       description: locale === 'ko'
         ? '바다거북스프 문의하기'
-        : 'Contact Pelican Soup Riddle',
+        : 'Contact Turtle Soup Riddle',
       url: baseUrl,
       locale: locale === 'ko' ? 'ko_KR' : 'en_US',
     },

@@ -1,30 +1,74 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { generateMetadataForProblem } from './metadata';
 import ProblemClient from './ProblemClient';
 import type { Problem } from '@/lib/types';
 
+async function getRelatedProblems(currentId: string, lang: 'ko', difficulty: string) {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('problems')
+      .select('id, title, difficulty')
+      .eq('lang', lang)
+      .eq('difficulty', difficulty)
+      .neq('id', currentId)
+      .order('like_count', { ascending: false })
+      .limit(4);
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
+function RelatedProblems({ problems, lang, difficulty }: { problems: any[]; lang: string; difficulty: string }) {
+  const diffLabel = difficulty === 'easy' ? '쉬운' : difficulty === 'hard' ? '어려운' : '같은 난이도의';
+
+  return (
+    <div className="bg-slate-900 border-t border-slate-800">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <h2 className="text-lg font-semibold text-white mb-4">
+          {`${diffLabel} 바다거북스프 문제`}
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {problems.map((p) => (
+            <Link key={p.id} href={`/${lang}/problem/${p.id}`} className="block p-4 rounded-xl bg-slate-800/60 border border-slate-700 hover:border-teal-500/50 transition-all">
+              <span className="text-white text-sm font-medium line-clamp-1">{p.title}</span>
+            </Link>
+          ))}
+        </div>
+        <div className="mt-4 flex gap-3">
+          <Link href={`/${lang}/problems`} className="text-sm text-teal-400 hover:text-teal-300 transition-colors">
+            ← 전체 문제 모음
+          </Link>
+          <Link href={`/${lang}/problems/${difficulty === 'hard' ? 'hard' : difficulty === 'easy' ? 'easy' : 'latest'}`} className="text-sm text-teal-400 hover:text-teal-300 transition-colors">
+            {`${diffLabel} 문제 더보기 →`}
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type Props = { params: Promise<{ lang: string; id: string }> };
 
-/** URL lang을 ko | en 로만 정규화 (ko: 한글 문제만, en: 영어 문제만) */
-function normalizeLang(lang: string): 'ko' | 'en' {
-  return lang === 'en' ? 'en' : 'ko';
+function normalizeLang(lang: string): 'ko' {
+  return 'ko';
 }
 
 // SEO: 메타데이터는 서버에서 생성
 export async function generateMetadata({ params }: Props) {
   const { lang, id } = await params;
-  return generateMetadataForProblem(id, normalizeLang(lang));
+  return generateMetadataForProblem(id);
 }
 
 // 동적 라우트: ISR 또는 on-demand
 export const dynamic = 'force-dynamic';
 
-/** 문제 조회: id + 언어 일치 시에만 반환. ko → 한글 문제만, en → 영어 문제만 */
-async function getProblem(problemId: string, requestLang: 'ko' | 'en'): Promise<Problem | null> {
+async function getProblem(problemId: string, requestLang: 'ko'): Promise<Problem | null> {
   const supabase = await createClient();
 
-  // 1) id + lang 조건으로 조회 시도 (lang 컬럼이 있는 DB)
   const { data, error } = await supabase
     .from('problems')
     .select('*')
@@ -32,9 +76,7 @@ async function getProblem(problemId: string, requestLang: 'ko' | 'en'): Promise<
     .single();
 
   if (error) {
-    // PGRST116: no rows → 해당 id 없음
     if (error.code === 'PGRST116') return null;
-    // lang/language 컬럼 없음 등 스키마 오류 시 id만으로 조회한 뒤 JS에서 필터
     if (error.code === '42703' || error.message?.includes('column') || error.message?.includes('lang')) {
       const fallback = await supabase
         .from('problems')
@@ -43,7 +85,7 @@ async function getProblem(problemId: string, requestLang: 'ko' | 'en'): Promise<
         .single();
       if (fallback.error || !fallback.data) return null;
       const row = fallback.data as any;
-      const problemLang = (row.lang ?? row.language ?? 'ko') === 'en' ? 'en' : 'ko';
+      const problemLang = (row.lang ?? row.language ?? 'ko') === 'ko' ? 'ko' : null;
       return problemLang === requestLang ? (row as Problem) : null;
     }
     return null;
@@ -52,7 +94,7 @@ async function getProblem(problemId: string, requestLang: 'ko' | 'en'): Promise<
   if (!data) return null;
 
   const row = data as any;
-  const problemLang = (row.lang ?? row.language ?? 'ko') === 'en' ? 'en' : 'ko';
+  const problemLang = (row.lang ?? row.language ?? 'ko') === 'ko' ? 'ko' : null;
   if (problemLang !== requestLang) return null;
 
   return data as Problem;
@@ -79,12 +121,20 @@ export default async function ProblemPage({ params }: Props) {
   const quizType = (problem as any).type || 'soup';
   const quizContent = await getQuizContent(id, quizType);
 
+  const difficulty = (problem as any).difficulty || 'medium';
+  const relatedProblems = await getRelatedProblems(id, locale, difficulty);
+
   return (
-    <ProblemClient
-      initialProblem={problem}
-      initialQuizContent={quizContent}
-      lang={locale}
-      problemId={id}
-    />
+    <>
+      <ProblemClient
+        initialProblem={problem}
+        initialQuizContent={quizContent}
+        lang={locale}
+        problemId={id}
+      />
+      {relatedProblems.length > 0 && (
+        <RelatedProblems problems={relatedProblems} lang={locale} difficulty={difficulty} />
+      )}
+    </>
   );
 }

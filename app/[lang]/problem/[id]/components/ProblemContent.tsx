@@ -111,14 +111,14 @@ export default function ProblemContent({
         {/* 해설/배경지식 (모든 퀴즈 타입, AdSense 품질 강화) */}
         <div>
           <label className="block text-sm font-medium mb-2 text-slate-300">
-            {lang === 'ko' ? '해설 및 배경지식 (선택)' : 'Explanation & Background (optional)'}
+            해설 및 배경지식 (선택)
           </label>
           <textarea
             value={editExplanation}
             onChange={(e) => onEditExplanationChange?.(e.target.value)}
             className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 resize-none text-sm"
             maxLength={5000}
-            placeholder={lang === 'ko' ? '정답의 배경, 유래, 관련 지식 등 300~500단어 권장' : 'Background, origin, related knowledge (300-500 words recommended)'}
+            placeholder="정답의 배경, 유래, 관련 지식 등 300~500단어 권장"
           />
           <div className="text-right text-xs text-slate-500 mt-1">
             {editExplanation.length} / 5000
@@ -170,7 +170,7 @@ export default function ProblemContent({
               {((problem as any).original_author || (problem as any).original_title) && (
                 <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400 flex-wrap">
                   <i className="ri-user-star-line text-purple-400"></i>
-                  <span>{lang === 'ko' ? '원작' : 'Original'}:</span>
+                  <span>원작:</span>
                   {(problem as any).original_title && (
                     <a
                       href={(problem as any).source_url || '#'}
@@ -238,7 +238,7 @@ export default function ProblemContent({
               {((problem as any).original_author || (problem as any).original_title) && (
                 <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400 flex-wrap">
                   <i className="ri-user-star-line text-purple-400"></i>
-                  <span>{lang === 'ko' ? '원작' : 'Original'}:</span>
+                  <span>원작:</span>
                   {(problem as any).original_title && (
                     <a
                       href={(problem as any).source_url || '#'}
@@ -291,7 +291,7 @@ export default function ProblemContent({
               }}
               showAnswer={quizShowAnswer}
               userAnswer={userQuizAnswer ?? undefined}
-              lang={lang === 'ko' || lang === 'en' ? lang : 'ko'}
+              lang="ko"
             />
           )}
 
@@ -306,7 +306,7 @@ export default function ProblemContent({
               showAnswer={quizShowAnswer}
               userAnswer={userQuizAnswer ?? undefined}
               explanation={quizContent.explanation}
-              lang={lang === 'ko' || lang === 'en' ? lang : 'ko'}
+              lang="ko"
             />
           )}
 
@@ -322,7 +322,7 @@ export default function ProblemContent({
               showAnswer={quizShowAnswer}
               userAnswer={typeof userQuizAnswer === 'string' ? userQuizAnswer : undefined}
               explanation={quizContent.explanation}
-              lang={lang === 'ko' || lang === 'en' ? lang : 'ko'}
+              lang="ko"
             />
           )}
 
@@ -337,7 +337,7 @@ export default function ProblemContent({
               }}
               showAnswer={quizShowAnswer}
               userAnswer={typeof userQuizAnswer === 'string' ? userQuizAnswer : undefined}
-              lang={lang === 'ko' || lang === 'en' ? lang : 'ko'}
+              lang="ko"
             />
           )}
 
@@ -353,7 +353,7 @@ export default function ProblemContent({
               }}
               showAnswer={quizShowAnswer}
               userAnswer={typeof userQuizAnswer === 'string' ? userQuizAnswer : undefined}
-              lang={lang === 'ko' || lang === 'en' ? lang : 'ko'}
+              lang="ko"
             />
           )}
 
@@ -369,7 +369,7 @@ export default function ProblemContent({
               }}
               showAnswer={quizShowAnswer}
               userAnswer={typeof userQuizAnswer === 'string' ? userQuizAnswer : undefined}
-              lang={lang === 'ko' || lang === 'en' ? lang : 'ko'}
+              lang="ko"
             />
           )}
 
@@ -384,7 +384,7 @@ export default function ProblemContent({
               }}
               showAnswer={quizShowAnswer}
               userAnswer={typeof userQuizAnswer === 'string' ? userQuizAnswer : undefined}
-              lang={lang === 'ko' || lang === 'en' ? lang : 'ko'}
+              lang="ko"
             />
           )}
 
@@ -400,7 +400,7 @@ export default function ProblemContent({
               }}
               showAnswer={quizShowAnswer}
               userAnswer={Array.isArray(userQuizAnswer) ? userQuizAnswer : undefined}
-              lang={lang === 'ko' || lang === 'en' ? lang : 'ko'}
+              lang="ko"
             />
           )}
 
@@ -419,7 +419,7 @@ export default function ProblemContent({
                 showAnswer={quizShowAnswer || hasVoted}
                 userAnswer={typeof userQuizAnswer === 'number' ? userQuizAnswer : undefined}
                 stats={balanceVoteStats}
-                lang={lang === 'ko' || lang === 'en' ? lang : 'ko'}
+                lang="ko"
               />
               {quizContent.description && (
                 <div className="mt-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
@@ -436,7 +436,7 @@ export default function ProblemContent({
                 <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 hover:border-teal-500/30 transition-colors flex items-center justify-between">
                   <span className="font-semibold text-teal-400 text-sm sm:text-base flex items-center gap-2">
                     <i className="ri-book-open-line"></i>
-                    {lang === 'ko' ? '해설 및 추리 포인트 보기' : 'View Explanation & Deduction Points'}
+                    해설 및 추리 포인트 보기
                   </span>
                   <i className="ri-arrow-down-s-line text-xl text-slate-400 group-open:rotate-180 transition-transform"></i>
                 </div>

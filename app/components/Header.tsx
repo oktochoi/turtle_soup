@@ -127,12 +127,6 @@ export default function Header() {
     }
     const pathMatches = pathname?.startsWith(pathWithLang);
     const category = searchParams.get('category');
-    if (isNoticeLink) {
-      return pathMatches && category === 'notice';
-    }
-    if (pathWithoutQuery === '/community' && !path.includes('?')) {
-      return pathMatches && category !== 'notice'; // 커뮤니티 탭: 공지 필터 아닐 때
-    }
     return pathMatches;
   };
 
@@ -144,10 +138,8 @@ export default function Header() {
     { href: '/rooms', label: t.nav.multiplayer, activeColor: 'bg-teal-500' },
     { href: '/play', label: t.nav.problems, activeColor: 'bg-purple-500' },
     { href: '/create-problem', label: t.nav.playGame, activeColor: 'bg-pink-500' },
-    { href: '/community', label: t.nav.community, activeColor: 'bg-blue-500' },
-    { href: '/community?category=notice', label: t.nav.notice, activeColor: 'bg-red-500' },
     { href: '/ranking', label: t.nav.ranking, activeColor: 'bg-yellow-500' },
-    { href: '/tutorial', label: t.nav.tutorial, activeColor: 'bg-cyan-500' },
+    { href: '/guide', label: t.nav.tutorial, activeColor: 'bg-cyan-500' },
   ];
 
   return (

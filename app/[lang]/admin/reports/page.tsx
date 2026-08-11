@@ -69,7 +69,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
 
       if (error || !userData || !userData.is_admin) {
         if (typeof window !== 'undefined' && (window as any).toastError) {
-          (window as any).toastError(lang === 'ko' ? '관리자 권한이 필요합니다.' : 'Admin access required.');
+          (window as any).toastError('관리자 권한이 필요합니다.');
         }
         router.push(`/${lang}`);
         return;
@@ -157,7 +157,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
       if (error) throw error;
 
       if (typeof window !== 'undefined' && (window as any).toastSuccess) {
-        (window as any).toastSuccess(lang === 'ko' ? '신고 상태가 업데이트되었습니다.' : 'Report status updated.');
+        (window as any).toastSuccess('신고 상태가 업데이트되었습니다.');
       }
 
       setShowDetailModal(false);
@@ -180,8 +180,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
       fake_account: { ko: '가짜 계정', en: 'Fake Account' },
       other: { ko: '기타', en: 'Other' },
     };
-    const langKey = lang === 'ko' || lang === 'en' ? lang : 'ko';
-    return labels[type]?.[langKey] || type;
+    return labels[type]?.ko || type;
   };
 
   const getStatusColor = (status: string) => {
@@ -201,13 +200,12 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
       resolved: { ko: '해결됨', en: 'Resolved' },
       dismissed: { ko: '기각됨', en: 'Dismissed' },
     };
-    const langKey = lang === 'ko' || lang === 'en' ? lang : 'ko';
-    return labels[status]?.[langKey] || status;
+    return labels[status]?.ko || status;
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US');
+    return date.toLocaleString('ko-KR');
   };
 
   if (isLoading) {
@@ -215,7 +213,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto mb-4"></div>
-          <p className="text-slate-400">{lang === 'ko' ? '로딩 중...' : 'Loading...'}</p>
+          <p className="text-slate-400">로딩 중...</p>
         </div>
       </div>
     );
@@ -233,10 +231,10 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
             {t.common.back}
           </button>
           <h1 className="text-2xl sm:text-3xl font-bold mb-2">
-            {lang === 'ko' ? '유저 신고 관리' : 'User Reports Management'}
+            유저 신고 관리
           </h1>
           <p className="text-slate-400 text-sm">
-            {lang === 'ko' ? '신고된 유저들을 검토하고 조치하세요.' : 'Review and take action on reported users.'}
+            신고된 유저들을 검토하고 조치하세요.
           </p>
         </div>
 
@@ -253,7 +251,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
               }`}
             >
               {status === 'all' 
-                ? (lang === 'ko' ? '전체' : 'All')
+                ? '전체'
                 : getStatusLabel(status)
               }
             </button>
@@ -265,7 +263,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
           {reports.length === 0 ? (
             <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-8 border border-slate-700/50 text-center">
               <p className="text-slate-400">
-                {lang === 'ko' ? '신고가 없습니다.' : 'No reports found.'}
+                신고가 없습니다.
               </p>
             </div>
           ) : (
@@ -291,11 +289,11 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
                       </span>
                     </div>
                     <div className="text-sm text-slate-300 mb-1">
-                      <span className="text-slate-400">{lang === 'ko' ? '신고당한 유저:' : 'Reported User:'}</span>{' '}
+                      <span className="text-slate-400">신고당한 유저:</span>{' '}
                       <span className="font-semibold">{report.reported_user_nickname || report.reported_user_id}</span>
                     </div>
                     <div className="text-sm text-slate-300 mb-1">
-                      <span className="text-slate-400">{lang === 'ko' ? '신고 사유:' : 'Reason:'}</span>{' '}
+                      <span className="text-slate-400">신고 사유:</span>{' '}
                       {report.reason}
                     </div>
                     <div className="text-xs text-slate-500">
@@ -303,7 +301,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
                     </div>
                   </div>
                   <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all text-sm font-semibold whitespace-nowrap">
-                    {lang === 'ko' ? '상세보기' : 'View Details'}
+                    상세보기
                   </button>
                 </div>
               </div>
@@ -318,7 +316,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
           <div className="bg-slate-800 rounded-xl p-6 sm:p-8 border border-slate-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl sm:text-2xl font-bold text-white">
-                {lang === 'ko' ? '신고 상세 정보' : 'Report Details'}
+                신고 상세 정보
               </h2>
               <button
                 onClick={() => {
@@ -336,31 +334,31 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
               {/* 신고 정보 */}
               <div className="bg-slate-900/50 rounded-lg p-4 space-y-3">
                 <div>
-                  <span className="text-sm text-slate-400">{lang === 'ko' ? '신고 유형:' : 'Report Type:'}</span>
+                  <span className="text-sm text-slate-400">신고 유형:</span>
                   <div className="mt-1 font-semibold">{getReportTypeLabel(selectedReport.report_type)}</div>
                 </div>
                 <div>
-                  <span className="text-sm text-slate-400">{lang === 'ko' ? '신고당한 유저:' : 'Reported User:'}</span>
+                  <span className="text-sm text-slate-400">신고당한 유저:</span>
                   <div className="mt-1 font-semibold">{selectedReport.reported_user_nickname || selectedReport.reported_user_id}</div>
                 </div>
                 <div>
-                  <span className="text-sm text-slate-400">{lang === 'ko' ? '신고한 유저:' : 'Reporter:'}</span>
+                  <span className="text-sm text-slate-400">신고한 유저:</span>
                   <div className="mt-1 font-semibold">
-                    {selectedReport.reporter_nickname || selectedReport.reporter_identifier || (lang === 'ko' ? '익명' : 'Anonymous')}
+                    {selectedReport.reporter_nickname || selectedReport.reporter_identifier || '익명'}
                   </div>
                 </div>
                 <div>
-                  <span className="text-sm text-slate-400">{lang === 'ko' ? '신고 사유:' : 'Reason:'}</span>
+                  <span className="text-sm text-slate-400">신고 사유:</span>
                   <div className="mt-1">{selectedReport.reason}</div>
                 </div>
                 {selectedReport.description && (
                   <div>
-                    <span className="text-sm text-slate-400">{lang === 'ko' ? '상세 설명:' : 'Description:'}</span>
+                    <span className="text-sm text-slate-400">상세 설명:</span>
                     <div className="mt-1 whitespace-pre-wrap">{selectedReport.description}</div>
                   </div>
                 )}
                 <div>
-                  <span className="text-sm text-slate-400">{lang === 'ko' ? '신고 일시:' : 'Reported At:'}</span>
+                  <span className="text-sm text-slate-400">신고 일시:</span>
                   <div className="mt-1 text-sm">{formatDate(selectedReport.created_at)}</div>
                 </div>
               </div>
@@ -368,7 +366,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
               {/* 상태 업데이트 */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  {lang === 'ko' ? '상태 변경' : 'Change Status'}
+                  상태 변경
                 </label>
                 <select
                   value={newStatus}
@@ -385,12 +383,12 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
               {/* 관리자 메모 */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  {lang === 'ko' ? '관리자 메모' : 'Admin Notes'}
+                  관리자 메모
                 </label>
                 <textarea
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
-                  placeholder={lang === 'ko' ? '관리자 메모를 입력하세요...' : 'Enter admin notes...'}
+                  placeholder="관리자 메모를 입력하세요..."
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   rows={4}
                 />
@@ -413,10 +411,7 @@ export default function AdminReportsPage({ params }: { params: Promise<{ lang: s
                   disabled={isUpdating}
                   className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all font-semibold"
                 >
-                  {isUpdating 
-                    ? (lang === 'ko' ? '업데이트 중...' : 'Updating...')
-                    : (lang === 'ko' ? '상태 업데이트' : 'Update Status')
-                  }
+                  {isUpdating ? '업데이트 중...' : '상태 업데이트'}
                 </button>
               </div>
             </div>

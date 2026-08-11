@@ -1507,7 +1507,7 @@ export default function RoomPage({ params }: { params: Promise<{ lang: string; c
                       const roomUrl = `${window.location.origin}/${lang}/room/${roomCode}`;
                       if (navigator.share) {
                         navigator.share({
-                          title: lang === 'ko' ? '바다거북스프 방에 초대합니다' : 'Join my Pelican Soup Riddle room',
+                          title: lang === 'ko' ? '바다거북스프 방에 초대합니다' : 'Join my Turtle Soup Riddle room',
                           text: lang === 'ko' ? `방 코드: ${roomCode}` : `Room code: ${roomCode}`,
                           url: roomUrl,
                         }).catch(() => {});

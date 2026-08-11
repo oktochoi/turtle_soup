@@ -48,9 +48,6 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
   const [isLoadingFollowers, setIsLoadingFollowers] = useState<boolean>(false);
   const [isLoadingFollowing, setIsLoadingFollowing] = useState<boolean>(false);
   
-  // 프로필 사진 업로드
-  const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // 신고 관련 state
   const [showReportModal, setShowReportModal] = useState(false);
@@ -492,85 +489,6 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
     }
   };
 
-  const handleProfileImageClick = () => {
-    if (isOwnProfile && fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleProfileImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !isOwnProfile || !user) return;
-
-    // 이미지 파일만 허용
-    if (!file.type.startsWith('image/')) {
-      showToast(lang === 'ko' ? '이미지 파일만 업로드 가능합니다.' : 'Only image files are allowed.', 'error');
-      return;
-    }
-
-    // 파일 크기 제한 (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      showToast(lang === 'ko' ? '파일 크기는 5MB 이하여야 합니다.' : 'File size must be less than 5MB.', 'error');
-      return;
-    }
-
-    setIsUploadingImage(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}_${Date.now()}.${fileExt}`;
-      const filePath = `profile-images/${fileName}`;
-
-      // Supabase Storage에 업로드 (avatars bucket 사용)
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (uploadError) {
-        // 버킷이 없는 경우 명확한 오류 메시지 제공
-        if (uploadError.message?.includes('Bucket') || uploadError.message?.includes('bucket') || uploadError.message?.includes('not found')) {
-          showToast(
-            lang === 'ko' 
-              ? 'Storage 버킷이 설정되지 않았습니다. Supabase 대시보드에서 "avatars" 버킷을 생성해주세요.' 
-              : 'Storage bucket not configured. Please create "avatars" bucket in Supabase dashboard.',
-            'error'
-          );
-          console.error('Storage 버킷 오류:', uploadError);
-          console.log('버킷 생성 방법: Supabase 대시보드 > Storage > New bucket > 이름: avatars, Public: 체크');
-          return;
-        }
-        throw uploadError;
-      }
-
-      // Public URL 가져오기
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      // game_users 테이블 업데이트
-      const { error: updateError } = await supabase
-        .from('game_users')
-        .update({ profile_image_url: publicUrl })
-        .eq('id', userId);
-
-      if (updateError) throw updateError;
-
-      // 로컬 상태 업데이트
-      setUser({ ...user, profile_image_url: publicUrl });
-      showToast(lang === 'ko' ? '프로필 사진이 업데이트되었습니다.' : 'Profile image updated.', 'success');
-    } catch (error: any) {
-      console.error('프로필 사진 업로드 오류:', error);
-      showToast(lang === 'ko' ? '프로필 사진 업로드에 실패했습니다.' : 'Profile image upload failed.', 'error');
-    } finally {
-      setIsUploadingImage(false);
-      // 파일 입력 초기화
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
 
   const handleSelectTitle = async (titleId: number) => {
     if (!progress) return;
@@ -833,58 +751,8 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
               {/* 프로필 사진 */}
               <div className="flex-shrink-0 flex justify-center sm:justify-start">
-                <div className="relative">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleProfileImageUpload}
-                    className="hidden"
-                    disabled={!isOwnProfile || isUploadingImage}
-                  />
-                  {user.profile_image_url ? (
-                    <div
-                      onClick={handleProfileImageClick}
-                      className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-2 border-slate-700 ${
-                        isOwnProfile ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''
-                      } relative group`}
-                    >
-                      <img
-                        src={user.profile_image_url}
-                        alt={user.nickname}
-                        className="w-full h-full object-cover"
-                      />
-                      {isOwnProfile && (
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <i className="ri-camera-line text-white text-xl"></i>
-                        </div>
-                      )}
-                      {isUploadingImage && (
-                        <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div
-                      onClick={handleProfileImageClick}
-                      className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-3xl sm:text-4xl font-bold border-2 border-slate-700 ${
-                        isOwnProfile ? 'cursor-pointer hover:opacity-80 transition-opacity relative group' : ''
-                      }`}
-                    >
-                      {(isEditingNickname ? newNickname : user.nickname).charAt(0).toUpperCase()}
-                      {isOwnProfile && (
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
-                          <i className="ri-camera-line text-white text-xl"></i>
-                        </div>
-                      )}
-                      {isUploadingImage && (
-                        <div className="absolute inset-0 bg-black/70 flex items-center justify-center rounded-full">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-3xl sm:text-4xl font-bold border-2 border-slate-700">
+                  {(isEditingNickname ? newNickname : user.nickname).charAt(0).toUpperCase()}
                 </div>
               </div>
               
@@ -1423,17 +1291,9 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                     onClick={() => setShowFollowersModal(false)}
                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700 transition-colors"
                   >
-                    {follower.profile_image_url ? (
-                      <img
-                        src={follower.profile_image_url}
-                        alt={follower.nickname}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold">
-                        {follower.nickname.charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold">
+                      {follower.nickname.charAt(0).toUpperCase()}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-white truncate">{follower.nickname}</div>
                       {follower.referral_code && (
@@ -1482,17 +1342,9 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                     onClick={() => setShowFollowingModal(false)}
                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700 transition-colors"
                   >
-                    {following.profile_image_url ? (
-                      <img
-                        src={following.profile_image_url}
-                        alt={following.nickname}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold">
-                        {following.nickname.charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold">
+                      {following.nickname.charAt(0).toUpperCase()}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-white truncate">{following.nickname}</div>
                       {following.referral_code && (

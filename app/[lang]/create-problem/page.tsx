@@ -15,7 +15,6 @@ import QuizFormNonsense from '@/components/quiz/QuizFormNonsense';
 import QuizFormMCQ from '@/components/quiz/QuizFormMCQ';
 import QuizFormOX from '@/components/quiz/QuizFormOX';
 import QuizFormImage from '@/components/quiz/QuizFormImage';
-import QuizFormBalance from '@/components/quiz/QuizFormBalance';
 import QuizFormLogic from '@/components/quiz/QuizFormLogic';
 import QuizFormFillBlank from '@/components/quiz/QuizFormFillBlank';
 import { convertImageToSvgFile } from '@/lib/utils/imageToSvg';
@@ -558,48 +557,6 @@ export default function CreateProblem({ params }: { params: Promise<{ lang: stri
         </div>
 
         <div className="space-y-4 sm:space-y-5 lg:space-y-6">
-          {/* 맞추기 게임 바로가기 */}
-          <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm sm:text-base font-semibold text-white mb-1">
-                  {lang === 'ko' ? '🎯 맞추기 게임 만들기' : '🎯 Create Guess Game'}
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-300">
-                  {lang === 'ko' 
-                    ? '이미지를 보고 정답을 맞히는 카드 게임을 만들어보세요'
-                    : 'Create a card game where players guess answers from images'}
-                </p>
-              </div>
-              <Link href={`/${lang}/guess/create`}>
-                <button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all duration-200 touch-manipulation whitespace-nowrap">
-                  {lang === 'ko' ? '만들기' : 'Create'}
-                </button>
-              </Link>
-            </div>
-          </div>
-
-          {/* 밸런스 게임 (토너먼트) 바로가기 */}
-          <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm sm:text-base font-semibold text-white mb-1">
-                  {lang === 'ko' ? '⚖️ 밸런스 게임 만들기' : '⚖️ Create Balance Game'}
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-300">
-                  {lang === 'ko' 
-                    ? '둘 중 하나를 선택해 결승까지 가는 토너먼트 게임을 만들어보세요'
-                    : 'Create a tournament game where players choose one of two each round until the final'}
-                </p>
-              </div>
-              <Link href={`/${lang}/balance/create`}>
-                <button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all duration-200 touch-manipulation whitespace-nowrap">
-                  {lang === 'ko' ? '만들기' : 'Create'}
-                </button>
-              </Link>
-            </div>
-          </div>
-
           {/* 바다거북 스프 만들기 버튼 */}
           {!showSoupForm && (
             <div className="bg-gradient-to-r from-teal-500/20 to-cyan-500/20 border border-teal-500/30 rounded-xl p-4">

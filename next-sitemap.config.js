@@ -12,14 +12,8 @@ module.exports = {
     '/auth/*',
     '/room/*',
     '/turtle_room/*',
-    '/liar_room/*',
-    '/mafia_room/*',
-    '/chat/*',
     '/profile/*',
     '/create-*',
-    '/wallet',
-    '/shop',
-    '/earn',
     '/_next/*',
     '/ko/api/*',
     '/en/api/*',
@@ -31,22 +25,10 @@ module.exports = {
     '/en/room/*',
     '/ko/turtle_room/*',
     '/en/turtle_room/*',
-    '/ko/liar_room/*',
-    '/en/liar_room/*',
-    '/ko/mafia_room/*',
-    '/en/mafia_room/*',
-    '/ko/chat/*',
-    '/en/chat/*',
     '/ko/profile/*',
     '/en/profile/*',
     '/ko/create-*',
     '/en/create-*',
-    '/ko/wallet',
-    '/en/wallet',
-    '/ko/shop',
-    '/en/shop',
-    '/ko/earn',
-    '/en/earn',
   ],
   robotsTxtOptions: {
     policies: [
@@ -94,17 +76,17 @@ module.exports = {
       changefreq = 'weekly';
     }
     // 3. 플레이 진입 / 가이드
-    else if (/^\/(ko|en)\/(play|tutorial|guide|faq)$/.test(url)) {
+    else if (/^\/(ko|en)\/(play|guide|faq)$/.test(url)) {
       priority = 0.8;
       changefreq = 'daily';
     }
     // 4. 커뮤니티 / 랭킹 / 방 목록 / 정보
-    else if (/^\/(ko|en)\/(community|ranking|rooms|about|contact)(\/.*)?$/.test(url)) {
+    else if (/^\/(ko|en)\/(community|ranking|rooms|contact)(\/.*)?$/.test(url)) {
       priority = 0.6;
       changefreq = 'weekly';
     }
     // 5. 방 / 세션 (실시간)
-    else if (/^\/(ko|en)\/(room|turtle_room|liar_room|mafia_room|chat)\/.+$/.test(url)) {
+    else if (/^\/(ko|en)\/(room|turtle_room)\/.+$/.test(url)) {
       priority = 0.4;
       changefreq = 'monthly';
     }

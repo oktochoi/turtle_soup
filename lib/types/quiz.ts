@@ -425,7 +425,7 @@ export const QUIZ_TYPES_BY_PRIORITY: QuizType[] = [
 /**
  * 멀티플레이 퀴즈 타입
  */
-export const MULTIPLAYER_QUIZ_TYPES: QuizType[] = ['soup', 'liar', 'mafia', 'chat'];
+export const MULTIPLAYER_QUIZ_TYPES: QuizType[] = ['soup'];
 
 /**
  * 싱글플레이 문제 생성 타입

@@ -55,7 +55,7 @@ export default function HomeClient() {
   }, [user, lang, isRedirecting]);
 
   /** ko → 한글 문제만, en → 영어 문제만 (메인 페이지 언어 필터) */
-  const currentLang = lang === 'en' ? 'en' : 'ko';
+  const currentLang = 'ko';
 
   const loadSampleProblems = async () => {
     try {
@@ -229,9 +229,7 @@ export default function HomeClient() {
               nickname:
                 userData?.nickname ||
                 user.user_metadata?.full_name ||
-                (lang === 'ko'
-                  ? `사용자${user.id.substring(0, 8)}`
-                  : `User${user.id.substring(0, 8)}`),
+                `사용자${user.id.substring(0, 8)}`,
             })
             .select()
             .single();
@@ -263,9 +261,7 @@ export default function HomeClient() {
             .insert({
               guest_id: guestId,
               nickname:
-                lang === 'ko'
-                  ? `게스트${guestId.substring(0, 6)}`
-                  : `Guest${guestId.substring(0, 6)}`,
+                `게스트${guestId.substring(0, 6)}`,
             })
             .select()
             .single();
@@ -284,11 +280,7 @@ export default function HomeClient() {
       }
 
       if (!userId) {
-        throw new Error(
-          lang === 'ko'
-            ? '유저를 찾거나 생성할 수 없습니다.'
-            : 'Unable to find or create user.'
-        );
+        throw new Error('유저를 찾거나 생성할 수 없습니다.');
       }
 
       const result = await triggerEvent(userId, guestId, authUserId, 'daily_participate', {});
@@ -296,22 +288,14 @@ export default function HomeClient() {
       if (result && result.success) {
         setIsCheckedIn(true);
         setCheckInMessage(
-          `${lang === 'ko' ? '출석 완료!' : 'Check-in complete!'} +${result.gainedXP} XP, +${
-            result.gainedPoints
-          } P ${lang === 'ko' ? '획득!' : 'earned!'}`
+          `출석 완료! +${result.gainedXP} XP, +${result.gainedPoints} P 획득!`
         );
       } else {
-        throw new Error(
-          lang === 'ko' ? '출석 처리에 실패했습니다.' : 'Check-in failed.'
-        );
+        throw new Error('출석 처리에 실패했습니다.');
       }
     } catch (error: any) {
       console.error('출석 오류:', error);
-      setCheckInMessage(
-        lang === 'ko'
-          ? '출석 처리 중 오류가 발생했습니다.'
-          : 'An error occurred during check-in.'
-      );
+      setCheckInMessage('출석 처리 중 오류가 발생했습니다.');
     } finally {
       setIsCheckingIn(false);
     }
@@ -321,8 +305,8 @@ export default function HomeClient() {
     return `/${lang}${path === '/' ? '' : path}`;
   };
 
-  const heroTitle = lang === 'ko' ? '오늘의 미스터리' : "Today's Mystery";
-  const heroCta = lang === 'ko' ? '추리 시작하기' : 'Start Solving';
+  const heroTitle = '오늘의 미스터리';
+  const heroCta = '추리 시작하기';
 
   const popularProblems = sampleProblems
     .slice()
@@ -348,15 +332,13 @@ export default function HomeClient() {
         {/* Top tagline */}
         <header className="mb-6 sm:mb-8">
           <p className="text-xs sm:text-sm uppercase tracking-[0.28em] text-cyan-300/80">
-            {lang === 'ko' ? 'Lateral Thinking Mystery Puzzles' : 'Immersive Mystery Puzzle Lobby'}
+            {'Lateral Thinking Mystery Puzzles'}
           </p>
           <h1 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-white">
-            {lang === 'ko' ? '질문으로 비밀을 풀어보세요.' : 'Unravel secrets with your questions.'}
+            {'질문으로 비밀을 풀어보세요.'}
           </h1>
           <p className="mt-3 max-w-2xl text-sm sm:text-base text-slate-300">
-            {lang === 'ko'
-              ? '오늘의 미스터리와 인기 퍼즐이 당신을 기다리고 있습니다. 바로 플레이를 시작해 보세요.'
-              : "Today's mystery and the most intriguing puzzles are waiting for you. Dive in and start solving."}
+            {'오늘의 미스터리와 인기 퍼즐이 당신을 기다리고 있습니다. 바로 플레이를 시작해 보세요.'}
           </p>
         </header>
 
@@ -392,14 +374,10 @@ export default function HomeClient() {
                   ) : (
                     <>
                       <h2 className="text-2xl sm:text-3xl lg:text-[2rem] font-semibold tracking-tight text-white">
-                        {lang === 'ko'
-                          ? '오늘의 미스터리가 준비 중입니다.'
-                          : "Today's mystery is being prepared."}
+                        {'오늘의 미스터리가 준비 중입니다.'}
                       </h2>
                       <p className="max-w-2xl text-sm sm:text-base text-slate-300/90">
-                        {lang === 'ko'
-                          ? '그 사이 인기 퍼즐이나 새로운 퍼즐을 먼저 풀어보세요.'
-                          : 'In the meantime, explore popular or new puzzles below.'}
+                        {'그 사이 인기 퍼즐이나 새로운 퍼즐을 먼저 풀어보세요.'}
                       </p>
                     </>
                   )}
@@ -420,31 +398,29 @@ export default function HomeClient() {
               <div className="flex flex-col justify-between gap-6 rounded-2xl border border-cyan-500/20 bg-gradient-to-b from-slate-900/90 to-slate-950/90 p-4 sm:p-5">
                 <div className="space-y-3">
                   <p className="text-xs font-medium uppercase tracking-[0.28em] text-slate-400">
-                    {lang === 'ko' ? '게임 로비' : 'Game Lobby'}
+                    {'게임 로비'}
                   </p>
                   <p className="text-sm text-slate-300">
-                    {lang === 'ko'
-                      ? '혼자 추리하거나, 친구와 방을 만들어 함께 비밀을 파헤쳐 보세요.'
-                      : 'Solve mysteries alone or create a room with friends to uncover the truth together.'}
+                    {'혼자 추리하거나, 친구와 방을 만들어 함께 비밀을 파헤쳐 보세요.'}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 text-center text-xs sm:text-sm">
                   <div className="rounded-xl bg-slate-900/70 px-2 py-3">
                     <p className="text-[0.72rem] uppercase tracking-wide text-slate-400">
-                      {lang === 'ko' ? '퍼즐 수' : 'Puzzles'}
+                      {'퍼즐 수'}
                     </p>
                     <p className="mt-1 text-lg font-semibold text-cyan-300">100+</p>
                   </div>
                   <div className="rounded-xl bg-slate-900/70 px-2 py-3">
                     <p className="text-[0.72rem] uppercase tracking-wide text-slate-400">
-                      {lang === 'ko' ? '게임 모드' : 'Game Modes'}
+                      {'게임 모드'}
                     </p>
                     <p className="mt-1 text-lg font-semibold text-cyan-300">3</p>
                   </div>
                   <div className="rounded-xl bg-slate-900/70 px-2 py-3">
                     <p className="text-[0.72rem] uppercase tracking-wide text-slate-400">
-                      {lang === 'ko' ? '평균 소요' : 'Avg. Time'}
+                      {'평균 소요'}
                     </p>
                     <p className="mt-1 text-lg font-semibold text-cyan-300">10m</p>
                   </div>
@@ -461,19 +437,17 @@ export default function HomeClient() {
             <div className="mb-4 flex items-baseline justify-between gap-3">
               <div>
                 <h2 className="text-lg sm:text-xl font-semibold text-white">
-                  {lang === 'ko' ? '인기 미스터리' : 'Popular Puzzles'}
+                  {'인기 미스터리'}
                 </h2>
                 <p className="mt-1 text-xs sm:text-sm text-slate-400">
-                  {lang === 'ko'
-                    ? '많이 플레이된 미스터리부터 도전해 보세요.'
-                    : 'Start with the most played mysteries.'}
+                  {'많이 플레이된 미스터리부터 도전해 보세요.'}
                 </p>
               </div>
               <Link
                 href={getLocalizedPath('/problems')}
                 className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-cyan-300 hover:text-cyan-200"
               >
-                <span>{lang === 'ko' ? '전체 보기' : 'View all'}</span>
+                <span>{'전체 보기'}</span>
                 <i className="ri-arrow-right-line text-sm" />
               </Link>
             </div>
@@ -509,9 +483,7 @@ export default function HomeClient() {
                 ))
               ) : (
                 <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-sm text-slate-400">
-                  {lang === 'ko'
-                    ? '아직 인기 미스터리가 없습니다. 첫 번째 도전자가 되어 보세요.'
-                    : 'No popular puzzles yet. Be the first to set the record.'}
+                  {'아직 인기 미스터리가 없습니다. 첫 번째 도전자가 되어 보세요.'}
                 </div>
               )}
             </div>
@@ -522,12 +494,10 @@ export default function HomeClient() {
             <div className="mb-4 flex items-baseline justify-between gap-3">
               <div>
                 <h2 className="text-lg sm:text-xl font-semibold text-white">
-                  {lang === 'ko' ? '새로 올라온 미스터리' : 'New Puzzles'}
+                  {'새로 올라온 미스터리'}
                 </h2>
                 <p className="mt-1 text-xs sm:text-sm text-slate-400">
-                  {lang === 'ko'
-                    ? '방금 올라온 따끈한 미스터리들입니다.'
-                    : 'Fresh mysteries just uploaded.'}
+                  {'방금 올라온 따끈한 미스터리들입니다.'}
                 </p>
               </div>
             </div>
@@ -561,16 +531,14 @@ export default function HomeClient() {
                     <div className="mt-auto flex items-center gap-3 text-[0.7rem] sm:text-xs text-slate-400">
                       <span className="inline-flex items-center gap-1.5">
                         <i className="ri-time-line text-cyan-300" />
-                        {lang === 'ko' ? '최근 업로드' : 'Recently added'}
+                        {'최근 업로드'}
                       </span>
                     </div>
                   </Link>
                 ))
               ) : (
                 <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-sm text-slate-400">
-                  {lang === 'ko'
-                    ? '아직 새로운 미스터리가 없습니다. 직접 하나 만들어 보세요.'
-                    : 'No new puzzles yet. Create one yourself.'}
+                  {'아직 새로운 미스터리가 없습니다. 직접 하나 만들어 보세요.'}
                 </div>
               )}
             </div>
@@ -581,12 +549,10 @@ export default function HomeClient() {
             <div className="mb-4 flex items-baseline justify-between gap-3">
               <div>
                 <h2 className="text-lg sm:text-xl font-semibold text-white">
-                  {lang === 'ko' ? '게임 모드' : 'Game Modes'}
+                  {'게임 모드'}
                 </h2>
                 <p className="mt-1 text-xs sm:text-sm text-slate-400">
-                  {lang === 'ko'
-                    ? '나에게 맞는 방식으로 바다거북스프를 즐겨보세요.'
-                    : 'Choose how you want to enjoy the mysteries.'}
+                  {'나에게 맞는 방식으로 바다거북스프를 즐겨보세요.'}
                 </p>
               </div>
             </div>
@@ -607,7 +573,7 @@ export default function HomeClient() {
                   {t.home.multiplayerDesc}
                 </p>
                 <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-cyan-300 group-hover:gap-1.5">
-                  {lang === 'ko' ? '방 만들기' : 'Create a room'}
+                  {'방 만들기'}
                   <i className="ri-arrow-right-up-line text-xs" />
                 </span>
               </Link>
@@ -627,7 +593,7 @@ export default function HomeClient() {
                   {t.home.offlineDesc}
                 </p>
                 <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-cyan-300 group-hover:gap-1.5">
-                  {lang === 'ko' ? '솔로 플레이' : 'Play solo'}
+                  {'솔로 플레이'}
                   <i className="ri-arrow-right-up-line text-xs" />
                 </span>
               </Link>
@@ -644,15 +610,34 @@ export default function HomeClient() {
                   {t.problem.createProblem}
                 </h3>
                 <p className="mb-3 text-xs sm:text-sm text-slate-400 line-clamp-3">
-                  {lang === 'ko'
-                    ? '자신만의 미스터리를 만들어 전 세계 플레이어와 공유하세요.'
-                    : 'Create your own mysteries and share them with players worldwide.'}
+                  {'자신만의 미스터리를 만들어 전 세계 플레이어와 공유하세요.'}
                 </p>
                 <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-cyan-300 group-hover:gap-1.5">
-                  {lang === 'ko' ? '문제 만들기' : 'Create puzzle'}
+                  {'문제 만들기'}
                   <i className="ri-arrow-right-up-line text-xs" />
                 </span>
               </Link>
+            </div>
+          </section>
+
+          {/* SEO category links */}
+          <section>
+            <h2 className="text-lg sm:text-xl font-semibold text-white mb-4">
+              {'카테고리별 문제'}
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
+              {[
+                { href: `/${lang}/problems/legend`, label: '🏆 레전드 문제', desc: '가장 인기 있는 문제' },
+                { href: `/${lang}/problems/hard`, label: '🔥 어려운 문제', desc: '고난도 추리 문제' },
+                { href: `/${lang}/problems/scary`, label: '👻 공포·반전', desc: '소름 돋는 문제' },
+                { href: `/${lang}/problems/easy`, label: '🌱 쉬운 문제', desc: '초보자용 문제' },
+                { href: `/${lang}/problems/latest`, label: '✨ 최신 문제', desc: '새로 올라온 문제' },
+              ].map((cat) => (
+                <Link key={cat.href} href={cat.href} className="group flex flex-col items-center p-3 rounded-xl border border-slate-800 bg-slate-900/80 hover:border-teal-500/50 transition-all text-center">
+                  <span className="text-sm font-medium text-white group-hover:text-teal-300 transition-colors">{cat.label}</span>
+                  <span className="text-xs text-slate-500 mt-1">{cat.desc}</span>
+                </Link>
+              ))}
             </div>
           </section>
 
@@ -670,12 +655,10 @@ export default function HomeClient() {
                   {t.ranking.title}
                 </h3>
                 <p className="mb-3 text-xs sm:text-sm text-slate-400">
-                  {lang === 'ko'
-                    ? '정답 수와 좋아요 순위를 확인하고, 나만의 기록을 세워보세요.'
-                    : 'Check solve and like rankings, and set your own records.'}
+                  {'정답 수와 좋아요 순위를 확인하고, 나만의 기록을 세워보세요.'}
                 </p>
                 <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-cyan-300 group-hover:gap-1.5">
-                  {lang === 'ko' ? '랭킹 보러가기' : 'View ranking'}
+                  {'랭킹 보러가기'}
                   <i className="ri-arrow-right-up-line text-xs" />
                 </span>
               </Link>
@@ -729,9 +712,7 @@ export default function HomeClient() {
                 {!user && (
                   <div className="flex flex-col rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
                     <p className="mb-3 text-xs sm:text-sm font-medium text-slate-200">
-                      {lang === 'ko'
-                        ? '로그인하면 기록과 랭킹, 커뮤니티 기능을 모두 사용할 수 있어요.'
-                        : 'Log in to keep your records, join rankings, and use all community features.'}
+                      {'로그인하면 기록과 랭킹, 커뮤니티 기능을 모두 사용할 수 있어요.'}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       <Link
@@ -739,14 +720,14 @@ export default function HomeClient() {
                         className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 text-xs sm:text-sm font-semibold text-slate-950 hover:bg-cyan-400"
                       >
                         <i className="ri-login-box-line text-sm" />
-                        <span>{lang === 'ko' ? '로그인' : 'Log in'}</span>
+                        <span>{'로그인'}</span>
                       </Link>
                       <Link
-                        href={getLocalizedPath('/tutorial')}
+                        href={getLocalizedPath('/guide')}
                         className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-xs sm:text-sm font-semibold text-slate-200 hover:border-cyan-400/70"
                       >
                         <i className="ri-book-open-line text-sm" />
-                        <span>{lang === 'ko' ? '플레이 방법' : 'How to play'}</span>
+                        <span>{'플레이 방법'}</span>
                       </Link>
                     </div>
                   </div>

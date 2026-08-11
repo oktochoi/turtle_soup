@@ -5,11 +5,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/hooks/useAuth';
 import { useTranslations } from '@/hooks/useTranslations';
 import { RoomCardSkeleton } from '@/components/Skeleton';
 import { RoomsEmptyState } from '@/components/EmptyState';
-import { handleError } from '@/lib/error-handler';
 
 type Room = {
   code: string;
@@ -20,24 +18,20 @@ type Room = {
   created_at: string;
   game_ended?: boolean;
   status?: string;
-  quiz_type?: string;
-  room_name?: string;
-  theme?: string;
-  level?: string;
-  max_players?: number;
+  quiz_type?: string | null;
   player_count: number;
   last_activity_at?: string | null;
   last_chat_at?: string | null;
-  room_type?: 'game' | 'chat'; // 'game' = rooms 테이블, 'chat' = chat_rooms 테이블
-  name?: string; // chat_rooms의 name 필드
-  member_count?: number; // chat_rooms의 멤버 수
 };
+
+function isSoupRoom(quizType: string | null | undefined): boolean {
+  return quizType == null || quizType === 'soup';
+}
 
 export default function RoomsPage({ params }: { params: Promise<{ lang: string }> }) {
   const resolvedParams = use(params);
   const lang = resolvedParams.lang || 'ko';
   const router = useRouter();
-  const { user } = useAuth();
   const t = useTranslations();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [filteredRooms, setFilteredRooms] = useState<Room[]>([]);
@@ -88,28 +82,6 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
           loadRooms();
         }
       )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'chat_rooms',
-        },
-        () => {
-          loadRooms();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'chat_room_members',
-        },
-        () => {
-          loadRooms();
-        }
-      )
       .subscribe();
 
     return () => {
@@ -117,213 +89,70 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
     };
   }, [lang]);
 
+  const enrichRoomsWithPlayerCount = async (roomsData: any[]): Promise<Room[]> => {
+    const soupRooms = roomsData.filter((room) => isSoupRoom(room.quiz_type));
+
+    return Promise.all(
+      soupRooms.map(async (room) => {
+        const { count } = await supabase
+          .from('players')
+          .select('*', { count: 'exact', head: true })
+          .eq('room_code', room.code);
+
+        const { data: lastChat } = await supabase
+          .from('room_chats')
+          .select('created_at')
+          .eq('room_code', room.code)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        return {
+          ...room,
+          player_count: count || 0,
+          last_chat_at: lastChat?.created_at || null,
+        };
+      })
+    );
+  };
+
   const loadRooms = async () => {
     try {
       const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
+      const selectFields = 'code, story, host_nickname, password, max_questions, created_at, game_ended, status, quiz_type, last_activity_at';
+      const statusFilter = ['active', 'done', 'LOBBY', 'PLAYING', 'FINISHED'] as const;
       
-      let query = supabase
+      let result = await supabase
         .from('rooms')
-        .select('code, story, host_nickname, password, max_questions, created_at, game_ended, status, quiz_type, room_name, theme, level, max_players, lang, last_activity_at')
-        .in('status', ['active', 'done', 'LOBBY', 'PLAYING', 'FINISHED']);
-      
-      // lang 컬럼으로 필터링 시도
-      const result = await query.eq('lang', currentLang).order('created_at', { ascending: false });
+        .select(`${selectFields}, lang`)
+        .in('status', [...statusFilter])
+        .eq('lang', currentLang)
+        .order('created_at', { ascending: false });
       
       // lang 컬럼이 없어서 에러가 발생한 경우
       if (result.error && (result.error.code === '42703' || result.error.message?.includes('column') || result.error.message?.includes('lang'))) {
         console.warn('lang 컬럼이 없습니다. 모든 방을 가져옵니다. 마이그레이션을 실행해주세요.');
-        // lang 컬럼 없이 모든 방 가져오기
         const allResult = await supabase
           .from('rooms')
-          .select('code, story, host_nickname, password, max_questions, created_at, game_ended, status, quiz_type, room_name, theme, level, max_players, last_activity_at')
-          .in('status', ['active', 'done', 'LOBBY', 'PLAYING', 'FINISHED'])
+          .select(selectFields)
+          .in('status', [...statusFilter])
           .order('created_at', { ascending: false });
         
         if (allResult.error) throw allResult.error;
         
-        // 클라이언트 사이드에서 필터링 (lang 필드가 있는 경우만)
         const filteredData = (allResult.data || []).filter((r: any) => !r.lang || r.lang === currentLang);
+        const roomsWithPlayerCount = await enrichRoomsWithPlayerCount(filteredData);
         
-        // 각 방의 플레이어 수와 최근 대화 시간 가져오기
-        const roomsWithPlayerCount = await Promise.all(
-          filteredData.map(async (room) => {
-            const { count } = await supabase
-              .from('players')
-              .select('*', { count: 'exact', head: true })
-              .eq('room_code', room.code);
-
-            // 최근 대화 시간 가져오기
-            const { data: lastChat } = await supabase
-              .from('room_chats')
-              .select('created_at')
-              .eq('room_code', room.code)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
-            return {
-              ...room,
-              player_count: count || 0,
-              last_chat_at: lastChat?.created_at || null,
-            };
-          })
-        );
-
-        const gameRooms = roomsWithPlayerCount.map(r => ({ ...r, room_type: 'game' as const }));
-        
-        // chat_rooms도 함께 조회 (is_system: 수다방 1,2,3 등 항상 상단 노출)
-        const { data: chatRoomsData, error: chatRoomsError } = await supabase
-          .from('chat_rooms')
-          .select('id, code, name, host_nickname, password, max_members, is_public, is_system, created_at, updated_at')
-          .eq('is_public', true)
-          .order('created_at', { ascending: false });
-        
-        if (!chatRoomsError && chatRoomsData) {
-          const chatRoomsWithMemberCount = await Promise.all(
-            chatRoomsData.map(async (chatRoom) => {
-              const roomId = (chatRoom as any).id;
-              const { count } = await supabase
-                .from('chat_room_members')
-                .select('*', { count: 'exact', head: true })
-                .eq('room_id', roomId || '');
-
-              // 최근 메시지 시간 가져오기
-              const { data: lastMessage } = await supabase
-                .from('chat_room_messages')
-                .select('created_at')
-                .eq('room_id', roomId || '')
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-              return {
-                code: chatRoom.code,
-                story: '', // 수다방은 story 없음
-                name: chatRoom.name,
-                host_nickname: chatRoom.host_nickname,
-                password: chatRoom.password,
-                max_questions: 0,
-                created_at: chatRoom.created_at,
-                player_count: count || 0,
-                member_count: count || 0,
-                last_chat_at: lastMessage?.created_at || null,
-                room_type: 'chat' as const,
-                max_players: chatRoom.max_members || 50,
-                is_system: !!(chatRoom as { is_system?: boolean }).is_system,
-              } as Room & { is_system?: boolean };
-            })
-          );
-          
-          // 게임방과 수다방 합치기 (수다방 1,2,3 시스템 방을 항상 상단에)
-          const allRooms = [...gameRooms, ...chatRoomsWithMemberCount].sort((a, b) => {
-            const aSys = (a as Room & { is_system?: boolean }).is_system;
-            const bSys = (b as Room & { is_system?: boolean }).is_system;
-            if (aSys && !bSys) return -1;
-            if (!aSys && bSys) return 1;
-            if (aSys && bSys) return ((a as Room).code || '').localeCompare((b as Room).code || '');
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-          });
-          
-          setRooms(allRooms);
-          setFilteredRooms(allRooms);
-        } else {
-          setRooms(gameRooms);
-          setFilteredRooms(gameRooms);
-        }
-        
+        setRooms(roomsWithPlayerCount);
+        setFilteredRooms(roomsWithPlayerCount);
         return;
       }
       
       if (result.error) throw result.error;
       
-      const roomsData = result.data;
-
-      // 각 방의 플레이어 수와 최근 대화 시간 가져오기
-      const roomsWithPlayerCount = await Promise.all(
-        (roomsData || []).map(async (room) => {
-          const { count } = await supabase
-            .from('players')
-            .select('*', { count: 'exact', head: true })
-            .eq('room_code', room.code);
-
-          // 최근 대화 시간 가져오기
-          const { data: lastChat } = await supabase
-            .from('room_chats')
-            .select('created_at')
-            .eq('room_code', room.code)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          return {
-            ...room,
-            player_count: count || 0,
-            last_chat_at: lastChat?.created_at || null,
-            room_type: 'game' as const,
-          };
-        })
-      );
-      
-        // chat_rooms도 함께 조회 (is_system: 수다방 1,2,3 등 항상 상단 노출)
-        const { data: chatRoomsData, error: chatRoomsError } = await supabase
-          .from('chat_rooms')
-          .select('id, code, name, host_nickname, password, max_members, is_public, is_system, created_at, updated_at')
-          .eq('is_public', true)
-          .order('created_at', { ascending: false });
-        
-        if (!chatRoomsError && chatRoomsData) {
-          const chatRoomsWithMemberCount = await Promise.all(
-            chatRoomsData.map(async (chatRoom) => {
-              const roomId = (chatRoom as any).id;
-            
-            const { count } = await supabase
-              .from('chat_room_members')
-              .select('*', { count: 'exact', head: true })
-              .eq('room_id', roomId || '');
-
-            // 최근 메시지 시간 가져오기
-            const { data: lastMessage } = await supabase
-              .from('chat_room_messages')
-              .select('created_at')
-              .eq('room_id', roomId || '')
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
-            return {
-              code: chatRoom.code,
-              story: '', // 수다방은 story 없음
-              name: chatRoom.name,
-              host_nickname: chatRoom.host_nickname,
-              password: chatRoom.password,
-              max_questions: 0,
-              created_at: chatRoom.created_at,
-              player_count: count || 0,
-              member_count: count || 0,
-              last_chat_at: lastMessage?.created_at || null,
-              room_type: 'chat' as const,
-              max_players: chatRoom.max_members || 50,
-              is_system: !!(chatRoom as { is_system?: boolean }).is_system,
-            } as Room & { is_system?: boolean };
-          })
-        );
-        
-        // 게임방과 수다방 합치기 (수다방 1,2,3 시스템 방을 항상 상단에)
-        const allRooms = [...roomsWithPlayerCount, ...chatRoomsWithMemberCount].sort((a, b) => {
-          const aSys = (a as Room & { is_system?: boolean }).is_system;
-          const bSys = (b as Room & { is_system?: boolean }).is_system;
-          if (aSys && !bSys) return -1;
-          if (!aSys && bSys) return 1;
-          if (aSys && bSys) return ((a as Room).code || '').localeCompare((b as Room).code || '');
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        });
-        
-        setRooms(allRooms);
-        setFilteredRooms(allRooms);
-      } else {
-        setRooms(roomsWithPlayerCount);
-        setFilteredRooms(roomsWithPlayerCount);
-      }
+      const roomsWithPlayerCount = await enrichRoomsWithPlayerCount(result.data || []);
+      setRooms(roomsWithPlayerCount);
+      setFilteredRooms(roomsWithPlayerCount);
     } catch (error: any) {
       // AbortError는 무해한 에러이므로 무시 (컴포넌트 언마운트 시 발생 가능)
       if (error?.name !== 'AbortError' && error?.message?.includes('aborted') === false) {
@@ -389,8 +218,13 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
     setFilteredRooms(filtered);
   }, [searchQuery, privacyFilter, minPlayers, sortOption, rooms]);
 
-  const handleJoinRoom = async (roomCode: string, hasPassword: boolean, quizType?: string, roomType?: 'game' | 'chat') => {
-    // 로그인 체크
+  const turtleRoomPath = (roomCode: string, query?: Record<string, string>) => {
+    const base = `/${lang}/turtle_room/${roomCode}`;
+    if (!query || Object.keys(query).length === 0) return base;
+    return `${base}?${new URLSearchParams(query).toString()}`;
+  };
+
+  const handleJoinRoom = async (roomCode: string, hasPassword: boolean) => {
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) {
       alert(lang === 'ko' 
@@ -400,29 +234,11 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
       return;
     }
     
-    // 수다방인 경우
-    if (roomType === 'chat') {
-      if (hasPassword) {
-        setSelectedRoom(roomCode);
-        setShowPasswordModal(true);
-      } else {
-        router.push(`/${lang}/chat/${roomCode}`);
-      }
-      return;
-    }
-    
-    // 게임방인 경우
     if (hasPassword) {
       setSelectedRoom(roomCode);
       setShowPasswordModal(true);
     } else {
-      // 게임 타입에 따라 다른 경로로 이동
-      const roomPath = quizType === 'liar' 
-        ? `/${lang}/liar_room/${roomCode}`
-        : quizType === 'mafia'
-        ? `/${lang}/mafia_room/${roomCode}`
-        : `/${lang}/turtle_room/${roomCode}`;
-      router.push(roomPath);
+      router.push(turtleRoomPath(roomCode));
     }
   };
 
@@ -433,7 +249,6 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
       return;
     }
     
-    // 로그인 체크
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) {
       alert(lang === 'ko' 
@@ -446,26 +261,10 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
     }
     
     setError('');
-    // 선택된 방의 게임 타입 확인
-    const selectedRoomData = rooms.find(r => r.code === selectedRoom);
-    const quizType = selectedRoomData?.quiz_type;
-    
-    // 게임 타입에 따라 다른 경로로 이동
-    const roomPath = quizType === 'liar' 
-      ? `/${lang}/liar_room/${selectedRoom}`
-      : quizType === 'mafia'
-      ? `/${lang}/mafia_room/${selectedRoom}`
-      : `/${lang}/turtle_room/${selectedRoom}`;
-    
-    const urlParams = new URLSearchParams({
-      password: password.trim(),
-    });
-    router.push(`${roomPath}?${urlParams.toString()}`);
+    router.push(turtleRoomPath(selectedRoom, { password: password.trim() }));
     setShowPasswordModal(false);
     setPassword('');
   };
-
-  // 로딩 상태는 아래에서 처리
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
@@ -598,7 +397,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
             <label className="block text-xs text-slate-400 mb-2">{lang === 'ko' ? '정렬' : 'Sort'}</label>
             <select
               value={sortOption}
-              onChange={(e) => setSortOption(e.target.value as any)}
+              onChange={(e) => setSortOption(e.target.value as typeof sortOption)}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             >
               <option value="latest">{lang === 'ko' ? '최신순' : 'Latest'}</option>
@@ -688,28 +487,6 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-lg font-bold text-teal-400">{room.code}</span>
                       <div className="flex items-center gap-2 flex-wrap">
-                        {/* 방 타입 배지 */}
-                        {room.room_type === 'chat' ? (
-                          <span className="px-2 py-1 rounded text-xs border font-semibold bg-purple-500/20 text-purple-400 border-purple-500/50">
-                            <i className="ri-chat-3-line mr-1"></i>
-                            {lang === 'ko' ? '수다방' : 'Chat Room'}
-                          </span>
-                        ) : room.quiz_type && (
-                          <span className={`px-2 py-1 rounded text-xs border font-semibold ${
-                            room.quiz_type === 'liar' 
-                              ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
-                              : room.quiz_type === 'mafia'
-                              ? 'bg-purple-500/20 text-purple-400 border-purple-500/50'
-                              : 'bg-teal-500/20 text-teal-400 border-teal-500/50'
-                          }`}>
-                            {room.quiz_type === 'liar' 
-                              ? (lang === 'ko' ? '라이어 게임' : 'Liar Game')
-                              : room.quiz_type === 'mafia'
-                              ? (lang === 'ko' ? '마피아' : 'Mafia')
-                              : (lang === 'ko' ? '바다거북스프' : 'Turtle Soup')
-                            }
-                          </span>
-                        )}
                       {(room.game_ended || room.status === 'done' || room.status === 'FINISHED') && (
                         <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs border border-red-500/50">
                           <i className="ri-stop-circle-line mr-1"></i>
@@ -729,21 +506,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                       )}
                     </div>
                   </div>
-                  {/* 수다방인 경우 name 표시, 라이어 게임인 경우 room_name 표시, 그 외에는 story 표시 */}
-                  {room.room_type === 'chat' ? (
-                    <p className="text-sm font-semibold text-slate-200 mb-3">{room.name || room.code}</p>
-                  ) : room.quiz_type === 'liar' ? (
-                    <div className="mb-3">
-                      <p className="text-sm font-semibold text-slate-200 mb-1">{room.room_name || (lang === 'ko' ? '라이어 게임 방' : 'Liar Game Room')}</p>
-                      {room.theme && (
-                        <p className="text-xs text-slate-400">
-                          {lang === 'ko' ? '주제' : 'Theme'}: {room.theme} | {lang === 'ko' ? '난이도' : 'Difficulty'}: {room.level}
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-slate-300 line-clamp-2 mb-3">{room.story}</p>
-                  )}
+                  <p className="text-sm text-slate-300 line-clamp-2 mb-3">{room.story}</p>
                   <div className="flex flex-col gap-2 text-xs text-slate-400 mb-3">
                     <div className="flex items-center gap-4 flex-wrap">
                       <span>
@@ -752,10 +515,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                       </span>
                       <span>
                         <i className="ri-group-line mr-1"></i>
-                        {room.room_type === 'chat' 
-                          ? `${room.member_count || 0}${room.max_players ? ` / ${room.max_players}` : ''}${lang === 'ko' ? '명' : ''}`
-                          : `${room.player_count}${room.quiz_type === 'liar' && room.max_players ? ` / ${room.max_players}` : ''}${lang === 'ko' ? t.room.playersCount : ''}`
-                        }
+                        {room.player_count}{lang === 'ko' ? t.room.playersCount : ''}
                       </span>
                     </div>
                     <div className="flex items-center gap-4 flex-wrap pt-2 border-t border-slate-700/50">
@@ -800,7 +560,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                 <div className="flex gap-2">
                   {!(room.game_ended || room.status === 'done' || room.status === 'FINISHED') && (
                     <button
-                      onClick={() => handleJoinRoom(room.code, !!room.password, room.quiz_type, room.room_type)}
+                      onClick={() => handleJoinRoom(room.code, !!room.password)}
                       className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-2.5 rounded-lg transition-all text-sm"
                     >
                       <i className="ri-login-box-line mr-2"></i>
@@ -808,14 +568,7 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
                     </button>
                   )}
                   <button
-                    onClick={() => {
-                      const spectatorPath = room.quiz_type === 'liar' 
-                        ? `/${lang}/liar_room/${room.code}?spectator=true`
-                        : room.quiz_type === 'mafia'
-                        ? `/${lang}/mafia_room/${room.code}?spectator=true`
-                        : `/${lang}/turtle_room/${room.code}?spectator=true`;
-                      router.push(spectatorPath);
-                    }}
+                    onClick={() => router.push(turtleRoomPath(room.code, { spectator: 'true' }))}
                     className={`${!(room.game_ended || room.status === 'done' || room.status === 'FINISHED') ? 'flex-1' : 'w-full'} bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 rounded-lg transition-all text-sm border border-slate-600`}
                     title={t.room.spectateModeTooltip}
                   >
@@ -827,7 +580,6 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
             ))}
             </div>
 
-            {/* 광고: 방 리스트 중간 (5개 방 후) */}
             {/* 페이지네이션 */}
             {totalPages > 1 && (
               <div className="mt-6 flex items-center justify-center gap-2">
@@ -921,4 +673,3 @@ export default function RoomsPage({ params }: { params: Promise<{ lang: string }
     </div>
   );
 }
-

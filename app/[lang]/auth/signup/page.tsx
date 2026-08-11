@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useRef } from 'react';
+import { use } from 'react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -22,10 +22,6 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
   const [showResendEmail, setShowResendEmail] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [profileImage, setProfileImage] = useState<File | null>(null);
-  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,35 +145,6 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
                   }
                 }
 
-                // 프로필 이미지 업로드 (있는 경우)
-                if (profileImage) {
-                  try {
-                    const fileExt = profileImage.name.split('.').pop();
-                    const fileName = `${gameUser.id}_${Date.now()}.${fileExt}`;
-                    const filePath = `profile-images/${fileName}`;
-
-                    const { error: uploadError } = await supabase.storage
-                      .from('avatars')
-                      .upload(filePath, profileImage, {
-                        cacheControl: '3600',
-                        upsert: false
-                      });
-
-                    if (!uploadError) {
-                      const { data: { publicUrl } } = supabase.storage
-                        .from('avatars')
-                        .getPublicUrl(filePath);
-
-                      await supabase
-                        .from('game_users')
-                        .update({ profile_image_url: publicUrl })
-                        .eq('id', gameUser.id);
-                    }
-                  } catch (imageError) {
-                    // 프로필 이미지 업로드 실패는 무시 (회원가입은 성공)
-                    console.warn('프로필 이미지 업로드 오류:', imageError);
-                  }
-                }
               }
             }
           } catch (refError) {
@@ -367,95 +334,6 @@ export default function SignupPage({ params }: { params: Promise<{ lang: string 
                 disabled={isLoading}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               />
-            </div>
-
-            {/* 프로필 이미지 업로드 (선택 사항) */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                {lang === 'ko' ? '프로필 이미지 (선택)' : 'Profile Image (Optional)'}
-              </label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    // 이미지 파일만 허용
-                    if (!file.type.startsWith('image/')) {
-                      setError(lang === 'ko' ? '이미지 파일만 업로드 가능합니다.' : 'Only image files are allowed.');
-                      return;
-                    }
-                    // 파일 크기 제한 (5MB)
-                    if (file.size > 5 * 1024 * 1024) {
-                      setError(lang === 'ko' ? '파일 크기는 5MB 이하여야 합니다.' : 'File size must be less than 5MB.');
-                      return;
-                    }
-                    setProfileImage(file);
-                    // 미리보기 생성
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      setProfileImagePreview(reader.result as string);
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                }}
-                className="hidden"
-                disabled={isLoading}
-              />
-              <div className="flex items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isLoading}
-                  className="flex-shrink-0 w-20 h-20 rounded-full border-2 border-slate-700 bg-slate-900 hover:bg-slate-800 transition-colors flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed relative group overflow-hidden"
-                >
-                  {profileImagePreview ? (
-                    <>
-                      <img
-                        src={profileImagePreview}
-                        alt="프로필 미리보기"
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <i className="ri-camera-line text-white text-xl"></i>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-2xl">
-                      {nickname ? nickname.charAt(0).toUpperCase() : '+'}
-                    </div>
-                  )}
-                </button>
-                <div className="flex-1">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isLoading}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {profileImage ? (lang === 'ko' ? '이미지 변경' : 'Change Image') : (lang === 'ko' ? '이미지 선택' : 'Select Image')}
-                  </button>
-                  {profileImage && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setProfileImage(null);
-                        setProfileImagePreview(null);
-                        if (fileInputRef.current) {
-                          fileInputRef.current.value = '';
-                        }
-                      }}
-                      className="mt-2 text-xs text-red-400 hover:text-red-300 transition-colors"
-                    >
-                      {lang === 'ko' ? '제거' : 'Remove'}
-                    </button>
-                  )}
-                  <p className="text-xs text-slate-500 mt-1">
-                    {lang === 'ko' ? '5MB 이하의 이미지 파일만 가능합니다.' : 'Image files under 5MB only.'}
-                  </p>
-                </div>
-              </div>
             </div>
 
             <div>

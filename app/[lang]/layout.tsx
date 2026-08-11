@@ -14,25 +14,11 @@ export async function generateMetadata({
 }: {
   params: Promise<{ lang: string }>;
 }): Promise<Metadata> {
-  const { lang } = await params;
-  const locale = isValidLocale(lang) ? lang : defaultLocale;
-
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://turtle-soup-rust.vercel.app";
-  const baseUrl = `${siteUrl}/${locale}`;
+  const baseUrl = `${siteUrl}/ko`;
 
-  // Title: 브랜드 + 핵심 키워드, 50~60자
-  const siteName = locale === "ko" ? "바다거북스프" : "Lateral Thinking Mystery Puzzles";
-  const title =
-    locale === "ko"
-      ? "바다거북스프 | 추리 퀴즈·라이어 게임"
-      : "Lateral Thinking Mystery Puzzles | Mystery Riddle·Logic Quiz·Liar Game";
-
-  // Meta Description: 90~155자
-  const description =
-    locale === "ko"
-      ? "바다거북스프, 라이어 게임, 마피아 등 추리 퀴즈를 즐기세요. 친구와 멀티플레이, 오늘의 문제, 문제 만들기. 바다거북스프에서 실력과 랭킹을 확인하세요."
-      : "Play Lateral Thinking Mystery Puzzles, Liar Game, Mafia and more. Multiplayer with friends, daily puzzles, create your own. Check your rank and skills at Lateral Thinking Mystery Puzzles.";
-
+  const title = "바다거북스프 | 추리 퀴즈 문제 모음";
+  const description = "바다거북스프 문제를 풀어보세요. 레전드 문제, 어려운 문제, 공포·반전 문제까지 다양한 추리 퀴즈를 즐길 수 있습니다. 멀티플레이, 오늘의 문제, 랭킹까지.";
   const ogImage = `${siteUrl}/og.png`;
 
   return {
@@ -41,20 +27,14 @@ export async function generateMetadata({
     metadataBase: new URL(siteUrl),
     alternates: {
       canonical: baseUrl,
-      languages: {
-        ko: `${siteUrl}/ko`,
-        en: `${siteUrl}/en`,
-        "x-default": `${siteUrl}/ko`,
-      },
     },
     openGraph: {
       type: "website",
-      siteName,
+      siteName: "바다거북스프",
       title: title.slice(0, 60),
       description: description.slice(0, 155),
       url: baseUrl,
-      locale: locale === "ko" ? "ko_KR" : "en_US",
-      alternateLocale: locale === "ko" ? "en_US" : "ko_KR",
+      locale: "ko_KR",
       images: [
         {
           url: ogImage,
@@ -105,25 +85,15 @@ export default async function LangLayout({
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    name: locale === "ko" ? "바다거북스프" : "Lateral Thinking Mystery Puzzles",
-    description:
-      locale === "ko"
-        ? "다양한 퀴즈와 추리 게임을 즐기는 퀴즈 플랫폼"
-        : "A quiz platform where you can enjoy various quizzes and deduction games",
-    url: `${siteUrl}/${locale}`,
+    name: "바다거북스프",
+    description: "다양한 퀴즈와 추리 게임을 즐기는 퀴즈 플랫폼",
+    url: `${siteUrl}/ko`,
     applicationCategory: "Game",
     operatingSystem: "Web",
     offers: {
       "@type": "Offer",
       price: "0",
-      priceCurrency: locale === "ko" ? "KRW" : "USD",
-    },
-    game: {
-      "@type": "VideoGame",
-      name: locale === "ko" ? "바다거북스프" : "Lateral Thinking Mystery Puzzles",
-      description: locale === "ko" ? "추리 게임" : "Deduction Game",
-      gamePlatform: "Web Browser",
-      genre: locale === "ko" ? "추리게임" : "Puzzle",
+      priceCurrency: "KRW",
     },
   };
 
@@ -135,11 +105,6 @@ export default async function LangLayout({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-
-      {/* hreflang 태그 */}
-      <link rel="alternate" hrefLang="ko" href={`${siteUrl}/ko`} />
-      <link rel="alternate" hrefLang="en" href={`${siteUrl}/en`} />
-      <link rel="alternate" hrefLang="x-default" href={`${siteUrl}/ko`} />
 
       <div className="flex flex-col min-h-screen">
         <Header />

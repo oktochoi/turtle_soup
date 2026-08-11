@@ -17,7 +17,7 @@ export async function generateMetadata({
     title: locale === 'ko' ? '커뮤니티 가이드라인' : 'Community Guidelines',
     description: locale === 'ko'
       ? '바다거북스프 커뮤니티 가이드라인입니다. 모든 사용자가 안전하고 즐거운 환경에서 게임을 즐길 수 있도록 함께 지켜주세요.'
-      : 'Community Guidelines for Pelican Soup Riddle. Please help us maintain a safe and enjoyable environment for all users.',
+      : 'Community Guidelines for Turtle Soup Riddle. Please help us maintain a safe and enjoyable environment for all users.',
     alternates: {
       canonical: baseUrl,
       languages: {
@@ -29,7 +29,7 @@ export async function generateMetadata({
       title: locale === 'ko' ? '커뮤니티 가이드라인' : 'Community Guidelines',
       description: locale === 'ko'
         ? '바다거북스프 커뮤니티 가이드라인'
-        : 'Community Guidelines for Pelican Soup Riddle',
+        : 'Community Guidelines for Turtle Soup Riddle',
       url: baseUrl,
       locale: locale === 'ko' ? 'ko_KR' : 'en_US',
     },
@@ -65,7 +65,7 @@ export default async function CommunityGuidelinesPage({
               <p className="mb-4 text-lg">
                 {isKo
                   ? '바다거북스프는 모든 사용자가 안전하고 즐거운 환경에서 게임을 즐길 수 있도록 노력하고 있습니다. 아래 가이드라인을 준수해 주시기 바랍니다.'
-                  : 'Pelican Soup Riddle strives to provide a safe and enjoyable environment for all users. Please follow the guidelines below.'}
+                  : 'Turtle Soup Riddle strives to provide a safe and enjoyable environment for all users. Please follow the guidelines below.'}
               </p>
             </section>
 
@@ -289,7 +289,7 @@ export default async function CommunityGuidelinesPage({
               <p>
                 {isKo
                   ? '바다거북스프는 모든 사용자가 즐겁고 안전하게 게임을 즐길 수 있는 커뮤니티를 만들기 위해 노력하고 있습니다. 여러분의 협조와 참여가 필요합니다. 함께 건전한 게임 환경을 만들어 나가요!'
-                  : 'Pelican Soup Riddle strives to create a community where all users can enjoy the game happily and safely. We need your cooperation and participation. Let\'s build a healthy gaming environment together!'}
+                  : 'Turtle Soup Riddle strives to create a community where all users can enjoy the game happily and safely. We need your cooperation and participation. Let\'s build a healthy gaming environment together!'}
               </p>
             </section>
           </div>

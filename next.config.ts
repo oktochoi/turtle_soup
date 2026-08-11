@@ -4,12 +4,24 @@ const nextConfig: NextConfig = {
   // 리다이렉트: 블로그→공지사항, how-to-play→guide
   async redirects() {
     return [
-      { source: '/ko/blog', destination: '/ko/community?category=notice', permanent: true },
-      { source: '/ko/blog/:path*', destination: '/ko/community?category=notice', permanent: true },
-      { source: '/en/blog', destination: '/en/community?category=notice', permanent: true },
-      { source: '/en/blog/:path*', destination: '/en/community?category=notice', permanent: true },
+      // 레거시 경로 → 한국어 대응 페이지
+      { source: '/ko/blog', destination: '/ko', permanent: true },
+      { source: '/ko/blog/:path*', destination: '/ko', permanent: true },
+      { source: '/ko/community', destination: '/ko', permanent: true },
+      { source: '/ko/community/:path*', destination: '/ko', permanent: true },
       { source: '/ko/how-to-play', destination: '/ko/guide', permanent: true },
-      { source: '/en/how-to-play', destination: '/en/guide', permanent: true },
+      { source: '/ko/tutorial', destination: '/ko/guide', permanent: true },
+      { source: '/ko/about', destination: '/ko/guide', permanent: true },
+      { source: '/ko/guess', destination: '/ko/problems', permanent: true },
+      { source: '/ko/guess/:path*', destination: '/ko/problems', permanent: true },
+      { source: '/ko/balance', destination: '/ko/problems', permanent: true },
+      { source: '/ko/balance/:path*', destination: '/ko/problems', permanent: true },
+      { source: '/ko/chat/:path*', destination: '/ko/rooms', permanent: true },
+      { source: '/ko/liar_room/:path*', destination: '/ko/rooms', permanent: true },
+      { source: '/ko/mafia_room/:path*', destination: '/ko/rooms', permanent: true },
+      { source: '/ko/wallet', destination: '/ko', permanent: true },
+      { source: '/ko/shop', destination: '/ko', permanent: true },
+      { source: '/ko/earn', destination: '/ko', permanent: true },
     ];
   },
   // output: "export" 제거 - Supabase를 사용하는 동적 앱이므로 필요 없음

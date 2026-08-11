@@ -16,7 +16,7 @@ export async function generateMetadata({
     title: locale === 'ko' ? '이용약관' : 'Terms of Service',
     description: locale === 'ko'
       ? '바다거북스프 게임의 이용약관입니다. 서비스 이용에 대한 규정을 확인하세요.'
-      : 'Terms of Service for Pelican Soup Riddle. Review the rules for using the service.',
+      : 'Terms of Service for Turtle Soup Riddle. Review the rules for using the service.',
     alternates: {
       canonical: baseUrl,
       languages: {
@@ -28,7 +28,7 @@ export async function generateMetadata({
       title: locale === 'ko' ? '이용약관' : 'Terms of Service',
       description: locale === 'ko'
         ? '바다거북스프 게임의 이용약관'
-        : 'Terms of Service for Pelican Soup Riddle',
+        : 'Terms of Service for Turtle Soup Riddle',
       url: baseUrl,
       locale: locale === 'ko' ? 'ko_KR' : 'en_US',
     },
@@ -67,7 +67,7 @@ export default async function TermsPage({
               <p>
                 {isKo
                   ? '이 약관은 바다거북스프(이하 "서비스")가 제공하는 온라인 게임 서비스(이하 "서비스")의 이용과 관련하여 서비스와 이용자 간의 권리, 의무 및 책임사항, 기타 필요한 사항을 규정함을 목적으로 합니다.'
-                  : 'This agreement aims to stipulate the rights, obligations, and responsibilities between the Service and users, as well as other necessary matters, regarding the use of the online game service (hereinafter referred to as the "Service") provided by Pelican Soup Riddle (hereinafter referred to as the "Service").'}
+                  : 'This agreement aims to stipulate the rights, obligations, and responsibilities between the Service and users, as well as other necessary matters, regarding the use of the online game service (hereinafter referred to as the "Service") provided by Turtle Soup Riddle (hereinafter referred to as the "Service").'}
               </p>
             </section>
 
@@ -80,7 +80,7 @@ export default async function TermsPage({
                   <strong>{isKo ? '"서비스"' : '"Service"'}:</strong>{' '}
                   {isKo
                     ? '바다거북스프가 제공하는 온라인 추리 게임 서비스를 의미합니다.'
-                    : 'Refers to the online deduction game service provided by Pelican Soup Riddle.'}
+                    : 'Refers to the online deduction game service provided by Turtle Soup Riddle.'}
                 </li>
                 <li>
                   <strong>{isKo ? '"이용자"' : '"User"'}:</strong>{' '}

@@ -26,12 +26,10 @@ export default function UserLabel({
   size = 'md',
   className = '',
   showProfileImage = false,
-  profileImageUrl,
 }: UserLabelProps) {
   const [userLevel, setUserLevel] = useState<number>(level || 1);
   const [userTitle, setUserTitle] = useState<Title | null>(null);
   const [displayName, setDisplayName] = useState<string>(nickname || '사용자');
-  const [userProfileImage, setUserProfileImage] = useState<string | null>(profileImageUrl || null);
 
   const loadTitleById = async (id: number) => {
     try {
@@ -70,32 +68,21 @@ export default function UserLabel({
 
   const loadTitle = async () => {
     if (!titleId) return;
-
     try {
       const { data: title } = await supabase
         .from('titles')
         .select('*')
         .eq('id', titleId)
         .single();
-
-      if (title) {
-        setUserTitle(title);
-      }
+      if (title) setUserTitle(title);
     } catch (error) {
       console.error('칭호 로드 오류:', error);
     }
   };
 
   useEffect(() => {
-    // level이 제공되지 않은 경우 가져오기
-    if (!level) {
-      loadUserData();
-    }
-
-    // titleId가 제공된 경우 칭호 가져오기
-    if (titleId) {
-      loadTitle();
-    }
+    if (!level) loadUserData();
+    if (titleId) loadTitle();
   }, [userId, level, titleId]);
 
   const loadNickname = async () => {
@@ -105,47 +92,15 @@ export default function UserLabel({
         .select('nickname')
         .eq('id', userId)
         .single();
-
-      if (user) {
-        setDisplayName(user.nickname);
-      }
+      if (user) setDisplayName(user.nickname);
     } catch (error) {
       console.error('닉네임 로드 오류:', error);
     }
   };
 
   useEffect(() => {
-    if (!nickname) {
-      loadNickname();
-    }
+    if (!nickname) loadNickname();
   }, [userId, nickname]);
-
-  const loadProfileImage = async () => {
-    try {
-      const { data: user } = await supabase
-        .from('game_users')
-        .select('profile_image_url, nickname')
-        .eq('id', userId)
-        .single();
-
-      if (user) {
-        setUserProfileImage(user.profile_image_url);
-        if (!nickname && user.nickname) {
-          setDisplayName(user.nickname);
-        }
-      }
-    } catch (error) {
-      console.error('프로필 이미지 로드 오류:', error);
-    }
-  };
-
-  useEffect(() => {
-    if (showProfileImage && !profileImageUrl) {
-      loadProfileImage();
-    } else if (profileImageUrl) {
-      setUserProfileImage(profileImageUrl);
-    }
-  }, [userId, showProfileImage, profileImageUrl]);
 
   const imageSize = size === 'sm' ? 'w-6 h-6' : size === 'lg' ? 'w-10 h-10' : 'w-8 h-8';
   const textSize = size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm';
@@ -153,18 +108,8 @@ export default function UserLabel({
   return (
     <div className={`inline-flex items-center gap-2 ${className}`}>
       {showProfileImage && (
-        <div className={`${imageSize} rounded-full flex-shrink-0 overflow-hidden border border-slate-600`}>
-          {userProfileImage ? (
-            <img
-              src={userProfileImage}
-              alt={displayName}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-xs">
-              {displayName.charAt(0).toUpperCase()}
-            </div>
-          )}
+        <div className={`${imageSize} rounded-full flex-shrink-0 overflow-hidden border border-slate-600 bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-xs`}>
+          {displayName.charAt(0).toUpperCase()}
         </div>
       )}
       {showBadge && (
@@ -182,4 +127,3 @@ export default function UserLabel({
     </div>
   );
 }
-

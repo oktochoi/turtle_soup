@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
-const supportedLocales = ['ko', 'en'] as const;
+const supportedLocales = ['ko'] as const;
 type SupportedLocale = (typeof supportedLocales)[number];
 const defaultLocale: SupportedLocale = 'ko';
 
@@ -29,18 +29,13 @@ function shouldSkipMiddleware(pathname: string): boolean {
   return false;
 }
 
-function detectPreferredLocale(request: NextRequest): string {
-  const header = request.headers.get('accept-language') || '';
-  const lower = header.toLowerCase();
-  if (lower.includes('ko')) return 'ko';
-  if (lower.includes('en')) return 'en';
+function detectPreferredLocale(_request: NextRequest): string {
   return defaultLocale;
 }
 
 // Public 경로 목록 (로그인 없이 접근 가능)
 const publicPaths = [
   '/',
-  '/about',
   '/faq',
   '/privacy',
   '/terms',
@@ -48,12 +43,8 @@ const publicPaths = [
   '/auth', // 인증 관련 페이지는 Public
   '/problems', // 문제 목록은 Public
   '/problem', // 개별 문제 상세는 Public
-  '/guess', // 맞추기 게임 목록은 Public
   '/ranking', // 랭킹은 Public
-  '/community', // 커뮤니티는 Public
-  '/tutorial', // 튜토리얼은 Public
   '/guide', // 가이드는 Public
-  '/balance', // 밸런스 게임 목록·플레이 (생성은 페이지에서 로그인 유도)
 ];
 
 // 인증이 필요한 경로 (로그인 필수)
@@ -67,15 +58,8 @@ const protectedPaths = [
   '/create-room',
   '/create',
   '/edit',
-  '/guess/create', // 맞추기 게임 만들기
   '/turtle_room',
-  '/liar_room',
-  '/mafia_room',
   '/room',
-  '/chat',
-  '/wallet',
-  '/shop',
-  '/earn',
 ];
 
 // 경로가 Public인지 확인
@@ -102,7 +86,6 @@ function isPublicPath(pathname: string): boolean {
     if (fullPath.startsWith(publicPath + '/')) {
       // 하지만 protected 경로는 제외
       const remainingPath = fullPath.slice(publicPath.length);
-      // /guess/create 같은 경우는 protected이므로 false
       return !isProtectedPath(pathname);
     }
     return false;
@@ -142,32 +125,29 @@ export async function middleware(request: NextRequest) {
     (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
   );
 
-  // 루트 경로는 기본 언어로 리다이렉트
+  // /en → /ko 301 redirect (기존 영어 URL 보존)
+  if (pathname.startsWith('/en/') || pathname === '/en') {
+    const restOfPath = pathname === '/en' ? '' : pathname.slice(3);
+    const newUrl = new URL(`/ko${restOfPath}`, request.url);
+    return NextResponse.redirect(newUrl, 301);
+  }
+
+  // 루트 경로는 /ko로 리다이렉트
   if (pathname === '/') {
-    const preferred = detectPreferredLocale(request);
-    return NextResponse.redirect(
-      new URL(`/${preferred}`, request.url)
-    );
+    return NextResponse.redirect(new URL('/ko', request.url));
   }
 
-  // 언어 코드가 없는 경우 기본 언어로 리다이렉트
+  // 언어 코드가 없는 경우 /ko로 리다이렉트
   if (!pathnameHasLocale) {
-    // /daily -> /ko/daily
-    const preferred = detectPreferredLocale(request);
-    const newPathname = `/${preferred}${pathname}`;
-    return NextResponse.redirect(
-      new URL(newPathname, request.url)
-    );
+    return NextResponse.redirect(new URL(`/ko${pathname}`, request.url));
   }
 
-  // 잘못된 언어 코드는 기본 언어로 리다이렉트
+  // 잘못된 언어 코드는 /ko로 리다이렉트
   const pathSegments = pathname.split('/').filter(Boolean);
   if (pathSegments.length > 0 && !isSupportedLocale(pathSegments[0])) {
     const restOfPath = pathSegments.slice(1).join('/');
-    const newPathname = restOfPath ? `/${defaultLocale}/${restOfPath}` : `/${defaultLocale}`;
-    return NextResponse.redirect(
-      new URL(newPathname, request.url)
-    );
+    const newPathname = restOfPath ? `/ko/${restOfPath}` : '/ko';
+    return NextResponse.redirect(new URL(newPathname, request.url), 301);
   }
 
   // Protected 경로는 페이지 레벨에서 인증 체크하도록 통과

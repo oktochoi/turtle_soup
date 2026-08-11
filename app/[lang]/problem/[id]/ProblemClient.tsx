@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import type { Problem, ProblemQuestion, ProblemComment, ProblemUserAnswer, ProblemAnswerReply } from '@/lib/types';
 import { buildProblemKnowledge, analyzeQuestionV8, calculateAnswerSimilarity, initializeModel, type ProblemKnowledge } from '@/lib/ai-analyzer';
-import { buildProblemKnowledge as buildProblemKnowledgeEn, analyzeQuestionV8 as analyzeQuestionV8En, calculateAnswerSimilarityEn, initializeModel as initializeModelEn, type ProblemKnowledge as ProblemKnowledgeEn } from '@/lib/ai-analyzer-en';
 import ProblemAdminButtons from './ProblemAdminButtons';
 import { useAuth } from '@/lib/hooks/useAuth';
 import UserLabel from '@/components/UserLabel';
@@ -90,7 +89,7 @@ export default function ProblemClient({
   const [editCommentIsSpoiler, setEditCommentIsSpoiler] = useState(false);
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
-  const [problemKnowledge, setProblemKnowledge] = useState<ProblemKnowledge | ProblemKnowledgeEn | null>(null);
+  const [problemKnowledge, setProblemKnowledge] = useState<ProblemKnowledge | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [hasSubmittedAnswer, setHasSubmittedAnswer] = useState(false);
   const [authorGameUserId, setAuthorGameUserId] = useState<string | null>(null);
@@ -162,7 +161,7 @@ export default function ProblemClient({
       return;
     }
     try {
-      const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
+      const currentLang = 'ko';
       // int_id 기준으로 다음 문제 찾기
       const currentIntId = (problem as any).int_id;
       
@@ -209,7 +208,7 @@ export default function ProblemClient({
       return;
     }
     try {
-      const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
+      const currentLang = 'ko';
       // int_id 기준으로 이전 문제 찾기
       const currentIntId = (problem as any).int_id;
       
@@ -259,9 +258,9 @@ export default function ProblemClient({
   const handleCreateRoomFromProblem = async () => {
     if (!problem) {
       if (typeof window !== 'undefined' && (window as any).toastError) {
-        (window as any).toastError(lang === 'ko' ? '문제 정보를 불러올 수 없습니다.' : 'Cannot load problem information.');
+        (window as any).toastError('문제 정보를 불러올 수 없습니다.');
       } else {
-        alert(lang === 'ko' ? '문제 정보를 불러올 수 없습니다.' : 'Cannot load problem information.');
+        alert('문제 정보를 불러올 수 없습니다.');
       }
       return;
     }
@@ -269,9 +268,9 @@ export default function ProblemClient({
     // 로그인 체크
     if (!user) {
       if (typeof window !== 'undefined' && (window as any).toastWarning) {
-        (window as any).toastWarning(lang === 'ko' ? '로그인이 필요합니다.' : 'Login required.');
+        (window as any).toastWarning('로그인이 필요합니다.');
       } else {
-        alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Login required.');
+        alert('로그인이 필요합니다.');
       }
       router.push(`/${lang}/auth/login`);
       return;
@@ -280,9 +279,9 @@ export default function ProblemClient({
     // 정답 확인 칸이 보이지 않으면 정답 표시 요청
     if (!showAnswer) {
       if (typeof window !== 'undefined' && (window as any).toastInfo) {
-        (window as any).toastInfo(lang === 'ko' ? '정답을 확인한 후 방을 만들 수 있습니다.' : 'Please check the answer before creating a room.');
+        (window as any).toastInfo('정답을 확인한 후 방을 만들 수 있습니다.');
       } else {
-        alert(lang === 'ko' ? '정답을 확인한 후 방을 만들 수 있습니다.' : 'Please check the answer before creating a room.');
+        alert('정답을 확인한 후 방을 만들 수 있습니다.');
       }
       return;
     }
@@ -308,7 +307,7 @@ export default function ProblemClient({
         nickname = userData?.nickname || gameUser?.nickname || `User${user.id.substring(0, 6)}`;
       } else {
         // 게스트인 경우 임시 닉네임
-        nickname = lang === 'ko' ? `게스트${Math.random().toString(36).substring(2, 6)}` : `Guest${Math.random().toString(36).substring(2, 6)}`;
+        nickname = `게스트${Math.random().toString(36).substring(2, 6)}`;
       }
 
       // 방 코드 생성
@@ -337,7 +336,7 @@ export default function ProblemClient({
         truth: problem.answer,
         host_nickname: nickname,
         max_questions: 30,
-        lang: lang === 'ko' || lang === 'en' ? lang : 'ko',
+        lang: 'ko',
         hints: problem.hints || null,
       };
 
@@ -399,9 +398,9 @@ export default function ProblemClient({
     } catch (error: any) {
       console.error('방 생성 오류:', error);
       if (typeof window !== 'undefined' && (window as any).toastError) {
-        (window as any).toastError(lang === 'ko' ? '방 생성에 실패했습니다. 다시 시도해주세요.' : 'Failed to create room. Please try again.');
+        (window as any).toastError('방 생성에 실패했습니다. 다시 시도해주세요.');
       } else {
-        alert(lang === 'ko' ? '방 생성에 실패했습니다. 다시 시도해주세요.' : 'Failed to create room. Please try again.');
+        alert('방 생성에 실패했습니다. 다시 시도해주세요.');
       }
     } finally {
       setIsCreatingRoom(false);
@@ -421,7 +420,7 @@ export default function ProblemClient({
     
     try {
       await navigator.clipboard.writeText(url);
-      showToast(lang === 'ko' ? '링크가 복사되었습니다!' : 'Link copied!', 'success');
+      showToast('링크가 복사되었습니다!', 'success');
     } catch (error) {
       // 폴백: 텍스트 영역 사용
       const textArea = document.createElement('textarea');
@@ -432,9 +431,9 @@ export default function ProblemClient({
       textArea.select();
       try {
         document.execCommand('copy');
-        showToast(lang === 'ko' ? '링크가 복사되었습니다!' : 'Link copied!', 'success');
+        showToast('링크가 복사되었습니다!', 'success');
       } catch (err) {
-        showToast(lang === 'ko' ? '링크 복사에 실패했습니다. URL을 직접 복사해주세요.' : 'Failed to copy link. Please copy the URL manually.', 'error');
+        showToast('링크 복사에 실패했습니다. URL을 직접 복사해주세요.', 'error');
       }
       document.body.removeChild(textArea);
     }
@@ -463,9 +462,9 @@ export default function ProblemClient({
     // 유사도 오류인 경우 질문/답변 없이도 가능
     if (bugReportType !== 'wrong_similarity' && (!question || !answer)) {
       if (typeof window !== 'undefined' && (window as any).toastWarning) {
-        (window as any).toastWarning(lang === 'ko' ? '질문과 답변 정보가 필요합니다.' : 'Question and answer information is required.');
+        (window as any).toastWarning('질문과 답변 정보가 필요합니다.');
       } else {
-        alert(lang === 'ko' ? '질문과 답변 정보가 필요합니다.' : 'Question and answer information is required.');
+        alert('질문과 답변 정보가 필요합니다.');
       }
       return;
     }
@@ -473,9 +472,9 @@ export default function ProblemClient({
     // 기대한 답변 필수 검증
     if (!bugReportExpected || !bugReportExpected.trim()) {
       if (typeof window !== 'undefined' && (window as any).toastError) {
-        (window as any).toastError(lang === 'ko' ? '기대한 답변을 입력해주세요.' : 'Please enter the expected answer.');
+        (window as any).toastError('기대한 답변을 입력해주세요.');
       } else {
-        alert(lang === 'ko' ? '기대한 답변을 입력해주세요.' : 'Please enter the expected answer.');
+        alert('기대한 답변을 입력해주세요.');
       }
       return;
     }
@@ -491,15 +490,9 @@ export default function ProblemClient({
 
     if (learnedErrorCheck.isLearnedError) {
       if (typeof window !== 'undefined' && (window as any).toastInfo) {
-        (window as any).toastInfo(
-          lang === 'ko' 
-            ? '이 오류는 이미 학습되어 수정되었습니다. AI가 이제 올바르게 동작할 것입니다.'
-            : 'This error has already been learned and fixed. The AI should now work correctly.'
-        );
+        (window as any).toastInfo('이 오류는 이미 학습되어 수정되었습니다. AI가 이제 올바르게 동작할 것입니다.');
       } else {
-        alert(lang === 'ko' 
-          ? '이 오류는 이미 학습되어 수정되었습니다. AI가 이제 올바르게 동작할 것입니다.'
-          : 'This error has already been learned and fixed. The AI should now work correctly.');
+        alert('이 오류는 이미 학습되어 수정되었습니다. AI가 이제 올바르게 동작할 것입니다.');
       }
       // 학습된 오류라도 리포트는 저장 (통계용)
     }
@@ -529,7 +522,7 @@ export default function ProblemClient({
         similarity_score: similarityScore !== null ? Number(similarityScore.toFixed(2)) : null,
         problem_content: problem.content,
         hints: (problem as any).hints || null,
-        language: lang === 'ko' || lang === 'en' ? lang : 'ko',
+        language: 'ko',
       };
 
       const { error } = await supabase
@@ -539,17 +532,17 @@ export default function ProblemClient({
       if (error) {
         console.error('오류 리포트 전송 오류:', error);
         if (typeof window !== 'undefined' && (window as any).toastError) {
-          (window as any).toastError(lang === 'ko' ? '오류 리포트 전송에 실패했습니다.' : 'Failed to send error report.');
+          (window as any).toastError('오류 리포트 전송에 실패했습니다.');
         } else {
-          alert(lang === 'ko' ? '오류 리포트 전송에 실패했습니다.' : 'Failed to send error report.');
+          alert('오류 리포트 전송에 실패했습니다.');
         }
         return;
       }
 
       if (typeof window !== 'undefined' && (window as any).toastSuccess) {
-        (window as any).toastSuccess(lang === 'ko' ? '오류 리포트가 전송되었습니다.' : 'Error report has been sent.');
+        (window as any).toastSuccess('오류 리포트가 전송되었습니다.');
       } else {
-        alert(lang === 'ko' ? '오류 리포트가 전송되었습니다.' : 'Error report has been sent.');
+        alert('오류 리포트가 전송되었습니다.');
       }
       setShowBugReportModal(false);
       setBugReportExpected('');
@@ -558,9 +551,9 @@ export default function ProblemClient({
     } catch (error) {
       console.error('오류 리포트 전송 오류:', error);
       if (typeof window !== 'undefined' && (window as any).toastError) {
-        (window as any).toastError(lang === 'ko' ? '오류 리포트 전송에 실패했습니다.' : 'Failed to send error report.');
+        (window as any).toastError('오류 리포트 전송에 실패했습니다.');
       } else {
-        alert(lang === 'ko' ? '오류 리포트 전송에 실패했습니다.' : 'Failed to send error report.');
+        alert('오류 리포트 전송에 실패했습니다.');
       }
     }
   };
@@ -576,15 +569,9 @@ export default function ProblemClient({
     loadRating();
     
     // AI 모델을 백그라운드에서 미리 로드 (첫 질문 속도 개선)
-    if (lang === 'en') {
-      initializeModelEn().catch(err => {
-        console.error('AI 모델 사전 로딩 실패 (첫 질문 시 자동 로드됨):', err);
-      });
-    } else {
-      initializeModel().catch(err => {
-        console.error('AI 모델 사전 로딩 실패 (첫 질문 시 자동 로드됨):', err);
-      });
-    }
+    initializeModel().catch((err: any) => {
+      console.error('AI 모델 사전 로딩 실패 (첫 질문 시 자동 로드됨):', err);
+    });
   }, [problemId, lang]);
 
   // 작성자 및 관리자 확인 (user_id 기반)
@@ -722,7 +709,7 @@ export default function ProblemClient({
       // 문제 로드 후 다음/이전 문제 로드 (data를 직접 사용하여 state 업데이트 대기 불필요)
       // React state 업데이트는 비동기이므로, data를 직접 전달하는 방식으로 변경
       const loadNextWithData = async () => {
-        const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
+        const currentLang = 'ko';
         const currentIntId = (data as any).int_id;
         
         if (currentIntId === null || currentIntId === undefined) {
@@ -751,7 +738,7 @@ export default function ProblemClient({
       };
       
       const loadPreviousWithData = async () => {
-        const currentLang = (lang === 'ko' || lang === 'en') ? lang : 'ko';
+        const currentLang = 'ko';
         const currentIntId = (data as any).int_id;
         
         if (currentIntId === null || currentIntId === undefined || currentIntId <= 0) {
@@ -829,14 +816,8 @@ export default function ProblemClient({
       if (quizType === 'soup' && data && data.content && data.answer) {
         try {
           const hints = (data as any).hints as string[] | null | undefined;
-          // 영어 문제는 영어 분석기 사용, 한국어는 기존 분석기 사용
-          if (lang === 'en') {
-            const knowledge = await buildProblemKnowledgeEn(data.content, data.answer, undefined, hints, (data as any).explanation);
-            setProblemKnowledge(knowledge);
-          } else {
-            const knowledge = await buildProblemKnowledge(data.content, data.answer, undefined, hints, (data as any).explanation);
-            setProblemKnowledge(knowledge);
-          }
+          const knowledge = await buildProblemKnowledge(data.content, data.answer, undefined, hints, (data as any).explanation);
+          setProblemKnowledge(knowledge);
         } catch (err) {
           console.error('Knowledge 생성 오류:', err);
           // knowledge 생성 실패해도 계속 진행
@@ -1280,22 +1261,16 @@ export default function ProblemClient({
       let knowledge = problemKnowledge;
       if (!knowledge && problem.content && problem.answer) {
         const hints = (problem as any).hints as string[] | null | undefined;
-        if (lang === 'en') {
-          knowledge = await buildProblemKnowledgeEn(problem.content, problem.answer, undefined, hints, (problem as any).explanation);
-        } else {
-          knowledge = await buildProblemKnowledge(problem.content, problem.answer, undefined, hints, (problem as any).explanation);
-        }
+        knowledge = await buildProblemKnowledge(problem.content, problem.answer, undefined, hints, (problem as any).explanation);
         setProblemKnowledge(knowledge);
       }
       
       if (knowledge) {
-        const answer = lang === 'en' 
-          ? await analyzeQuestionV8En(questionText, knowledge as ProblemKnowledgeEn)
-          : await analyzeQuestionV8(questionText, knowledge as ProblemKnowledge);
+        const answer = await analyzeQuestionV8(questionText, knowledge as ProblemKnowledge);
         setSuggestedAnswer(answer);
       } else {
         // fallback: knowledge 생성 실패 시 기존 방식 사용
-        const analyzer = lang === 'en' ? await import('@/lib/ai-analyzer-en') : await import('@/lib/ai-analyzer');
+        const analyzer = await import('@/lib/ai-analyzer');
         const answer = await analyzer.analyzeQuestion(questionText, problem.content, problem.answer);
         setSuggestedAnswer(answer);
       }
@@ -1454,16 +1429,12 @@ export default function ProblemClient({
 
       // 문제 작성자에게 알림 생성 (대댓글 제외)
       if (!parentId && problem && problem.user_id && problem.user_id !== user.id) {
-        const problemTitle = problem.title || (lang === 'ko' ? '문제' : 'Problem');
+        const problemTitle = problem.title || '문제';
         await createNotification({
           userId: problem.user_id,
           type: 'comment_on_problem',
-          title: lang === 'ko' 
-            ? `"${problemTitle}"에 댓글이 달렸습니다`
-            : `New comment on "${problemTitle}"`,
-          message: lang === 'ko'
-            ? `${nickname}님이 댓글을 남겼습니다: ${textToSubmit.substring(0, 50)}${textToSubmit.length > 50 ? '...' : ''}`
-            : `${nickname} commented: ${textToSubmit.substring(0, 50)}${textToSubmit.length > 50 ? '...' : ''}`,
+          title: `"${problemTitle}"에 댓글이 달렸습니다`,
+          message: `${nickname}님이 댓글을 남겼습니다: ${textToSubmit.substring(0, 50)}${textToSubmit.length > 50 ? '...' : ''}`,
           link: `/${lang}/problem/${problemId}`,
         });
       }
@@ -1918,10 +1889,10 @@ export default function ProblemClient({
     "mainEntity": [
       {
         "@type": "Question",
-        "name": problem.title || (lang === 'ko' ? '문제' : 'Problem'),
+        "name": problem.title || '문제',
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": (problem as any).explanation || problem.answer || (lang === 'ko' ? '정답은 문제 상세에서 확인하세요.' : 'Check the problem detail for the answer.')
+          "text": (problem as any).explanation || problem.answer || '정답은 문제 상세에서 확인하세요.'
         }
       }
     ]
@@ -1971,14 +1942,12 @@ export default function ProblemClient({
               });
               
               showToast(
-                newStatus === 'featured' 
-                  ? (lang === 'ko' ? '관리자 채택되었습니다.' : 'Problem featured.')
-                  : (lang === 'ko' ? '관리자 채택이 해제되었습니다.' : 'Feature removed.'),
+                newStatus === 'featured' ? '관리자 채택되었습니다.' : '관리자 채택이 해제되었습니다.',
                 'success'
               );
             } catch (error) {
               console.error('관리자 채택 오류:', error);
-              showToast(lang === 'ko' ? '관리자 채택 실패' : 'Failed to toggle feature', 'error');
+              showToast('관리자 채택 실패', 'error');
             }
           }}
           onEditClick={() => {
@@ -2166,15 +2135,7 @@ export default function ProblemClient({
                 setIsCalculatingSimilarity(true);
                 try {
                   const problemContentWithExplanation = [problem.content, (problem as any).explanation].filter(Boolean).join(' ');
-                  const similarity =
-                    lang === 'en'
-                      ? await calculateAnswerSimilarityEn(
-                          userGuess.trim(),
-                          problem.answer,
-                          problemContentWithExplanation,
-                          problemKnowledge as any
-                        )
-                      : await calculateAnswerSimilarity(
+                  const similarity = await calculateAnswerSimilarity(
                           userGuess.trim(),
                           problem.answer,
                           problemContentWithExplanation
@@ -2368,10 +2329,10 @@ export default function ProblemClient({
           <button
             onClick={() => setShowAnswer(true)}
             className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold py-2.5 px-4 rounded-lg shadow-lg transition-all duration-200 flex items-center gap-2 text-sm"
-            title={lang === 'ko' ? '정답 보기' : 'Show Answer'}
+            title="정답 보기"
           >
             <i className="ri-eye-line"></i>
-            <span className="hidden sm:inline">{lang === 'ko' ? '정답 보기' : 'Show Answer'}</span>
+            <span className="hidden sm:inline">정답 보기</span>
           </button>
         </div>
       )}

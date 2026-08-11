@@ -16,7 +16,7 @@ export async function generateMetadata({
     title: locale === 'ko' ? '개인정보처리방침' : 'Privacy Policy',
     description: locale === 'ko'
       ? '바다거북스프 게임의 개인정보처리방침입니다. 개인정보 수집, 이용, 보호에 대한 내용을 확인하세요.'
-      : 'Privacy Policy for Pelican Soup Riddle. Learn how we collect, use, and protect your personal information.',
+      : 'Privacy Policy for Turtle Soup Riddle. Learn how we collect, use, and protect your personal information.',
     alternates: {
       canonical: baseUrl,
       languages: {
@@ -28,7 +28,7 @@ export async function generateMetadata({
       title: locale === 'ko' ? '개인정보처리방침' : 'Privacy Policy',
       description: locale === 'ko'
         ? '바다거북스프 게임의 개인정보처리방침'
-        : 'Privacy Policy for Pelican Soup Riddle',
+        : 'Privacy Policy for Turtle Soup Riddle',
       url: baseUrl,
       locale: locale === 'ko' ? 'ko_KR' : 'en_US',
     },
@@ -69,7 +69,7 @@ export default async function PrivacyPage({
               <p className="mb-4">
                 {isKo
                   ? '바다거북스프(이하 "서비스")는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며, 이용 목적이 변경되는 경우에는 개인정보보호법 제18조에 따라 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.'
-                  : 'Pelican Soup Riddle (the "Service") processes personal information for the following purposes. The personal information being processed will not be used for purposes other than those listed below, and if the purpose of use changes, we will take necessary measures such as obtaining separate consent in accordance with Article 18 of the Personal Information Protection Act.'}
+                  : 'Turtle Soup Riddle (the "Service") processes personal information for the following purposes. The personal information being processed will not be used for purposes other than those listed below, and if the purpose of use changes, we will take necessary measures such as obtaining separate consent in accordance with Article 18 of the Personal Information Protection Act.'}
               </p>
               <ul className="list-disc pl-6 space-y-2">
                 <li>
