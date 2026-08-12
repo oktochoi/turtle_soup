@@ -1,11 +1,22 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/hooks/useAuth';
-import CaseCreateWizard from '@/components/case/CaseCreateWizard';
+
+/** Client-only: wizard may load AI for optional answer test — never SSR into Vercel function. */
+const CaseCreateWizard = dynamic(() => import('@/components/case/CaseCreateWizard'), {
+  ssr: false,
+  loading: () => (
+    <div className="rounded-2xl border border-slate-700 bg-slate-900/80 p-10 text-center">
+      <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-teal-400 border-t-transparent" />
+      <p className="text-sm text-slate-400">작성 도구 불러오는 중…</p>
+    </div>
+  ),
+});
 
 export default function CreateProblem({ params }: { params: Promise<{ lang: string }> }) {
   const resolvedParams = use(params);

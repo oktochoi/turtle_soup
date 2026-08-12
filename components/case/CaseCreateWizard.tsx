@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { triggerEvent } from '@/lib/progress-client';
-import { buildCaseKnowledge, judgeQuestionV11 } from '@/lib/ai/v11';
 import { findBlockedContentReason } from '@/lib/problems/public';
 import { CATEGORY_LABELS, type CaseCategory } from '@/lib/investigation/types';
 
@@ -51,7 +50,9 @@ export default function CaseCreateWizard({ lang, userId, authorName }: Props) {
     setTestAnswer(null);
     setTestDebug(null);
     try {
-      // Warm knowledge (same as production path)
+      // Dynamic import keeps @xenova/transformers out of the create-problem SSR function.
+      const { buildCaseKnowledge } = await import('@/lib/ai/v11/knowledge');
+      const { judgeQuestionV11 } = await import('@/lib/ai/v11/judge');
       buildCaseKnowledge({ caseId: 'preview', content: content.trim(), answer: answer.trim() });
       const result = await judgeQuestionV11({
         question: q,
@@ -102,6 +103,8 @@ export default function CaseCreateWizard({ lang, userId, authorName }: Props) {
     setSubmitting(true);
     setPreparing(true);
     try {
+      // knowledge.ts only — no transformers / NLI
+      const { buildCaseKnowledge } = await import('@/lib/ai/v11/knowledge');
       buildCaseKnowledge({
         caseId: 'draft',
         content: content.trim(),

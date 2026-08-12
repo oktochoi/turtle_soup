@@ -1,6 +1,25 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Keep ONNX / Transformers out of Vercel serverless function traces (250MB limit).
+  // These run in the browser via dynamic import, not on the Node function.
+  serverExternalPackages: [
+    '@xenova/transformers',
+    '@huggingface/transformers',
+    'onnxruntime-node',
+    'onnxruntime-web',
+  ],
+  outputFileTracingExcludes: {
+    '*': [
+      'node_modules/@xenova/**',
+      'node_modules/@huggingface/**',
+      'node_modules/onnxruntime-node/**',
+      'node_modules/onnxruntime-web/**',
+      'node_modules/@huggingface/transformers/**',
+      '**/node_modules/**/onnx*/**',
+      '**/.cache/**',
+    ],
+  },
   // 리다이렉트: 블로그→공지사항, how-to-play→guide
   async redirects() {
     return [

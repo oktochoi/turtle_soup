@@ -13,6 +13,7 @@ import { useTranslations } from '@/hooks/useTranslations';
 import { createNotification } from '@/lib/notifications';
 import { trackSupabaseEvent } from '@/lib/supabase-events';
 import { checkIfLearnedError } from '@/lib/check-learned-error';
+import dynamic from 'next/dynamic';
 import QuizPlayMCQ from '@/components/quiz/QuizPlayMCQ';
 import QuizPlayOX from '@/components/quiz/QuizPlayOX';
 import QuizPlayImage from '@/components/quiz/QuizPlayImage';
@@ -27,7 +28,15 @@ import ProblemCTABar from './components/ProblemCTABar';
 import QuestionInputSection from './components/QuestionInputSection';
 import UserAnswersFeed from './components/UserAnswersFeed';
 import AdminQuestionList from './components/AdminQuestionList';
-import InvestigationGame from './components/InvestigationGame';
+
+const InvestigationGame = dynamic(() => import('./components/InvestigationGame'), {
+  ssr: false,
+  loading: () => (
+    <div className="mb-6 rounded-xl border border-slate-700 bg-slate-900/50 p-8 text-center text-sm text-slate-400">
+      수사 도구 불러오는 중…
+    </div>
+  ),
+});
 
 type ProblemClientProps = {
   initialProblem: Problem;
