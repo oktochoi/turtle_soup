@@ -17,6 +17,6 @@
   {"id":"purpose_check","category":"목적","answer":"상태를 확인하기 위해 음식을 주문했다.","question":"주문 목적이 상태 확인이야?","expect":"yes"},
   {"id":"neg_victim_order","category":"부정","answer":"피해자는 음식을 직접 주문하지 않았다.","question":"피해자가 직접 주문했나요?","expect":"no"},
   {"id":"story_guess","category":"정상가설","answer":"어머니가 음식을 주문했다.","question":"사고였나요?","expect":"no"},
-  {"id":"story_married","category":"정상가설","answer":"범인은 피해자의 아내였다.","question":"피해자는 결혼했나요?","expect":"no"},
-  {"id":"food_related","category":"정상가설","answer":"음식을 주문한 목적은 상태 확인이었다.","question":"죽음이 음식과 관련 있나요?","expect":"no"}
+  {"id":"story_married","category":"정상가설","answer":"범인은 피해자의 아내였다.","question":"피해자는 결혼했나요?","expect":"yes"},
+  {"id":"food_related","category":"정상가설","answer":"음식을 주문한 목적은 상태 확인이었다.","question":"죽음이 음식과 관련 있나요?","expect":"irrelevant"}
 ]

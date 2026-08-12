@@ -4,7 +4,7 @@ import { judgeQuestionV10, runNLIScores } from '@/lib/ai-analyzer-v10';
 import { getOrBuildCaseKnowledge } from './cache';
 import { lexicalOverlap } from './normalize';
 import { parseQuestion } from './parser';
-import { decidePolicy, V11_CONFIG } from './policy';
+import { decidePolicy, V11_CONFIG, isConcreteUngrounded, isAltHypothesisQuestion } from './policy';
 import { isObviouslyUnrelated, reasonFamilyRelation } from './relation';
 import { retrieveKnowledge, similarity } from './retrieval';
 import type { AtomicFact, CaseKnowledge, V11JudgeDebug, V11JudgeResult } from './types';
@@ -70,22 +70,25 @@ function lexicalFactJudgment(args: {
   const topicHints = ['결혼', '사고', '자살', '살인', '범죄', '사망'];
   const qTopics = topicHints.filter((t) => qNorm.includes(t));
 
-  const focusKinds = new Set(['cause', 'purpose', 'state', 'event', 'fact']);
+  const focusKinds = new Set(['cause', 'purpose', 'state', 'event', 'fact', 'belief', 'relation']);
   let best: { score: number; fact: AtomicFact } | null = null;
 
   for (const f of knowledge.facts) {
-    if (f.source !== 'answer' && f.kind !== 'relation') continue;
-    if (!focusKinds.has(f.kind) && f.kind !== 'relation') continue;
+    if (f.source !== 'answer' && f.source !== 'content' && f.kind !== 'relation') continue;
+    if (!focusKinds.has(f.kind)) continue;
 
     const factNegated = /않|없|아니|못/.test(f.text);
     if (parsed.isNegated && !factNegated) continue;
     if (!parsed.isNegated && factNegated) continue;
 
-    if (qTopics.length && !qTopics.some((t) => f.text.includes(t))) continue;
+    if (qTopics.length && !qTopics.some((t) => f.text.includes(t) || knowledge.answer.includes(t))) {
+      // topic filter only when fact also fails answer-level topic
+      if (!qTopics.some((t) => knowledge.answer.includes(t) || knowledge.content.includes(t))) continue;
+    }
 
     const score = lexicalOverlap(question, f.text);
-    const answerBoost = lexicalOverlap(question, knowledge.answer) * 0.12;
-    const intentBoost = parsed.intent === f.kind ? 0.12 : 0;
+    const answerBoost = lexicalOverlap(question, knowledge.answer) * 0.15;
+    const intentBoost = parsed.intent === f.kind || (parsed.intent === 'cause' && f.kind === 'belief') ? 0.12 : 0;
     const purposeBoost =
       parsed.intent === 'purpose' &&
       f.kind === 'purpose' &&
@@ -93,11 +96,13 @@ function lexicalFactJudgment(args: {
       /목적|확인|위해|주문/.test(f.text)
         ? 0.15
         : 0;
-    const total = score + intentBoost + answerBoost + purposeBoost;
+    const motiveBoost =
+      /동기|오해|외도|때문에/.test(qNorm) && /오해|외도|때문|동기|살해/.test(f.text) ? 0.18 : 0;
+    const total = score + intentBoost + answerBoost + purposeBoost + motiveBoost;
     if (!best || total > best.score) best = { score: total, fact: f };
   }
 
-  if (best && best.score >= 0.4) {
+  if (best && best.score >= 0.34) {
     return { label: 'yes', reason: 'entailment', fact: best.fact };
   }
   return null;
@@ -173,6 +178,132 @@ export async function judgeQuestionV11(args: {
 
     const relation = reasonFamilyRelation(knowledge, parsed);
     const obviouslyUnrelated = isObviouslyUnrelated(parsed.raw);
+    const concreteUngrounded = isConcreteUngrounded(
+      parsed.raw,
+      knowledge.content,
+      knowledge.answer
+    );
+    const altHypothesis = isAltHypothesisQuestion(parsed.raw);
+
+    // Belief vs fact BEFORE relation auto-yes (아들 present ≠ 아들이 죽었다)
+    if (parsed.intent === 'state' && !parsed.isBeliefQuery) {
+      const answerSaysAlive = /살아|생존/.test(knowledge.answer) && /생각|믿/.test(knowledge.answer);
+      const asksDead = /죽|사망|숨지/.test(parsed.normalized);
+      if (answerSaysAlive && asksDead) {
+        const debug: V11JudgeDebug = {
+          question: parsed.raw,
+          parsedIntent: parsed.intent,
+          retrieved,
+          embeddingTopScore,
+          relation,
+          storyRelevance: true,
+          final: 'no',
+          reason: 'belief_fact_split',
+        };
+        if (process.env.NODE_ENV === 'development') console.log('[V11]', debug);
+        return { label: 'no', reason: 'belief_fact_split', confirmedFact: null, debug };
+      }
+    }
+    if (parsed.isBeliefQuery) {
+      const hasBeliefDead =
+        knowledge.beliefs.some((b) => /죽|사망/.test(b.text)) ||
+        (/생각|믿/.test(knowledge.answer) && /죽|사망/.test(knowledge.answer));
+      const asksBelievedDead =
+        /죽|사망/.test(parsed.normalized) && /생각|믿|알았/.test(parsed.normalized);
+      if (hasBeliefDead && asksBelievedDead) {
+        const debug: V11JudgeDebug = {
+          question: parsed.raw,
+          parsedIntent: parsed.intent,
+          retrieved,
+          embeddingTopScore,
+          relation,
+          storyRelevance: true,
+          final: 'yes',
+          reason: 'belief_fact_split',
+        };
+        const fact =
+          knowledge.facts.find((f) => f.kind === 'belief' && !confirmedIds.has(f.id)) || null;
+        if (process.env.NODE_ENV === 'development') console.log('[V11]', debug);
+        return { label: 'yes', reason: 'belief_fact_split', confirmedFact: fact, debug };
+      }
+    }
+
+    // Off-topic / concrete-ungrounded before lexical YES shortcuts
+    if (obviouslyUnrelated || concreteUngrounded) {
+      const debug: V11JudgeDebug = {
+        question: parsed.raw,
+        parsedIntent: parsed.intent,
+        retrieved,
+        embeddingTopScore,
+        relation,
+        storyRelevance: false,
+        final: 'irrelevant',
+        reason: 'unrelated_irrelevant',
+      };
+      if (process.env.NODE_ENV === 'development') console.log('[V11]', debug);
+      return { label: 'irrelevant', reason: 'unrelated_irrelevant', confirmedFact: null, debug };
+    }
+
+    // Wrong culprit / parent before lexical (lexical can false-positive on shared words)
+    if (
+      !relation.matched &&
+      (relation.detail?.includes('asked as culprit') ||
+        relation.detail?.includes('is culprit but') ||
+        relation.detail?.includes('asked but only') ||
+        relation.direction === 'general_to_specific')
+    ) {
+      const debug: V11JudgeDebug = {
+        question: parsed.raw,
+        parsedIntent: parsed.intent,
+        retrieved,
+        embeddingTopScore,
+        relation,
+        storyRelevance: true,
+        final: 'no',
+        reason: 'relation_not_entailed',
+      };
+      if (process.env.NODE_ENV === 'development') console.log('[V11]', debug);
+      return { label: 'no', reason: 'relation_not_entailed', confirmedFact: null, debug };
+    }
+
+    if (
+      relation.matched &&
+      (relation.direction === 'synonym' || relation.direction === 'specific_to_general') &&
+      (parsed.isFamilyQuery ||
+        parsed.intent === 'relation' ||
+        parsed.intent === 'entity' ||
+        /결혼|부부|가족|관련|범인/.test(parsed.normalized)) &&
+      parsed.intent !== 'state' &&
+      !parsed.isBeliefQuery
+    ) {
+      const debug: V11JudgeDebug = {
+        question: parsed.raw,
+        parsedIntent: parsed.intent,
+        retrieved,
+        embeddingTopScore,
+        relation,
+        storyRelevance: true,
+        final: 'yes',
+        reason: 'relation_entailment',
+      };
+      if (process.env.NODE_ENV === 'development') console.log('[V11]', debug);
+      return { label: 'yes', reason: 'relation_entailment', confirmedFact: null, debug };
+    }
+
+    if (altHypothesis) {
+      const debug: V11JudgeDebug = {
+        question: parsed.raw,
+        parsedIntent: parsed.intent,
+        retrieved,
+        embeddingTopScore,
+        relation,
+        storyRelevance: true,
+        final: 'no',
+        reason: 'story_related_no',
+      };
+      if (process.env.NODE_ENV === 'development') console.log('[V11]', debug);
+      return { label: 'no', reason: 'story_related_no', confirmedFact: null, debug };
+    }
 
     let nli: { entailment: number; contradiction: number; neutral: number } | null = null;
     let premise: string | undefined;
@@ -212,47 +343,7 @@ export async function judgeQuestionV11(args: {
     }
 
     // Belief vs fact: if asking "아들은 죽었어?" and answer says alive + mother believed dead
-    if (parsed.intent === 'state' && !parsed.isBeliefQuery) {
-      const answerSaysAlive = /살아|생존/.test(knowledge.answer) && /생각|믿/.test(knowledge.answer);
-      const asksDead = /죽|사망|숨지/.test(parsed.normalized);
-      if (answerSaysAlive && asksDead) {
-        const debug: V11JudgeDebug = {
-          question: parsed.raw,
-          parsedIntent: parsed.intent,
-          retrieved,
-          embeddingTopScore,
-          nli: nli ? { ...nli, premise } : undefined,
-          relation,
-          storyRelevance: true,
-          final: 'no',
-          reason: 'belief_fact_split',
-        };
-        if (process.env.NODE_ENV === 'development') console.log('[V11]', debug);
-        return { label: 'no', reason: 'belief_fact_split', confirmedFact: null, debug };
-      }
-    }
-    if (parsed.isBeliefQuery) {
-      const hasBeliefDead = knowledge.beliefs.some((b) => /죽|사망/.test(b.text)) ||
-        (/생각|믿/.test(knowledge.answer) && /죽|사망/.test(knowledge.answer));
-      const asksBelievedDead = /죽|사망/.test(parsed.normalized) && /생각|믿|알았/.test(parsed.normalized);
-      if (hasBeliefDead && asksBelievedDead) {
-        const debug: V11JudgeDebug = {
-          question: parsed.raw,
-          parsedIntent: parsed.intent,
-          retrieved,
-          embeddingTopScore,
-          nli: nli ? { ...nli, premise } : undefined,
-          relation,
-          storyRelevance: true,
-          final: 'yes',
-          reason: 'belief_fact_split',
-        };
-        const fact =
-          knowledge.facts.find((f) => f.kind === 'belief' && !confirmedIds.has(f.id)) || null;
-        if (process.env.NODE_ENV === 'development') console.log('[V11]', debug);
-        return { label: 'yes', reason: 'belief_fact_split', confirmedFact: fact, debug };
-      }
-    }
+    // (handled earlier before relation auto-yes)
 
     const negSplit = negationFactSplit({ question: parsed.raw, knowledge, parsed });
     if (negSplit) {
@@ -342,6 +433,8 @@ export async function judgeQuestionV11(args: {
       relation,
       storyRelevance,
       obviouslyUnrelated,
+      concreteUngrounded,
+      altHypothesis,
     });
 
     const confirmedFact = await pickConfirmedFact({

@@ -98,36 +98,65 @@ export function splitSentences(text: string): string[] {
 }
 
 export function lexicalOverlap(a: string, b: string): number {
-  const ta = new Set(
-    normalizeText(a)
-      .split(/\s+/)
-      .flatMap((w) => w.match(/[가-힣a-z0-9]{2,}/g) || [])
-      .filter(Boolean)
-  );
-  const tb = new Set(
-    normalizeText(b)
-      .split(/\s+/)
-      .flatMap((w) => w.match(/[가-힣a-z0-9]{2,}/g) || [])
-      .filter(Boolean)
-  );
-  if (!ta.size || !tb.size) {
-    // character bigrams for short Korean
-    const bigrams = (s: string) => {
-      const n = normalizeText(s).replace(/\s/g, '');
-      const set = new Set<string>();
-      for (let i = 0; i < n.length - 1; i++) set.add(n.slice(i, i + 2));
-      return set;
-    };
-    const ba = bigrams(a);
-    const bb = bigrams(b);
+  const na = normalizeText(a).replace(/\s/g, '');
+  const nb = normalizeText(b).replace(/\s/g, '');
+  if (!na || !nb) return 0;
+
+  const tokens = (s: string) =>
+    new Set(
+      normalizeText(s)
+        .split(/\s+/)
+        .flatMap((w) => w.match(/[가-힣a-z0-9]{2,}/g) || [])
+        .filter(Boolean)
+    );
+
+  const ta = tokens(a);
+  const tb = tokens(b);
+  let wordScore = 0;
+  if (ta.size && tb.size) {
+    let inter = 0;
+    for (const x of ta) if (tb.has(x)) inter++;
+    wordScore = inter / Math.max(1, Math.min(ta.size, tb.size));
+  }
+
+  // Korean paraphrases rarely share exact tokens (아내가 vs 아내였다) — use n-grams.
+  const ngrams = (s: string, n: number) => {
+    const set = new Set<string>();
+    for (let i = 0; i <= s.length - n; i++) set.add(s.slice(i, i + n));
+    return set;
+  };
+  const ngramScore = (n: number) => {
+    const ba = ngrams(na, n);
+    const bb = ngrams(nb, n);
     if (!ba.size || !bb.size) return 0;
     let inter = 0;
     for (const x of ba) if (bb.has(x)) inter++;
     return inter / Math.max(1, Math.min(ba.size, bb.size));
+  };
+
+  const bi = ngramScore(2);
+  const tri = ngramScore(3);
+
+  // Containment bonus: shorter side largely appears in longer side
+  const shorter = na.length <= nb.length ? na : nb;
+  const longer = na.length <= nb.length ? nb : na;
+  let contain = 0;
+  if (shorter.length >= 4 && longer.includes(shorter)) {
+    contain = 0.85;
+  } else if (shorter.length >= 6) {
+    // partial window containment
+    let best = 0;
+    const win = Math.min(6, shorter.length);
+    for (let i = 0; i <= shorter.length - win; i++) {
+      if (longer.includes(shorter.slice(i, i + win))) best += 1;
+    }
+    contain = Math.min(0.75, (best / Math.max(1, shorter.length - win + 1)) * 0.9);
   }
-  let inter = 0;
-  for (const x of ta) if (tb.has(x)) inter++;
-  return inter / Math.max(1, Math.min(ta.size, tb.size));
+
+  return Math.min(
+    1,
+    Math.max(wordScore, bi, tri * 1.05, contain, wordScore * 0.4 + bi * 0.6)
+  );
 }
 
 export function simpleHash(text: string): string {

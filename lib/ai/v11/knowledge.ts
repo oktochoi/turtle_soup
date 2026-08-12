@@ -301,6 +301,21 @@ export function buildCaseKnowledge(args: {
     });
   }
 
+  // Situation facts from content (e.g. locked door) — judge YES/NO, not final scoring focus
+  contentSentences.forEach((sentence, idx) => {
+    if (facts.some((f) => f.text === sentence)) return;
+    const isState = STATE_MARKERS.test(sentence) || /잠겨|열려|발견|실내|집/.test(sentence);
+    const isAction = ACTION_MARKERS.test(sentence);
+    if (!isState && !isAction && sentence.length < 10) return;
+    facts.push({
+      id: makeId('fact', fi++),
+      text: sentence,
+      kind: isState ? 'state' : isAction ? 'event' : 'fact',
+      importance: Math.max(0.4, 0.65 - idx * 0.04),
+      source: 'content',
+    });
+  });
+
   return {
     caseId,
     answerHash: simpleHash(answer + '|' + content),
