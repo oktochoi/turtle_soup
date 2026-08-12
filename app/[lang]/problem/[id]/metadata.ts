@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { generateMetadata, truncateDescription, sanitizeTitle } from '@/lib/seo';
+import { isPublicProblemStatus, normalizeProblemStatus } from '@/lib/problems/public';
 
 function buildProblemDescription(
   rawContent: string | null | undefined,
@@ -23,7 +24,7 @@ export async function generateMetadataForProblem(
   const supabase = await createClient();
   const { data: problem, error } = await supabase
     .from('problems')
-    .select('title, content, created_at, updated_at, lang, difficulty, tags')
+    .select('title, content, created_at, updated_at, lang, difficulty, tags, status')
     .eq('id', problemId)
     .single();
 
@@ -36,6 +37,9 @@ export async function generateMetadataForProblem(
     });
 
   if (error || !problem) return notFoundMeta();
+
+  const status = normalizeProblemStatus((problem as { status?: string }).status);
+  const isIndexable = isPublicProblemStatus(status);
 
   const rawTitle = problem.title || '바다거북스프 추리 문제';
   const baseTitle = sanitizeTitle(rawTitle);
@@ -82,6 +86,7 @@ export async function generateMetadataForProblem(
     publishedTime: (problem as any).created_at,
     modifiedTime: lastMod,
     keywords,
+    noindex: !isIndexable,
   });
 
   return {

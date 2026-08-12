@@ -13,7 +13,6 @@ import { useTranslations } from '@/hooks/useTranslations';
 import { createNotification } from '@/lib/notifications';
 import { trackSupabaseEvent } from '@/lib/supabase-events';
 import { checkIfLearnedError } from '@/lib/check-learned-error';
-import JsonLd from '@/components/JsonLd';
 import QuizPlayMCQ from '@/components/quiz/QuizPlayMCQ';
 import QuizPlayOX from '@/components/quiz/QuizPlayOX';
 import QuizPlayImage from '@/components/quiz/QuizPlayImage';
@@ -26,7 +25,6 @@ import CommentsSection from './components/CommentsSection';
 import BugReportModal from './components/BugReportModal';
 import ProblemCTABar from './components/ProblemCTABar';
 import QuestionInputSection from './components/QuestionInputSection';
-import AnswerInputSection from './components/AnswerInputSection';
 import UserAnswersFeed from './components/UserAnswersFeed';
 import AdminQuestionList from './components/AdminQuestionList';
 import InvestigationGame from './components/InvestigationGame';
@@ -1853,55 +1851,8 @@ export default function ProblemClient({
   const difficultyBadge = getDifficultyFromRating(averageRating);
   const quizType = (problem as any)?.type || 'soup' as QuizType;
 
-  // JSON-LD 구조화된 데이터
-  const structuredData = problem ? {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    "headline": problem.title || '',
-    "description": (problem.content && typeof problem.content === 'string') ? problem.content.substring(0, 200) : '',
-    "author": {
-      "@type": "Person",
-      "name": problem.author || 'Anonymous'
-    },
-    "datePublished": problem.created_at,
-    "dateModified": problem.updated_at || problem.created_at,
-    "interactionStatistic": [
-      {
-        "@type": "InteractionCounter",
-        "interactionType": "https://schema.org/ViewAction",
-        "userInteractionCount": problem.view_count || 0
-      },
-      {
-        "@type": "InteractionCounter",
-        "interactionType": "https://schema.org/LikeAction",
-        "userInteractionCount": problem.like_count || 0
-      }
-    ],
-    "commentCount": problem.comment_count || 0,
-    "mainEntityOfPage": {
-      "@type": "WebPage",
-      "@id": (typeof window !== 'undefined' ? `${window.location.origin}/${lang}/problem/${problemId}` : '')
-    }
-  } : null;
-
-  const faqStructuredData = problem ? {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": problem.title || '문제',
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": (problem as any).explanation || problem.answer || '정답은 문제 상세에서 확인하세요.'
-        }
-      }
-    ]
-  } : null;
   return (
     <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">
-      {structuredData && <JsonLd data={structuredData} />}
-      {faqStructuredData && <JsonLd data={faqStructuredData} />}
   
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-3 sm:py-4 lg:py-6 xl:py-8 max-w-4xl">
         {/* 뒤로가기 */}

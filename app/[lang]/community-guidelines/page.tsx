@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getMessages, type Locale, isValidLocale, defaultLocale } from '@/lib/i18n';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { getSiteUrl } from '@/lib/site-config';
 
 export async function generateMetadata({
   params,
@@ -10,7 +11,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang } = await params;
   const locale = isValidLocale(lang) ? lang : defaultLocale;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://turtle-soup-rust.vercel.app';
+  const siteUrl = getSiteUrl();
   const baseUrl = `${siteUrl}/${locale}/community-guidelines`;
 
   return {

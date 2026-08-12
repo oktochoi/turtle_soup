@@ -391,9 +391,10 @@ export default function RankingPage({ params }: { params: Promise<{ lang: string
         </div>
 
         <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-            {t.ranking.title}
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 text-white">
+            랭킹
           </h1>
+          <p className="text-sm text-slate-400 mb-4">수사 성과를 한눈에 확인하세요.</p>
           <p className="text-fog text-sm sm:text-base">{t.ranking.description}</p>
         </div>
 

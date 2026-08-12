@@ -200,3 +200,12 @@
 .balance-round-enter {
   animation: balanceRoundIn 0.35s ease-out forwards;
 }
+
+/* Game UI V2 — mobile keyboard / viewport */
+.safe-pb {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+.game-v2 {
+  min-height: 70dvh;
+}
+

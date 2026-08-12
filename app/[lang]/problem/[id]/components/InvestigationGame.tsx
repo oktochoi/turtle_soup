@@ -1,23 +1,29 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import type { ProblemKnowledge } from '@/lib/ai-analyzer';
 import type { Problem } from '@/lib/types';
 import {
-  INVESTIGATION_CONFIG,
-  canCloseCase,
-  createSession,
-  difficultyStars,
-  evaluateFinalSolution,
-  formatDuration,
-  problemToCase,
-  processFinalSolution,
-  processHint,
-  processHypothesis,
-  processQuestion,
-  type CaseResult,
-  type InvestigationSession,
-} from '@/lib/investigation';
+  askQuestionV2,
+  createGameSession,
+  problemToCaseView,
+  solveCaseV2,
+  submitHypothesisV2,
+  applyHintV2,
+  type GameSessionV2,
+} from '@/lib/game/session';
+import {
+  saveClosedInvestigationRecord,
+  syncInvestigationToSupabase,
+} from '@/lib/game/investigation-records';
+import { useAuth } from '@/lib/hooks/useAuth';
+import AdSlot from '@/components/ads/AdSlot';
+import ProblemReportButton from '@/components/case/ProblemReportButton';
+import { buildCaseDossier } from '@/lib/content/case-dossier';
+
+const MAX_HINTS = 3;
 
 interface Props {
   problem: Problem;
@@ -25,75 +31,66 @@ interface Props {
   ensureKnowledge: () => Promise<ProblemKnowledge | null>;
 }
 
-type Banner =
-  | { type: 'clue'; text: string }
-  | { type: 'critical'; text: string }
-  | { type: 'hint'; text: string }
-  | { type: 'energy'; text: string }
-  | null;
-
 export default function InvestigationGame({ problem, knowledge, ensureKnowledge }: Props) {
-  const caseData = useMemo(() => problemToCase(problem), [problem]);
-  const [session, setSession] = useState<InvestigationSession>(() => createSession(problem.id));
+  const caseView = useMemo(() => problemToCaseView(problem), [problem]);
+  const { user } = useAuth();
+  const params = useParams();
+  const lang = (params?.lang as string) || 'ko';
+  const [session, setSession] = useState<GameSessionV2>(() => createGameSession(problem.id));
   const [questionText, setQuestionText] = useState('');
   const [busy, setBusy] = useState(false);
-  const [banner, setBanner] = useState<Banner>(null);
+  const [showCaseSheet, setShowCaseSheet] = useState(false);
+  const [showFactsSheet, setShowFactsSheet] = useState(false);
   const [showHypothesis, setShowHypothesis] = useState(false);
   const [hypothesisText, setHypothesisText] = useState('');
   const [showSolve, setShowSolve] = useState(false);
   const [solutionText, setSolutionText] = useState('');
-  const [pendingResult, setPendingResult] = useState<CaseResult | null>(null);
-  const [confirmClose, setConfirmClose] = useState(false);
-  const [result, setResult] = useState<CaseResult | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const hintsLeft = Math.max(0, MAX_HINTS - session.hintCount);
 
   useEffect(() => {
     if (session.status !== 'briefing') return;
     const t = setTimeout(() => {
       setSession((s) => ({ ...s, status: 'investigating' }));
-    }, INVESTIGATION_CONFIG.CASE_BRIEFING_MS);
+    }, 1400);
     return () => clearTimeout(t);
   }, [session.status]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [session.questions.length, banner]);
-
-  const energyDepleted = session.investigationEnergy <= 0;
-  const canAsk = session.status === 'investigating' && !energyDepleted && !busy;
+  }, [session.messages.length, busy]);
 
   const onAsk = async () => {
     const q = questionText.trim();
-    if (!q || !canAsk) return;
+    if (!q || busy || session.status !== 'investigating') return;
     setBusy(true);
-    setBanner(null);
     try {
       const kn = knowledge || (await ensureKnowledge());
-      if (!kn) throw new Error('knowledge unavailable');
-      const out = await processQuestion({
+      const { session: next } = await askQuestionV2({
         question: q,
         session,
-        caseData,
-        knowledge: kn,
+        caseView,
+        problemKnowledge: kn,
       });
-      setSession(out.session);
+      setSession(next);
       setQuestionText('');
-      if (out.unlockedClue) {
-        setBanner({
-          type: out.importance === 'critical' ? 'critical' : 'clue',
-          text: out.unlockedClue.text,
-        });
-      }
-      if (out.energyDepleted) {
-        setBanner({
-          type: 'energy',
-          text: '수사력이 모두 소진되었습니다. 현재까지 확보한 정보로 최종 추리에 도전하세요.',
-        });
-        setShowSolve(true);
-      }
+      inputRef.current?.focus();
     } catch (e) {
       console.error(e);
-      setBanner({ type: 'energy', text: '질문 처리 중 오류가 발생했습니다. 다시 시도해 주세요.' });
+      setSession((s) => ({
+        ...s,
+        messages: [
+          ...s.messages,
+          {
+            id: `err_${Date.now()}`,
+            role: 'system',
+            text: '질문 처리 중 문제가 생겼습니다. 다시 시도해 주세요.',
+            createdAt: Date.now(),
+          },
+        ],
+      }));
     } finally {
       setBusy(false);
     }
@@ -104,247 +101,339 @@ export default function InvestigationGame({ problem, knowledge, ensureKnowledge 
     if (!text || busy) return;
     setBusy(true);
     try {
-      const next = await processHypothesis({ hypothesis: text, session, caseData });
+      const next = await submitHypothesisV2({ hypothesis: text, session, caseView });
       setSession(next);
       setShowHypothesis(false);
+      setHypothesisText('');
+    } catch {
+      setSession((s) => ({
+        ...s,
+        messages: [
+          ...s.messages,
+          {
+            id: `err_h_${Date.now()}`,
+            role: 'system',
+            text: '가설 확인에 실패했습니다. 다시 시도해 주세요.',
+            createdAt: Date.now(),
+          },
+        ],
+      }));
     } finally {
       setBusy(false);
     }
   };
 
   const onHint = async () => {
-    if (busy || energyDepleted) return;
+    if (busy || hintsLeft <= 0) return;
     setBusy(true);
     try {
-      const { session: next, hint } = await processHint({ session, caseData });
-      setSession(next);
-      if (hint) setBanner({ type: 'hint', text: hint });
+      setSession(await applyHintV2({ session, caseView }));
     } finally {
       setBusy(false);
     }
   };
 
-  const onSolvePreview = async () => {
+  const onSolve = async () => {
     const text = solutionText.trim();
     if (!text || busy) return;
     setBusy(true);
     try {
-      const { score, matches } = await evaluateFinalSolution(text, caseData);
-      const previewSession = {
-        ...session,
-        truthScore: Math.max(session.truthScore, score),
-      };
-      // Build a temporary result for confirm UI without closing
-      const { calculateCaseScore } = await import('@/lib/investigation/scoring');
-      const r = calculateCaseScore({
-        session: { ...previewSession, closedAt: Date.now(), finalSolutionScore: score },
-        finalSolutionScore: score,
-        cluesTotal: caseData.keyClues.length,
-        elementMatches: matches,
-      });
-      setSession(previewSession);
-      setPendingResult(r);
-      setConfirmClose(true);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const confirmSolve = async (close: boolean) => {
-    if (!pendingResult) return;
-    if (!close) {
-      setConfirmClose(false);
-      setPendingResult(null);
-      if (!energyDepleted) setShowSolve(false);
-      return;
-    }
-    if (!canCloseCase(pendingResult.finalSolutionScore) && !energyDepleted) {
-      setConfirmClose(false);
-      return;
-    }
-    setBusy(true);
-    try {
-      const { session: next, result: r } = await processFinalSolution({
-        solution: solutionText.trim(),
-        session: { ...session, status: 'solving' },
-        caseData,
-      });
+      const { session: next } = await solveCaseV2({ solution: text, session, caseView });
       setSession(next);
-      setResult(r);
-      setConfirmClose(false);
+
+      if (next.result && next.closedAt) {
+        const durationSec = Math.max(1, Math.round((next.closedAt - next.startedAt) / 1000));
+        saveClosedInvestigationRecord(
+          {
+            caseId: caseView.id,
+            caseTitle: caseView.title,
+            caseNumber: caseView.caseNumber,
+            accuracy: next.result.accuracy,
+            questionCount: next.questionCount,
+            hintCount: next.hintCount,
+            confirmedFactsCount: next.confirmedFacts.length,
+            durationSec,
+            startedAt: next.startedAt,
+            closedAt: next.closedAt,
+          },
+          user?.id ?? null
+        );
+
+        if (user?.id) {
+          await syncInvestigationToSupabase({
+            authUserId: user.id,
+            problemId: caseView.id,
+            accuracy: next.result.accuracy,
+          });
+        }
+      }
+
       setShowSolve(false);
+    } catch {
+      setSession((s) => ({
+        ...s,
+        messages: [
+          ...s.messages,
+          {
+            id: `err_s_${Date.now()}`,
+            role: 'system',
+            text: '사건 해결 제출에 실패했습니다. 다시 시도해 주세요.',
+            createdAt: Date.now(),
+          },
+        ],
+      }));
     } finally {
       setBusy(false);
     }
   };
 
-  const answerLabel = (a: string) =>
-    a === 'yes' ? '예' : a === 'no' ? '아니요' : '상관없음';
-
-  const answerColor = (a: string) =>
-    a === 'yes'
-      ? 'text-emerald-300'
-      : a === 'no'
-        ? 'text-rose-300'
-        : 'text-slate-400';
-
-  if (session.status === 'briefing') {
+  if (session.status === 'ready') {
     return (
-      <div className="rounded-2xl border border-slate-700 bg-slate-900/80 p-8 sm:p-12 text-center animate-fade-in">
-        <p className="text-xs tracking-[0.25em] text-teal-300/80">CASE #{caseData.caseNumber}</p>
-        <h2 className="mt-4 font-display text-3xl sm:text-4xl text-white">{caseData.title}</h2>
-        <p className="mt-8 text-sm tracking-[0.35em] text-slate-300">CASE OPEN</p>
-      </div>
-    );
-  }
-
-  if (result && session.status === 'closed') {
-    return (
-      <div className="rounded-2xl border border-slate-700 bg-slate-900/90 p-6 sm:p-10 animate-fade-in">
-        <p className="text-xs tracking-[0.3em] text-teal-300">CASE CLOSED</p>
-        <p className="mt-4 font-display text-5xl text-white">{result.grade}</p>
-        <p className="mt-2 text-2xl text-teal-300">{result.score.toLocaleString()} POINTS</p>
-
-        <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-          <Stat label="추리 정확도" value={`${result.finalSolutionScore}%`} />
-          <Stat label="핵심 단서" value={`${result.cluesFound} / ${result.cluesTotal}`} />
-          <Stat label="질문" value={String(result.questionCount)} />
-          <Stat label="불필요 질문" value={String(result.irrelevantQuestionCount)} />
-          <Stat label="힌트" value={String(result.hintCount)} />
-          <Stat label="해결 시간" value={formatDuration(result.durationSec)} />
+      <div className="rounded-2xl border border-slate-700 bg-slate-900/80 p-6 sm:p-8">
+        <p className="text-[11px] tracking-[0.22em] text-teal-300">CASE #{caseView.caseNumber}</p>
+        <h2 className="mt-3 font-display text-2xl sm:text-3xl text-white">{caseView.title}</h2>
+        <p className="mt-2 text-xs text-slate-400">
+          {caseView.categoryLabel} · {caseView.stars} · 약{' '}
+          {caseView.difficulty === 'hard' ? 15 : caseView.difficulty === 'easy' ? 8 : 12}분
+        </p>
+        <div className="mt-6 text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+          {caseView.content}
         </div>
-
-        <div className="mt-8 rounded-xl border border-slate-700 bg-slate-950/50 p-5">
-          <p className="text-xs text-slate-400">당신의 추리 스타일</p>
-          <p className="mt-2 text-lg font-semibold text-white">{result.detectiveStyle}</p>
-          <p className="mt-2 text-sm text-slate-300">{result.styleDescription}</p>
-          {result.highlightQuestion && (
-            <p className="mt-3 text-sm text-teal-200/90">
-              핵심 질문: “{result.highlightQuestion}”
-            </p>
-          )}
+        <ul className="mt-5 space-y-1.5 text-xs text-slate-500">
+          <li>· 예 / 아니요 / 상관없음으로 답합니다</li>
+          <li>· 가설로 방향을 확인하고, 확신이 생기면 사건 해결</li>
+          <li>· 힌트는 사건당 {MAX_HINTS}회까지</li>
+        </ul>
+        <p className="mt-4 text-xs text-slate-500">{(problem.view_count || 0).toLocaleString()}회 수사</p>
+        {(problem as Problem & { status?: string }).status === 'pending' && (
+          <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+            검토 중인 사건입니다. 승인 후 다른 사용자에게 공개됩니다.
+          </p>
+        )}
+        <div className="mt-3">
+          <ProblemReportButton problemId={caseView.id} lang={lang} />
         </div>
-
         <button
           type="button"
-          className="btn-primary mt-8"
-          onClick={() => {
-            setResult(null);
-            setSession(createSession(problem.id));
-            setSolutionText('');
-            setPendingResult(null);
-          }}
+          className="btn-primary mt-8 w-full sm:w-auto"
+          onClick={() => setSession((s) => ({ ...s, status: 'briefing', startedAt: Date.now() }))}
         >
-          다시 수사하기
+          수사 시작
         </button>
       </div>
     );
   }
 
+  if (session.status === 'briefing') {
+    return (
+      <div className="rounded-2xl border border-slate-700 bg-slate-900/80 p-8 sm:p-12 text-center">
+        <p className="text-xs tracking-[0.25em] text-teal-300/80">CASE #{caseView.caseNumber}</p>
+        <h2 className="mt-4 font-display text-3xl sm:text-4xl text-white">{caseView.title}</h2>
+        <p className="mt-8 text-sm tracking-[0.35em] text-slate-300 animate-pulse">CASE OPEN</p>
+        <button
+          type="button"
+          className="btn-ghost mt-10 !text-xs"
+          onClick={() => setSession((s) => ({ ...s, status: 'investigating' }))}
+        >
+          바로 시작
+        </button>
+      </div>
+    );
+  }
+
+  if (session.status === 'closed' && session.result) {
+    const r = session.result;
+    const dossier = buildCaseDossier(problem);
+    const verdict =
+      r.accuracy >= 85 ? '거의 완벽히 밝혀냈습니다.' : r.accuracy >= 70 ? '사건을 해결했습니다.' : '아직 핵심이 남아 있습니다.';
+
+    return (
+      <div className="rounded-2xl border border-slate-700 bg-slate-900/90 p-6 sm:p-10">
+        <p className="text-xs tracking-[0.3em] text-teal-300">CASE CLOSED</p>
+        <p className="mt-4 text-sm text-slate-400">추리 정확도</p>
+        <p className="mt-1 font-display text-5xl text-white">{r.accuracy}%</p>
+        <p className="mt-3 text-sm text-slate-300">{verdict}</p>
+        <p className="mt-4 text-sm text-slate-300">
+          맞춘 핵심 사실 {r.matchedCount} / {r.totalCount}
+        </p>
+        <p className="mt-1 text-sm text-slate-400">
+          질문 {session.questionCount}회 · 힌트 {session.hintCount}회
+        </p>
+
+        <div className="mt-8 rounded-xl border border-slate-700 bg-slate-950/50 p-4">
+          <p className="text-xs text-slate-500 mb-2">사건 진실</p>
+          <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{r.answer}</p>
+        </div>
+
+        {dossier.explanation && (
+          <div className="mt-4 rounded-xl border border-teal-500/20 bg-teal-500/5 p-4">
+            <p className="text-xs text-teal-300/80 mb-2">해설</p>
+            <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{dossier.explanation}</p>
+          </div>
+        )}
+
+        <div className="mt-6 rounded-xl border border-slate-700 bg-slate-900/50 p-4">
+          <p className="text-xs font-semibold text-slate-400 mb-2">이 사건에서 배운 수사법</p>
+          <ul className="space-y-1.5 text-sm text-slate-300 list-disc pl-5">
+            {dossier.learningPoints.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="mt-8 flex flex-col sm:flex-row gap-3">
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => {
+              setSession(createGameSession(problem.id));
+              setSolutionText('');
+              setHypothesisText('');
+            }}
+          >
+            다시 수사하기
+          </button>
+          <Link href={`/${lang}/problems`} className="btn-ghost text-center">
+            다른 사건 찾기
+          </Link>
+        </div>
+
+        <AdSlot variant="closed" className="mt-8" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      {/* Top stats */}
-      <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm">
-        <Pill label="수사력" value={String(session.investigationEnergy)} accent />
-        <Pill
-          label="단서"
-          value={`${session.discoveredClueIds.length}/${caseData.keyClues.length}`}
-        />
-        <Pill label="TRUTH" value={`${session.truthScore}%`} />
-        <Pill label="XP" value={String(session.xp)} />
+    <div className="game-v2 flex flex-col min-h-[70dvh] lg:min-h-[640px]">
+      <div className="lg:hidden flex items-center justify-between gap-2 mb-3">
+        <div className="min-w-0">
+          <p className="text-[11px] tracking-[0.18em] text-teal-300 truncate">
+            CASE #{caseView.caseNumber} · {caseView.title}
+          </p>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <button type="button" className="btn-ghost !px-2.5 !py-1.5 text-xs" onClick={() => setShowCaseSheet(true)}>
+            사건
+          </button>
+          <button type="button" className="btn-ghost !px-2.5 !py-1.5 text-xs" onClick={() => setShowFactsSheet(true)}>
+            사실 {session.confirmedFacts.length}
+          </button>
+        </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)_minmax(0,0.9fr)]">
-        {/* Case board */}
-        <aside className="rounded-2xl border border-slate-700 bg-slate-900/80 p-4 sm:p-5 order-1">
-          <p className="text-[11px] tracking-[0.22em] text-teal-300">CASE #{caseData.caseNumber}</p>
-          <h2 className="mt-2 font-display text-xl text-white">{caseData.title}</h2>
+      <div className="flex-1 grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.6fr)] min-h-0">
+        <aside className="hidden lg:flex flex-col rounded-2xl border border-slate-700 bg-slate-900/80 p-5 min-h-0">
+          <p className="text-[11px] tracking-[0.22em] text-teal-300">CASE #{caseView.caseNumber}</p>
+          <h2 className="mt-2 font-display text-xl text-white">{caseView.title}</h2>
           <p className="mt-1 text-xs text-slate-400">
-            {caseData.categoryLabel} · {difficultyStars(caseData.difficulty)} · 약 {caseData.estimatedMinutes}분
+            {caseView.categoryLabel} · {caseView.stars}
           </p>
-          <div className="mt-4 text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
-            {caseData.content}
+          <div className="mt-4 text-sm text-slate-300 leading-relaxed whitespace-pre-wrap overflow-y-auto flex-1">
+            {caseView.content}
           </div>
-
-          <div className="mt-6">
-            <p className="text-xs font-semibold text-slate-400 mb-2">발견한 단서</p>
-            <ul className="space-y-2">
-              {caseData.keyClues.map((clue) => {
-                const unlocked = session.discoveredClueIds.includes(clue.id);
-                return (
-                  <li
-                    key={clue.id}
-                    className={`rounded-lg border px-3 py-2 text-sm ${
-                      unlocked
-                        ? 'border-teal-500/30 bg-teal-500/10 text-teal-100'
-                        : 'border-slate-700 bg-slate-950/40 text-slate-500'
-                    }`}
-                  >
-                    {unlocked ? `✓ ${clue.text}` : '🔒 ???'}
+          <div className="mt-6 pt-4 border-t border-slate-700">
+            <p className="text-xs font-semibold text-slate-400 mb-2">확인된 사실</p>
+            {session.confirmedFacts.length === 0 ? (
+              <p className="text-sm text-slate-500">아직 없습니다. 질문으로 사실을 확인해 보세요.</p>
+            ) : (
+              <ul className="space-y-2 max-h-48 overflow-y-auto">
+                {session.confirmedFacts.map((f) => (
+                  <li key={f.id} className="text-sm text-teal-100/90">
+                    · {f.text}
                   </li>
-                );
-              })}
-              {caseData.keyClues.length === 0 && (
-                <li className="text-sm text-slate-500">이 사건은 별도 단서 목록이 없습니다.</li>
-              )}
-            </ul>
+                ))}
+              </ul>
+            )}
           </div>
         </aside>
 
-        {/* Chat */}
-        <section className="rounded-2xl border border-slate-700 bg-slate-900/80 flex flex-col min-h-[420px] order-2">
-          <div className="px-4 py-3 border-b border-slate-700">
-            <h3 className="text-sm font-semibold text-white">AI 수사 대화</h3>
+        <section className="rounded-2xl border border-slate-700 bg-slate-900/80 flex flex-col min-h-[52dvh] lg:min-h-0">
+          <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-white">AI 조사</h3>
+            <p className="text-[11px] text-slate-500">
+              질문 {session.questionCount} · 힌트 {session.hintCount}/{MAX_HINTS}
+            </p>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-[50vh] lg:max-h-[560px]">
-            {session.questions.length === 0 && (
-              <p className="text-sm text-slate-400">자유롭게 질문하며 사건의 진실을 좁혀가세요.</p>
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {session.messages.length === 0 && !busy && (
+              <div className="rounded-xl border border-dashed border-slate-700 px-3 py-4 text-sm text-slate-400 space-y-2">
+                <p>자유롭게 질문하며 사건의 진실을 좁혀가세요.</p>
+                <p className="text-xs text-slate-500">
+                  예: “가족이 관련됐나요?”, “문이 잠겨 있었나요?”
+                </p>
+              </div>
             )}
-            {session.questions.map((q, i) => (
-              <div key={`${q.createdAt}-${i}`} className="space-y-2">
-                <div className="rounded-xl bg-slate-800/80 px-3 py-2 text-sm text-slate-100">
-                  Q. {q.question}
-                </div>
-                <div className={`rounded-xl border border-slate-700 px-3 py-2 text-sm ${answerColor(q.answer)}`}>
-                  A. {answerLabel(q.answer)}
-                  <span className="ml-2 text-[11px] text-slate-500">
-                    {q.importance} · +{q.xp}XP · -{q.energyCost}
-                  </span>
-                </div>
+            {session.messages.map((m) => (
+              <div key={m.id} className="space-y-2">
+                {m.role === 'user' && (
+                  <div className="rounded-xl bg-slate-800/90 px-3 py-2 text-sm text-slate-100 ml-4 sm:ml-10">
+                    {m.text}
+                  </div>
+                )}
+                {m.role === 'ai' && (
+                  <div className="space-y-2 mr-4 sm:mr-10">
+                    <div className="rounded-xl border border-slate-700 px-3 py-2 text-sm text-slate-200">
+                      {m.text}
+                    </div>
+                    {m.confirmedFact && (
+                      <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 px-3 py-2 text-sm text-teal-100">
+                        <p className="font-semibold mb-1 text-teal-200/90">확인된 사실</p>
+                        <p>{m.confirmedFact}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {m.role === 'system' && (
+                  <div className="rounded-xl border border-slate-600/50 bg-slate-950/40 px-3 py-2 text-sm text-slate-300">
+                    {m.text}
+                  </div>
+                )}
               </div>
             ))}
-            {banner && (
-              <div
-                className={`rounded-xl border px-3 py-3 text-sm ${
-                  banner.type === 'critical'
-                    ? 'border-amber-400/40 bg-amber-500/10 text-amber-100'
-                    : banner.type === 'clue'
-                      ? 'border-teal-400/40 bg-teal-500/10 text-teal-100'
-                      : banner.type === 'hint'
-                        ? 'border-sky-400/40 bg-sky-500/10 text-sky-100'
-                        : 'border-rose-400/40 bg-rose-500/10 text-rose-100'
-                }`}
-              >
-                {banner.type === 'critical' && <p className="font-semibold mb-1">CRITICAL QUESTION</p>}
-                {banner.type === 'clue' && <p className="font-semibold mb-1">새로운 단서 발견</p>}
-                {banner.type === 'hint' && <p className="font-semibold mb-1">수사 힌트</p>}
-                <p>{banner.text}</p>
+            {busy && (
+              <div className="mr-4 sm:mr-10 rounded-xl border border-slate-700 px-3 py-2 text-sm text-slate-400 animate-pulse">
+                AI가 답변을 준비하고 있습니다…
               </div>
             )}
             <div ref={chatEndRef} />
           </div>
 
-          <div className="sticky bottom-0 border-t border-slate-700 bg-slate-900/95 p-3 space-y-2">
-            {energyDepleted && (
-              <p className="text-xs text-rose-300">수사력 소진 — 최종 추리만 가능합니다.</p>
-            )}
+          <div className="sticky bottom-0 border-t border-slate-700 bg-slate-900/95 p-3 space-y-2 safe-pb">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn-ghost !text-xs !px-3 !py-1.5"
+                disabled={busy || hintsLeft <= 0}
+                onClick={onHint}
+                title={hintsLeft <= 0 ? '힌트를 모두 사용했습니다' : `남은 힌트 ${hintsLeft}회`}
+              >
+                힌트 {hintsLeft > 0 ? `(${hintsLeft})` : '(없음)'}
+              </button>
+              <button
+                type="button"
+                className="btn-ghost !text-xs !px-3 !py-1.5"
+                disabled={busy}
+                onClick={() => setShowHypothesis(true)}
+              >
+                가설 확인
+              </button>
+              <button
+                type="button"
+                className="btn-primary !text-xs !px-3 !py-1.5"
+                disabled={busy}
+                onClick={() => setShowSolve(true)}
+              >
+                사건 해결
+              </button>
+            </div>
             <div className="flex gap-2">
               <input
+                ref={inputRef}
                 className="field flex-1"
-                placeholder="질문을 입력하세요…"
+                placeholder="예/아니요로 답할 수 있는 질문을 입력…"
                 value={questionText}
-                disabled={!canAsk}
+                disabled={busy}
                 onChange={(e) => setQuestionText(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -353,67 +442,73 @@ export default function InvestigationGame({ problem, knowledge, ensureKnowledge 
                   }
                 }}
               />
-              <button type="button" className="btn-primary !px-4" disabled={!canAsk || !questionText.trim()} onClick={onAsk}>
+              <button
+                type="button"
+                className="btn-primary !px-4 min-w-[4.5rem]"
+                disabled={busy || !questionText.trim()}
+                onClick={onAsk}
+              >
                 {busy ? '…' : '질문'}
               </button>
             </div>
           </div>
         </section>
-
-        {/* Status / actions */}
-        <aside className="rounded-2xl border border-slate-700 bg-slate-900/80 p-4 sm:p-5 space-y-4 order-3">
-          <div>
-            <p className="text-xs text-slate-400">수사 상태</p>
-            <p className="mt-1 text-sm text-white">
-              {session.status === 'solving' ? '최종 추리 단계' : '조사 중'}
-            </p>
-          </div>
-
-          {session.hypothesisFeedback && (
-            <div className="rounded-xl border border-slate-700 bg-slate-950/50 p-3 text-sm">
-              <p className="text-xs text-slate-400 mb-1">가설 분석</p>
-              <p className="text-slate-200">{session.hypothesisFeedback.summary}</p>
-              <p className="mt-2 text-teal-300">진실 접근도 {session.truthScore}%</p>
-            </div>
-          )}
-
-          <div className="flex flex-col gap-2">
-            <button type="button" className="btn-ghost w-full" onClick={() => setShowHypothesis(true)} disabled={busy}>
-              가설 세우기
-            </button>
-            <button type="button" className="btn-ghost w-full" onClick={onHint} disabled={busy || energyDepleted}>
-              수사 힌트 (-{INVESTIGATION_CONFIG.COST_HINT})
-            </button>
-            <button
-              type="button"
-              className="btn-primary w-full"
-              onClick={() => setShowSolve(true)}
-              disabled={busy}
-            >
-              사건 해결
-            </button>
-          </div>
-        </aside>
       </div>
 
-      {/* Hypothesis modal */}
+      {showCaseSheet && (
+        <Sheet title="사건 정보" onClose={() => setShowCaseSheet(false)}>
+          <p className="text-[11px] tracking-[0.2em] text-teal-300">CASE #{caseView.caseNumber}</p>
+          <h3 className="mt-2 text-lg text-white font-semibold">{caseView.title}</h3>
+          <p className="mt-1 text-xs text-slate-400">
+            {caseView.categoryLabel} · {caseView.stars}
+          </p>
+          <p className="mt-4 text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{caseView.content}</p>
+        </Sheet>
+      )}
+      {showFactsSheet && (
+        <Sheet title="확인된 사실" onClose={() => setShowFactsSheet(false)}>
+          {session.confirmedFacts.length === 0 ? (
+            <p className="text-sm text-slate-500">아직 확인된 사실이 없습니다.</p>
+          ) : (
+            <ul className="space-y-2">
+              {session.confirmedFacts.map((f) => (
+                <li key={f.id} className="text-sm text-teal-100">
+                  · {f.text}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Sheet>
+      )}
+
       {showHypothesis && (
-        <Modal title="현재 생각하는 사건의 진실을 적어주세요." onClose={() => setShowHypothesis(false)}>
+        <Sheet title="가설 확인" onClose={() => setShowHypothesis(false)}>
+          <p className="text-sm text-slate-400 mb-2">
+            아직 확실하지 않아도 됩니다. 지금 생각하는 방향을 적으면 AI가 맞는지 대략 알려줍니다.
+            <span className="block mt-1 text-slate-500">사건을 끝내려면 ‘사건 해결’을 사용하세요.</span>
+          </p>
           <textarea
             className="field min-h-[120px]"
             value={hypothesisText}
             onChange={(e) => setHypothesisText(e.target.value)}
-            placeholder="예: 누군가 피해자의 상태를 확인하기 위해 배달을 보냈다고 생각한다."
+            placeholder="예: 전화한 사람은 진짜 아들이 아니었던 것 같다."
           />
-          <button type="button" className="btn-primary mt-3" disabled={busy || !hypothesisText.trim()} onClick={onHypothesis}>
-            가설 분석
+          <button
+            type="button"
+            className="btn-primary mt-3 w-full"
+            disabled={busy || !hypothesisText.trim()}
+            onClick={onHypothesis}
+          >
+            방향 확인
           </button>
-        </Modal>
+        </Sheet>
       )}
 
-      {/* Solve modal */}
       {showSolve && (
-        <Modal title="최종 추리를 작성하세요." onClose={() => !energyDepleted && setShowSolve(false)}>
+        <Sheet title="사건 해결" onClose={() => setShowSolve(false)}>
+          <p className="text-sm text-slate-400 mb-2">
+            최종 추리를 제출하면 사건이 종료되고 정확도가 채점됩니다.
+          </p>
           <textarea
             className="field min-h-[140px]"
             value={solutionText}
@@ -422,73 +517,19 @@ export default function InvestigationGame({ problem, knowledge, ensureKnowledge 
           />
           <button
             type="button"
-            className="btn-primary mt-3"
+            className="btn-primary mt-3 w-full"
             disabled={busy || !solutionText.trim()}
-            onClick={onSolvePreview}
+            onClick={onSolve}
           >
-            추리 평가
+            제출하고 종료
           </button>
-        </Modal>
-      )}
-
-      {confirmClose && pendingResult && (
-        <Modal title="추리 평가 결과" onClose={() => confirmSolve(false)}>
-          <p className="text-sm text-slate-300">
-            추리 정확도 <span className="text-teal-300 font-semibold">{pendingResult.finalSolutionScore}%</span>
-          </p>
-          <p className="mt-2 text-sm text-slate-400">현재 상태로 사건을 종결하시겠습니까?</p>
-          {!canCloseCase(pendingResult.finalSolutionScore) && !energyDepleted && (
-            <p className="mt-2 text-xs text-amber-300">
-              {INVESTIGATION_CONFIG.SOLVE_MIN}% 이상일 때 종결할 수 있습니다. 조사를 이어가 보세요.
-            </p>
-          )}
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={!canCloseCase(pendingResult.finalSolutionScore) && !energyDepleted}
-              onClick={() => confirmSolve(true)}
-            >
-              {pendingResult.finalSolutionScore}%로 종결
-            </button>
-            <button
-              type="button"
-              className="btn-ghost"
-              disabled={energyDepleted}
-              onClick={() => confirmSolve(false)}
-            >
-              조사 계속하기
-            </button>
-          </div>
-        </Modal>
+        </Sheet>
       )}
     </div>
   );
 }
 
-function Pill({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 ${
-        accent ? 'border-teal-500/30 bg-teal-500/10 text-teal-200' : 'border-slate-700 bg-slate-900 text-slate-300'
-      }`}
-    >
-      <span className="text-slate-500">{label}</span>
-      <span className="font-semibold">{value}</span>
-    </span>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-slate-700 bg-slate-950/40 px-3 py-3">
-      <p className="text-[11px] text-slate-500">{label}</p>
-      <p className="mt-1 text-base font-semibold text-white">{value}</p>
-    </div>
-  );
-}
-
-function Modal({
+function Sheet({
   title,
   children,
   onClose,
@@ -498,8 +539,18 @@ function Modal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-soft">
+    <div
+      className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="w-full sm:max-w-lg max-h-[85dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-soft"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
         <div className="flex items-start justify-between gap-3 mb-3">
           <h3 className="text-base font-semibold text-white">{title}</h3>
           <button type="button" className="text-slate-400 hover:text-white" onClick={onClose} aria-label="닫기">

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Serif_KR, IBM_Plex_Sans_KR } from "next/font/google";
+import AdSenseScript from "@/components/ads/AdSenseScript";
+import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import "./globals.css";
 
 const display = Noto_Serif_KR({
@@ -18,7 +20,7 @@ const body = IBM_Plex_Sans_KR({
   variable: '--font-body',
 });
 
-const SITE_URL = "https://turtle-soup-rust.vercel.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://turtle-soup-rust.vercel.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -64,20 +66,10 @@ export default function RootLayout({
       <head>
         <meta name="google-adsense-account" content="ca-pub-4462339094246168" />
         <meta name="google-site-verification" content="4j3cTkVACL2lF9s0CFfg6x9kHsVdndQdbKI5atxdBGQ" />
-        <meta name="google-site-verification" content="GSC_VERIFICATION_TOKEN" />
-        <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'GA_MEASUREMENT_ID');
-            `,
-          }}
-        />
       </head>
       <body className={`${display.variable} ${body.variable} antialiased`}>
+        <GoogleAnalytics />
+        <AdSenseScript />
         {children}
       </body>
     </html>

@@ -10,6 +10,12 @@ import { requiredXP, xpToNextLevel } from '@/lib/progress';
 import { useTranslations } from '@/hooks/useTranslations';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { handleError } from '@/lib/error-handler';
+import {
+  loadInvestigationRecords,
+  formatRecordDate,
+  formatDuration,
+  type InvestigationRecord,
+} from '@/lib/game/investigation-records';
 
 export default function ProfilePage({ params }: { params: Promise<{ lang: string; id: string }> }) {
   const resolvedParams = use(params);
@@ -65,6 +71,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [confirmDeleteText, setConfirmDeleteText] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [investigationRecords, setInvestigationRecords] = useState<InvestigationRecord[]>([]);
 
   useEffect(() => {
     loadProfile();
@@ -78,6 +85,12 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
       setIsOwnProfile(ownProfile);
     }
   }, [currentUser, user, isAuthLoading]);
+
+  useEffect(() => {
+    if (!isOwnProfile || typeof window === 'undefined') return;
+    const records = loadInvestigationRecords(currentUser?.id ?? null).slice(0, 5);
+    setInvestigationRecords(records);
+  }, [isOwnProfile, currentUser?.id]);
 
   const loadProfile = async () => {
     try {
@@ -806,7 +819,7 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                       <>
                         <Link href={`/${lang}/create-problem`}>
                           <button className="px-4 py-1.5 bg-ink-700 hover:bg-ink-600 text-white rounded-lg text-sm font-semibold transition-colors">
-                            {'문제 만들기'}
+                            사건 만들기
                           </button>
                         </Link>
                         <button
@@ -850,25 +863,29 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
                   </div>
                 )}
 
-                {/* 통계 */}
-                <div className="flex items-center gap-4 sm:gap-6 mb-4">
+                {/* 통계 — 게임 프로필 */}
+                <div className="flex flex-wrap items-center gap-4 sm:gap-6 mb-4">
+                  <div className="text-center">
+                    <span className="text-base sm:text-lg font-semibold">{actualSolveCount}</span>
+                    <span className="text-sm text-fog ml-1">해결한 사건</span>
+                  </div>
                   <div className="text-center">
                     <span className="text-base sm:text-lg font-semibold">{createdProblemsCount}</span>
-                    <span className="text-sm text-fog ml-1">{'게시물'}</span>
+                    <span className="text-sm text-fog ml-1">만든 사건</span>
                   </div>
                   <button
                     onClick={handleShowFollowers}
                     className="text-center hover:opacity-80 transition-opacity cursor-pointer"
                   >
                     <span className="text-base sm:text-lg font-semibold">{followersCount}</span>
-                    <span className="text-sm text-fog ml-1">{'팔로워'}</span>
+                    <span className="text-sm text-fog ml-1">팔로워</span>
                   </button>
                   <button
                     onClick={handleShowFollowing}
                     className="text-center hover:opacity-80 transition-opacity cursor-pointer"
                   >
                     <span className="text-base sm:text-lg font-semibold">{followingCount}</span>
-                    <span className="text-sm text-fog ml-1">{'팔로잉'}</span>
+                    <span className="text-sm text-fog ml-1">팔로잉</span>
                   </button>
                 </div>
 
@@ -902,65 +919,104 @@ export default function ProfilePage({ params }: { params: Promise<{ lang: string
           </div>
         </div>
 
-        {/* 문제 목록 - Thread 스타일 (최신순만) */}
+        {/* 만든 사건 */}
+        <div className="container mx-auto px-4 max-w-4xl mb-4">
+          <h2 className="text-lg font-semibold text-white mb-3">만든 사건</h2>
+        </div>
         {filteredProblems.length > 0 ? (
-          <div className="container mx-auto px-4 max-w-4xl space-y-4">
+          <div className="container mx-auto px-4 max-w-4xl grid gap-4 sm:grid-cols-2">
             {filteredProblems.map((problem) => (
-              <Link key={problem.id} href={`/${lang}/problem/${problem.id}`}>
-                <div className="bg-ink-800 border border-brass/20 rounded-lg p-4 hover:bg-ink-700 transition-colors cursor-pointer">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base sm:text-lg font-semibold text-white mb-2 line-clamp-2">
-                        {problem.title}
-                      </h3>
-                      {problem.content && (
-                        <p className="text-sm text-fog mb-3 line-clamp-2">
-                          {problem.content.replace(/<[^>]*>/g, '').substring(0, 150)}...
-                        </p>
-                      )}
-                      <div className="flex items-center gap-4 text-xs sm:text-sm text-fog">
-                        <span className="flex items-center gap-1">
-                          <i className="ri-chat-3-line"></i>
-                          {problem.comment_count || 0}
-                        </span>
-                        <span className="text-fog-dim">
-                          {new Date(problem.created_at).toLocaleDateString('ko-KR')}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+              <div key={problem.id} className="rounded-2xl border border-slate-700 bg-slate-900/80 p-4">
+                <p className="text-[11px] tracking-[0.18em] text-teal-300/80">CASE</p>
+                <h3 className="mt-1 font-semibold text-white line-clamp-2">{problem.title}</h3>
+                <p className="mt-2 text-xs text-slate-400">
+                  플레이 {(problem.view_count || 0).toLocaleString()} · 댓글 {problem.comment_count || 0}
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <Link href={`/${lang}/problem/${problem.id}`} className="btn-ghost !py-1.5 !px-3 text-xs">
+                    보기
+                  </Link>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         ) : createdProblemsCount > 0 ? (
           <div className="container mx-auto px-4 max-w-4xl">
             <div className="text-center py-12">
-              <p className="text-fog">{'로딩 중...'}</p>
+              <p className="text-fog">로딩 중...</p>
             </div>
           </div>
         ) : (
           <div className="container mx-auto px-4 max-w-4xl">
-            <div className="text-center py-12">
-              <div className="text-4xl mb-4 text-slate-600">
-                <i className="ri-image-add-line"></i>
-              </div>
-              <p className="text-fog mb-2">
-                {isOwnProfile 
-                  ? ('아직 만든 문제가 없습니다.')
-                  : ('아직 만든 문제가 없습니다.')
-                }
-              </p>
+            <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 px-6 py-12 text-center">
+              <p className="text-white font-medium">아직 만든 사건이 없습니다.</p>
+              <p className="mt-2 text-sm text-slate-400">당신만의 미스터리를 만들어보세요.</p>
               {isOwnProfile && (
-                <Link href={`/${lang}/create-problem`}>
-                  <button className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors">
-                    {'첫 문제 만들기'}
-                  </button>
+                <Link href={`/${lang}/create-problem`} className="btn-primary mt-6 inline-flex">
+                  사건 만들기
                 </Link>
               )}
             </div>
           </div>
         )}
+
+        {/* 수사 기록 */}
+        <div className="container mx-auto px-4 max-w-4xl mt-8 mb-6">
+          <h2 className="text-lg font-semibold text-white mb-3">수사 기록</h2>
+          {isOwnProfile && investigationRecords.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {investigationRecords.map((rec) => (
+                <div
+                  key={rec.id}
+                  className="rounded-2xl border border-slate-700 bg-slate-900/80 p-4"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[11px] tracking-[0.18em] text-teal-300/80">
+                        {rec.caseNumber}
+                      </p>
+                      <h3 className="mt-1 font-semibold text-white line-clamp-2">
+                        {rec.caseTitle}
+                      </h3>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-teal-500/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-teal-300">
+                      CASE CLOSED
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-400">
+                    <span>정확도 {rec.accuracy}%</span>
+                    <span>질문 {rec.questionCount}회</span>
+                    <span>{formatDuration(rec.durationSec)}</span>
+                    <span>{formatRecordDate(rec.closedAt)}</span>
+                  </div>
+                  <Link
+                    href={`/${lang}/problem/${rec.caseId}`}
+                    className="btn-ghost mt-3 inline-flex !py-1.5 !px-3 !text-xs"
+                  >
+                    다시 보기
+                  </Link>
+                </div>
+              ))}
+            </div>
+          ) : actualSolveCount > 0 ? (
+            <div className="rounded-2xl border border-slate-700 bg-slate-900/80 p-5">
+              <p className="text-sm text-slate-300">
+                해결한 사건 <span className="text-teal-300 font-semibold">{actualSolveCount}</span>건
+              </p>
+              <Link href={`/${lang}/problems`} className="btn-ghost mt-4 inline-flex !text-xs">
+                사건 찾기
+              </Link>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 px-6 py-10 text-center">
+              <p className="text-white font-medium">아직 해결한 사건이 없습니다.</p>
+              <p className="mt-2 text-sm text-slate-400">첫 사건을 수사해보세요.</p>
+              <Link href={`/${lang}/problems`} className="btn-primary mt-5 inline-flex">
+                사건 찾기
+              </Link>
+            </div>
+          )}
+        </div>
 
         {/* 칭호 섹션 - Thread 스타일 */}
         {userTitles.length > 0 && (

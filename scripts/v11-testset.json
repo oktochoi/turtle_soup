@@ -1,0 +1,22 @@
+[
+  {"id":"syn_mom","category":"동의표현","answer":"피해자의 어머니가 사건에 관련되어 있었다.","question":"엄마가 관련되어 있어?","expect":"yes"},
+  {"id":"syn_mother","category":"동의표현","answer":"피해자의 어머니가 사건에 관련되어 있었다.","question":"어머니가 관련됐나요?","expect":"yes"},
+  {"id":"hyp_parent","category":"상하위","answer":"피해자의 어머니가 사건에 관련되어 있었다.","question":"부모님 중 한 명이 관련되어 있어?","expect":"yes"},
+  {"id":"hyp_dad_no","category":"가족","answer":"피해자의 어머니가 사건에 관련되어 있었다.","question":"아빠가 관련되어 있어?","expect":"no"},
+  {"id":"g2s_mom","category":"상하위","answer":"부모 중 한 명이 관련되어 있다.","question":"엄마가 관련되어 있나요?","expect":"no"},
+  {"id":"irr_weather","category":"무관","answer":"피해자의 어머니가 관련되어 있었다.","question":"오늘 날씨가 사건에 관련 있어?","expect":"irrelevant"},
+  {"id":"irr_math","category":"무관","answer":"남자가 음식을 주문했다.","question":"1+1은 뭐야?","expect":"irrelevant"},
+  {"id":"belief_dead_q","category":"믿음","answer":"어머니는 아들이 죽었다고 생각했지만 실제로 아들은 살아 있었다.","question":"아들은 죽었어?","expect":"no"},
+  {"id":"belief_think","category":"믿음","answer":"어머니는 아들이 죽었다고 생각했지만 실제로 아들은 살아 있었다.","question":"엄마는 아들이 죽었다고 생각했어?","expect":"yes"},
+  {"id":"cause_truth","category":"인과","answer":"남자는 진실을 알게 된 충격으로 자살했다.","question":"진실을 알게 된 것이 죽음의 원인이야?","expect":"yes"},
+  {"id":"family_rel","category":"가족","answer":"범인은 피해자의 아내였다.","question":"가족이 관련됐나요?","expect":"yes"},
+  {"id":"spouse_wife","category":"사람관계","answer":"범인은 피해자의 아내였다.","question":"아내가 범인이야?","expect":"yes"},
+  {"id":"spouse_husband_no","category":"사람관계","answer":"범인은 피해자의 아내였다.","question":"남편이 범인이야?","expect":"no"},
+  {"id":"action_order","category":"행동","answer":"어머니가 음식을 주문했다.","question":"어머니가 음식을 주문했어?","expect":"yes"},
+  {"id":"state_locked","category":"상태","answer":"문은 안에서 잠겨 있었다.","question":"문이 잠겨 있었어?","expect":"yes"},
+  {"id":"purpose_check","category":"목적","answer":"상태를 확인하기 위해 음식을 주문했다.","question":"주문 목적이 상태 확인이야?","expect":"yes"},
+  {"id":"neg_victim_order","category":"부정","answer":"피해자는 음식을 직접 주문하지 않았다.","question":"피해자가 직접 주문했나요?","expect":"no"},
+  {"id":"story_guess","category":"정상가설","answer":"어머니가 음식을 주문했다.","question":"사고였나요?","expect":"no"},
+  {"id":"story_married","category":"정상가설","answer":"범인은 피해자의 아내였다.","question":"피해자는 결혼했나요?","expect":"no"},
+  {"id":"food_related","category":"정상가설","answer":"음식을 주문한 목적은 상태 확인이었다.","question":"죽음이 음식과 관련 있나요?","expect":"no"}
+]

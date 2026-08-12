@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getMessages, type Locale, isValidLocale, defaultLocale } from '@/lib/i18n';
 import { notFound } from 'next/navigation';
 import ContactForm from './ContactForm';
+import { getContactEmail, getSiteUrl } from '@/lib/site-config';
 
 export async function generateMetadata({
   params,
@@ -10,7 +11,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang } = await params;
   const locale = isValidLocale(lang) ? lang : defaultLocale;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://turtle-soup-rust.vercel.app';
+  const siteUrl = getSiteUrl();
   const baseUrl = `${siteUrl}/${locale}/contact`;
 
   return {
@@ -47,7 +48,7 @@ export default async function ContactPage({
   }
   const locale = lang as Locale;
   const isKo = locale === 'ko';
-  const contactEmail = 'okto0914@gmail.com';
+  const contactEmail = getContactEmail();
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">

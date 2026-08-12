@@ -70,12 +70,12 @@ export function ProblemsEmptyState({
 }) {
   return (
     <EmptyState
-      icon="ri-inbox-line"
-      title={lang === 'ko' ? '문제가 없습니다' : 'No problems found'}
+      icon="ri-folder-unknow-line"
+      title={lang === 'ko' ? '해당하는 사건이 없습니다' : 'No cases found'}
       description={lang === 'ko' 
-        ? '아직 등록된 문제가 없습니다. 첫 번째 문제를 만들어보세요!'
-        : 'No problems have been created yet. Create the first one!'}
-      actionLabel={lang === 'ko' ? '문제 만들기' : 'Create Problem'}
+        ? '필터를 바꿔 보거나, 새로운 사건을 만들어 보세요.'
+        : 'Try different filters, or create a new case.'}
+      actionLabel={lang === 'ko' ? '사건 만들기' : 'Create Case'}
       actionHref={`/${lang}/create-problem`}
       lang={lang}
     />

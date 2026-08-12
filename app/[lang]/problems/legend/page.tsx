@@ -23,6 +23,7 @@ export default async function LegendPage({ params }: { params: Promise<{ lang: s
     .from('problems')
     .select('id, title, content, difficulty, tags, like_count, view_count, comment_count, created_at')
     .eq('lang', locale)
+    .in('status', ['published', 'featured'])
     .order('like_count', { ascending: false })
     .order('view_count', { ascending: false })
     .limit(50);

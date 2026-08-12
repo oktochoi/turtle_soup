@@ -1,7 +1,9 @@
 import { MetadataRoute } from 'next';
-import { createClient } from '@/lib/supabase/server';
+import { PUBLIC_PROBLEM_STATUSES } from '@/lib/problems/public';
+import { getSiteUrl } from '@/lib/site-config';
+import { createPublicClient } from '@/lib/supabase/public-server';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://turtle-soup-rust.vercel.app';
+const siteUrl = getSiteUrl();
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = [];
@@ -18,6 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: '/rooms', changeFrequency: 'daily' as const, priority: 0.7 },
     { path: '/guide', changeFrequency: 'monthly' as const, priority: 0.6 },
     { path: '/faq', changeFrequency: 'monthly' as const, priority: 0.6 },
+    { path: '/community-guidelines', changeFrequency: 'monthly' as const, priority: 0.5 },
     { path: '/privacy', changeFrequency: 'yearly' as const, priority: 0.3 },
     { path: '/terms', changeFrequency: 'yearly' as const, priority: 0.3 },
     { path: '/contact', changeFrequency: 'yearly' as const, priority: 0.3 },
@@ -34,16 +37,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // 동적 문제 URL — 공개 문제만 포함
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
+    if (!supabase) return entries;
 
-    const { data: problems } = await supabase
+    const { data: problems, error: statusError } = await supabase
       .from('problems')
-      .select('id, updated_at, created_at')
+      .select('id, updated_at, created_at, status')
       .order('created_at', { ascending: false })
-      .limit(5000);
+      .limit(5000)
+      .in('status', [...PUBLIC_PROBLEM_STATUSES]);
 
-    if (problems) {
-      for (const problem of problems) {
+    const publicProblems =
+      !statusError && problems
+        ? problems
+        : (
+            await supabase
+              .from('problems')
+              .select('id, updated_at, created_at')
+              .order('created_at', { ascending: false })
+              .limit(5000)
+          ).data;
+
+    if (publicProblems) {
+      for (const problem of publicProblems) {
         const lastMod = problem.updated_at || problem.created_at || new Date().toISOString();
         entries.push({
           url: `${siteUrl}/ko/problem/${problem.id}`,

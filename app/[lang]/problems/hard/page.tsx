@@ -23,6 +23,7 @@ export default async function HardPage({ params }: { params: Promise<{ lang: str
     .from('problems')
     .select('id, title, content, difficulty, tags, like_count, view_count, comment_count, created_at')
     .eq('lang', locale)
+    .in('status', ['published', 'featured'])
     .eq('difficulty', 'hard')
     .order('like_count', { ascending: false })
     .limit(50);

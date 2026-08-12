@@ -9,6 +9,9 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { triggerEvent, getOrCreateGuestId } from '@/lib/progress-client';
 import { useTranslations } from '@/hooks/useTranslations';
 import type { Problem } from '@/lib/types';
+import { filterPublicProblems } from '@/lib/problems/public';
+import CaseCard from '@/components/case/CaseCard';
+import AdSlot from '@/components/ads/AdSlot';
 
 export default function HomeClient() {
   const params = useParams();
@@ -68,6 +71,7 @@ export default function HomeClient() {
         .from('problems')
         .select('*')
         .eq('lang', currentLang)
+        .in('status', ['published', 'featured'])
         .order('created_at', { ascending: false })
         .limit(6);
 
@@ -88,7 +92,10 @@ export default function HomeClient() {
         data = allResult.data;
         error = allResult.error;
         if (data && data.length > 0) {
-          const filtered = data.filter((p: any) => (p.lang ?? p.language ?? 'ko') === currentLang);
+          const filtered = filterPublicProblems(data as Problem[]).filter(
+            (p: Problem & { lang?: string; language?: string }) =>
+              (p.lang ?? p.language ?? 'ko') === currentLang
+          );
           setSampleProblems(filtered.slice(0, 6));
         }
         setIsLoadingSamples(false);
@@ -98,7 +105,7 @@ export default function HomeClient() {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        setSampleProblems(data.slice(0, 6));
+        setSampleProblems(filterPublicProblems(data as Problem[]).slice(0, 6));
       }
     } catch (error) {
       console.error('샘플 문제 로드 오류:', error);
@@ -112,6 +119,7 @@ export default function HomeClient() {
       const { data: problems, error } = await supabase
         .from('problems')
         .select('*')
+        .in('status', ['published', 'featured'])
         .order('created_at', { ascending: false });
       if (error) throw error;
       if (!problems || problems.length === 0) {
@@ -120,7 +128,12 @@ export default function HomeClient() {
       }
 
       // ko → 한글 문제만, en → 영어 문제만
-      const filteredProblems = problems.filter((problem: any) => (problem.lang ?? problem.language ?? 'ko') === currentLang);
+      const filteredProblems = filterPublicProblems(problems as Problem[]).filter(
+        (problem) =>
+          ((problem as Problem & { lang?: string; language?: string }).lang ??
+            (problem as Problem & { language?: string }).language ??
+            'ko') === currentLang
+      );
 
       if (filteredProblems.length === 0) {
         setIsLoadingProblem(false);
@@ -305,9 +318,6 @@ export default function HomeClient() {
     return `/${lang}${path === '/' ? '' : path}`;
   };
 
-  const heroTitle = '오늘의 사건';
-  const heroCta = '사건 수사 시작';
-
   const popularProblems = sampleProblems
     .slice()
     .sort((a, b) => (b.view_count || 0) - (a.view_count || 0))
@@ -317,7 +327,7 @@ export default function HomeClient() {
 
   const heroTargetHref = todayProblem
     ? getLocalizedPath(`/problem/${todayProblem.id}`)
-    : getLocalizedPath('/play');
+    : getLocalizedPath('/problems');
 
   return (
     <main className="min-h-screen text-slate-50 relative overflow-hidden">
@@ -327,370 +337,132 @@ export default function HomeClient() {
       </div>
 
       <div className="relative z-10 page-shell py-8 sm:py-10 lg:py-14">
-        {/* Top intro */}
-        <header className="mb-6 sm:mb-8">
-          <p className="text-xs sm:text-sm uppercase tracking-[0.22em] text-teal-300/80">
-            AI 사건 수사
-          </p>
+        <header className="mb-8 sm:mb-10 text-center sm:text-left">
+          <p className="text-xs sm:text-sm tracking-[0.22em] text-teal-300/80">AI 추리 게임</p>
           <h1 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-white">
-            단서를 모아 사건의 진실을 밝혀내세요.
+            오늘 어떤 미스터리를 풀어볼까요?
           </h1>
-          <p className="mt-3 max-w-2xl text-sm sm:text-base text-slate-300">
-            AI에게 자유롭게 질문하고, 핵심 단서를 발견하며 추리하세요. 오늘의 CASE가 기다리고 있습니다.
+          <p className="mt-3 max-w-2xl text-sm sm:text-base text-slate-300 mx-auto sm:mx-0">
+            AI에게 자유롭게 질문하며 사건의 진실을 추리하세요.
           </p>
+          <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:items-center justify-center sm:justify-start">
+            <Link href={heroTargetHref} className="btn-primary">
+              바로 사건 시작
+            </Link>
+            <Link href={getLocalizedPath('/problems')} className="btn-ghost">
+              사건 둘러보기
+            </Link>
+          </div>
         </header>
 
-        {/* HERO: Today's Mystery */}
+        {/* Today's CASE */}
         <section className="mb-10 sm:mb-12">
-          <div className="relative overflow-hidden rounded-3xl border border-teal-500/30 bg-slate-900/80">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(20,184,166,0.12),_transparent_55%)]" />
-
-            <div className="relative grid min-h-[260px] grid-cols-1 gap-8 p-6 sm:p-8 lg:p-10 lg:grid-cols-[2fr,1.2fr]">
-              <div className="flex flex-col justify-between gap-6">
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-teal-500/30 bg-slate-900/80 px-3 py-1 text-xs font-medium text-teal-300">
-                    <span className="h-1.5 w-1.5 rounded-full bg-teal-400" />
-                    {heroTitle}
-                  </div>
-
-                  {isLoadingProblem ? (
-                    <div className="mt-2 space-y-3">
-                      <div className="h-8 w-3/4 rounded-lg bg-slate-700/60" />
-                      <div className="h-4 w-full rounded bg-slate-800/70" />
-                      <div className="h-4 w-5/6 rounded bg-slate-800/70" />
-                    </div>
-                  ) : todayProblem ? (
-                    <>
-                      <h2 className="text-2xl sm:text-3xl lg:text-[2rem] font-semibold tracking-tight text-white">
-                        {todayProblem.title}
-                      </h2>
-                      <p className="max-w-2xl text-sm sm:text-base text-slate-300/90 line-clamp-3">
-                        {todayProblem.content}
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <h2 className="text-2xl sm:text-3xl lg:text-[2rem] font-semibold tracking-tight text-white">
-                        오늘의 미스터리가 준비 중입니다.
-                      </h2>
-                      <p className="max-w-2xl text-sm sm:text-base text-slate-300/90">
-                        그 사이 인기 퍼즐이나 새로운 퍼즐을 먼저 풀어보세요.
-                      </p>
-                    </>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <Link href={heroTargetHref} className="btn-primary sm:w-auto w-full">
-                    <i className="ri-play-fill text-lg" />
-                    <span>{heroCta}</span>
-                    <i className="ri-arrow-right-line text-base" />
-                  </Link>
-                </div>
-              </div>
-
-              <div className="flex flex-col justify-between gap-6 rounded-2xl border border-teal-500/15 bg-gradient-to-b from-slate-900/90 to-slate-950/90 p-4 sm:p-5">
-                <div className="space-y-3">
-                  <p className="text-xs font-medium uppercase tracking-[0.22em] text-slate-400">
-                    게임 로비
-                  </p>
-                  <p className="text-sm text-slate-300">
-                    혼자 추리하거나, 친구와 방을 만들어 함께 비밀을 파헤쳐 보세요.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 text-center text-xs sm:text-sm">
-                  <div className="rounded-xl bg-slate-900/70 px-2 py-3">
-                    <p className="text-[0.72rem] uppercase tracking-wide text-slate-400">퍼즐 수</p>
-                    <p className="mt-1 text-lg font-semibold text-teal-300">100+</p>
-                  </div>
-                  <div className="rounded-xl bg-slate-900/70 px-2 py-3">
-                    <p className="text-[0.72rem] uppercase tracking-wide text-slate-400">게임 모드</p>
-                    <p className="mt-1 text-lg font-semibold text-teal-300">3</p>
-                  </div>
-                  <div className="rounded-xl bg-slate-900/70 px-2 py-3">
-                    <p className="text-[0.72rem] uppercase tracking-wide text-slate-400">평균 소요</p>
-                    <p className="mt-1 text-lg font-semibold text-teal-300">10m</p>
-                  </div>
-                </div>
-              </div>
+          <h2 className="section-title mb-4">오늘의 CASE</h2>
+          {isLoadingProblem ? (
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 h-40 animate-pulse" />
+          ) : todayProblem ? (
+            <div className="max-w-xl">
+              <CaseCard problem={todayProblem} lang={lang} ctaLabel="사건 시작" />
             </div>
+          ) : (
+            <p className="text-sm text-slate-400">오늘의 CASE가 준비 중입니다. 아래에서 다른 사건을 골라보세요.</p>
+          )}
+        </section>
+
+        <AdSlot variant="home" className="mb-10" />
+
+        <section className="mb-10">
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <h2 className="section-title">인기 CASE</h2>
+            <Link href={getLocalizedPath('/problems')} className="text-xs sm:text-sm text-teal-300 hover:text-teal-200">
+              전체 보기 →
+            </Link>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {isLoadingSamples
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="rounded-2xl border border-slate-800 bg-slate-900/80 h-48 animate-pulse" />
+                ))
+              : popularProblems.map((p) => <CaseCard key={p.id} problem={p} lang={lang} />)}
+            {!isLoadingSamples && popularProblems.length === 0 && (
+              <p className="text-sm text-slate-400">아직 인기 CASE가 없습니다.</p>
+            )}
           </div>
         </section>
 
-        <section className="mb-10 flex flex-1 flex-col gap-10 lg:gap-12">
-          {/* Popular */}
-          <section>
-            <div className="mb-4 flex items-baseline justify-between gap-3">
-              <div>
-                <h2 className="section-title">인기 미스터리</h2>
-                <p className="section-lead">많이 플레이된 미스터리부터 도전해 보세요.</p>
+        <section className="mb-10">
+          <h2 className="section-title mb-4">새로운 CASE</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {isLoadingSamples
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="rounded-2xl border border-slate-800 bg-slate-900/80 h-48 animate-pulse" />
+                ))
+              : newProblems.map((p) => <CaseCard key={p.id} problem={p} lang={lang} />)}
+          </div>
+        </section>
+
+        <section className="mb-12">
+          <h2 className="section-title mb-4">난이도별 CASE</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
+            {[
+              { href: `/${lang}/problems/legend`, label: '레전드', desc: '인기 CASE' },
+              { href: `/${lang}/problems/hard`, label: '고난도', desc: '어려운 수사' },
+              { href: `/${lang}/problems/scary`, label: '공포·반전', desc: '소름 CASE' },
+              { href: `/${lang}/problems/easy`, label: '입문', desc: '초보 수사' },
+              { href: `/${lang}/problems/latest`, label: '최신', desc: '신규 CASE' },
+            ].map((cat) => (
+              <Link
+                key={cat.href}
+                href={cat.href}
+                className="group flex flex-col items-center p-3 rounded-xl border border-slate-800 bg-slate-900/80 hover:border-teal-500/40 transition-all text-center"
+              >
+                <span className="text-sm font-medium text-white group-hover:text-teal-300">{cat.label}</span>
+                <span className="text-xs text-slate-500 mt-1">{cat.desc}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* SEO / secondary — below game experience */}
+        <section className="border-t border-slate-800 pt-8 space-y-8">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Link href={getLocalizedPath('/create-problem')} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 hover:border-teal-500/40 transition">
+              <h3 className="font-semibold text-white">사건 만들기</h3>
+              <p className="mt-1 text-sm text-slate-400">나만의 미스터리를 공개하세요.</p>
+            </Link>
+            <Link href={getLocalizedPath('/ranking')} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 hover:border-teal-500/40 transition">
+              <h3 className="font-semibold text-white">랭킹</h3>
+              <p className="mt-1 text-sm text-slate-400">수사 기록을 확인하세요.</p>
+            </Link>
+            <Link href={getLocalizedPath('/guide')} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 hover:border-teal-500/40 transition">
+              <h3 className="font-semibold text-white">플레이 방법</h3>
+              <p className="mt-1 text-sm text-slate-400">바다거북스프가 처음이라면</p>
+            </Link>
+          </div>
+
+          <div className="flex flex-col rounded-2xl border border-slate-800 bg-slate-900/80 p-4 sm:p-5 max-w-md">
+            <h3 className="text-sm font-semibold text-white mb-2">{t.home.checkIn}</h3>
+            <p className="mb-3 text-xs text-slate-400">{t.home.checkInDesc}</p>
+            {checkInMessage && (
+              <div className="mb-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
+                {checkInMessage}
               </div>
-              <Link
-                href={getLocalizedPath('/problems')}
-                className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-teal-300 hover:text-teal-200"
-              >
-                <span>전체 보기</span>
-                <i className="ri-arrow-right-line text-sm" />
-              </Link>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {isLoadingSamples ? (
-                Array.from({ length: 3 }).map((_, idx) => (
-                  <div key={idx} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
-                    <div className="mb-3 h-5 w-3/4 rounded bg-slate-800" />
-                    <div className="mb-1.5 h-3 w-full rounded bg-slate-800/80" />
-                    <div className="h-3 w-5/6 rounded bg-slate-800/80" />
-                  </div>
-                ))
-              ) : popularProblems.length > 0 ? (
-                popularProblems.map((problem) => (
-                  <Link
-                    key={problem.id}
-                    href={getLocalizedPath(`/problem/${problem.id}`)}
-                    className="group flex flex-col rounded-2xl border border-slate-800 bg-slate-900/80 p-4 transition-colors hover:border-teal-400/50 hover:bg-slate-900"
-                  >
-                    <h3 className="mb-2 line-clamp-2 text-sm sm:text-base font-semibold text-white group-hover:text-teal-200">
-                      {problem.title}
-                    </h3>
-                    <p className="mb-3 line-clamp-2 text-xs sm:text-sm text-slate-400">
-                      {problem.content}
-                    </p>
-                  </Link>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-sm text-slate-400">
-                  아직 인기 미스터리가 없습니다. 첫 번째 도전자가 되어 보세요.
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* New */}
-          <section>
-            <div className="mb-4">
-              <h2 className="section-title">새로 올라온 미스터리</h2>
-              <p className="section-lead">방금 올라온 따끈한 미스터리들입니다.</p>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {isLoadingSamples ? (
-                Array.from({ length: 3 }).map((_, idx) => (
-                  <div key={idx} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
-                    <div className="mb-3 h-5 w-3/4 rounded bg-slate-800" />
-                    <div className="h-3 w-full rounded bg-slate-800/80" />
-                  </div>
-                ))
-              ) : newProblems.length > 0 ? (
-                newProblems.map((problem) => (
-                  <Link
-                    key={problem.id}
-                    href={getLocalizedPath(`/problem/${problem.id}`)}
-                    className="group flex flex-col rounded-2xl border border-slate-800 bg-slate-900/80 p-4 transition-colors hover:border-teal-400/50 hover:bg-slate-900"
-                  >
-                    <h3 className="mb-2 line-clamp-2 text-sm sm:text-base font-semibold text-white group-hover:text-teal-200">
-                      {problem.title}
-                    </h3>
-                    <p className="mb-3 line-clamp-2 text-xs sm:text-sm text-slate-400">
-                      {problem.content}
-                    </p>
-                    <div className="mt-auto flex items-center gap-3 text-[0.7rem] sm:text-xs text-slate-400">
-                      <span className="inline-flex items-center gap-1.5">
-                        <i className="ri-time-line text-teal-300" />
-                        최근 업로드
-                      </span>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-sm text-slate-400">
-                  아직 새로운 미스터리가 없습니다. 직접 하나 만들어 보세요.
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Game Modes */}
-          <section>
-            <div className="mb-4">
-              <h2 className="section-title">게임 모드</h2>
-              <p className="section-lead">나에게 맞는 방식으로 바다거북스프를 즐겨보세요.</p>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Link
-                href={getLocalizedPath('/rooms')}
-                className="group flex flex-col rounded-2xl border border-slate-800 bg-slate-900/80 p-4 transition-all hover:border-teal-400/50 hover:bg-slate-900"
-              >
-                <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500/15 text-teal-300">
-                  <i className="ri-group-line text-lg" />
-                </div>
-                <h3 className="mb-1 text-sm sm:text-base font-semibold text-white group-hover:text-teal-200">
-                  {t.home.multiplayer}
-                </h3>
-                <p className="mb-3 text-xs sm:text-sm text-slate-400 line-clamp-3">
-                  {t.home.multiplayerDesc}
-                </p>
-                <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-teal-300">
-                  방 만들기
-                  <i className="ri-arrow-right-up-line text-xs" />
-                </span>
-              </Link>
-
-              <Link
-                href={getLocalizedPath('/play')}
-                className="group flex flex-col rounded-2xl border border-slate-800 bg-slate-900/80 p-4 transition-all hover:border-teal-400/50 hover:bg-slate-900"
-              >
-                <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500/15 text-teal-300">
-                  <i className="ri-user-line text-lg" />
-                </div>
-                <h3 className="mb-1 text-sm sm:text-base font-semibold text-white group-hover:text-teal-200">
-                  {t.home.offline}
-                </h3>
-                <p className="mb-3 text-xs sm:text-sm text-slate-400 line-clamp-3">
-                  {t.home.offlineDesc}
-                </p>
-                <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-teal-300">
-                  솔로 플레이
-                  <i className="ri-arrow-right-up-line text-xs" />
-                </span>
-              </Link>
-
-              <Link
-                href={getLocalizedPath('/create-problem')}
-                className="group flex flex-col rounded-2xl border border-slate-800 bg-slate-900/80 p-4 transition-all hover:border-teal-400/50 hover:bg-slate-900"
-              >
-                <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500/15 text-teal-300">
-                  <i className="ri-add-circle-line text-lg" />
-                </div>
-                <h3 className="mb-1 text-sm sm:text-base font-semibold text-white group-hover:text-teal-200">
-                  {t.problem.createProblem}
-                </h3>
-                <p className="mb-3 text-xs sm:text-sm text-slate-400 line-clamp-3">
-                  자신만의 미스터리를 만들어 플레이어와 공유하세요.
-                </p>
-                <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-teal-300">
-                  문제 만들기
-                  <i className="ri-arrow-right-up-line text-xs" />
-                </span>
-              </Link>
-            </div>
-          </section>
-
-          {/* Categories */}
-          <section>
-            <h2 className="section-title mb-4">카테고리별 사건</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
-              {[
-                { href: `/${lang}/problems/legend`, label: '레전드 사건', desc: '가장 인기 있는 CASE' },
-                { href: `/${lang}/problems/hard`, label: '고난도 수사', desc: '극악·고난도 추리' },
-                { href: `/${lang}/problems/scary`, label: '공포·반전', desc: '소름 돋는 사건' },
-                { href: `/${lang}/problems/easy`, label: '입문 사건', desc: '초보자용 CASE' },
-                { href: `/${lang}/problems/latest`, label: '신규 사건', desc: '새로 올라온 CASE' },
-              ].map((cat) => (
-                <Link
-                  key={cat.href}
-                  href={cat.href}
-                  className="group flex flex-col items-center p-3 rounded-xl border border-slate-800 bg-slate-900/80 hover:border-teal-500/40 transition-all text-center"
-                >
-                  <span className="text-sm font-medium text-white group-hover:text-teal-300 transition-colors">
-                    {cat.label}
-                  </span>
-                  <span className="text-xs text-slate-500 mt-1">{cat.desc}</span>
-                </Link>
-              ))}
-            </div>
-          </section>
-
-          {/* Ranking & check-in */}
-          <section className="border-t border-slate-800 pt-6 lg:pt-8">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr),minmax(0,1.5fr)]">
-              <Link
-                href={getLocalizedPath('/ranking')}
-                className="group flex flex-col rounded-2xl border border-slate-800 bg-slate-900/80 p-4 sm:p-5 transition-all hover:border-teal-400/50 hover:bg-slate-900"
-              >
-                <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500/15 text-teal-300">
-                  <i className="ri-trophy-line text-lg" />
-                </div>
-                <h3 className="mb-1 text-sm sm:text-base font-semibold text-white group-hover:text-teal-200">
-                  {t.ranking.title}
-                </h3>
-                <p className="mb-3 text-xs sm:text-sm text-slate-400">
-                  정답 수와 좋아요 순위를 확인하고, 나만의 기록을 세워보세요.
-                </p>
-                <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-teal-300">
-                  랭킹 보러가기
-                  <i className="ri-arrow-right-up-line text-xs" />
-                </span>
-              </Link>
-
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col rounded-2xl border border-slate-800 bg-slate-900/80 p-4 sm:p-5">
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-teal-500/15 text-teal-300">
-                      <i className="ri-calendar-check-line text-sm" />
-                    </span>
-                    <h3 className="text-sm sm:text-base font-semibold text-white">
-                      {t.home.checkIn}
-                    </h3>
-                  </div>
-                  <p className="mb-3 text-xs sm:text-sm text-slate-400">{t.home.checkInDesc}</p>
-                  {checkInMessage && (
-                    <div className="mb-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
-                      {checkInMessage}
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleCheckIn}
-                    disabled={isCheckedIn || isCheckingIn}
-                    className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all ${
-                      isCheckedIn
-                        ? 'cursor-not-allowed bg-slate-800 text-slate-400'
-                        : 'bg-teal-500 text-slate-950 hover:bg-teal-400'
-                    }`}
-                  >
-                    {isCheckingIn ? (
-                      <>
-                        <i className="ri-loader-4-line animate-spin" />
-                        {t.home.checkInProcessing}
-                      </>
-                    ) : isCheckedIn ? (
-                      <>
-                        <i className="ri-checkbox-circle-line" />
-                        {t.home.checkInComplete}
-                      </>
-                    ) : (
-                      <>
-                        <i className="ri-calendar-check-line" />
-                        {t.home.checkInButton}
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {!user && (
-                  <div className="flex flex-col rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
-                    <p className="mb-3 text-xs sm:text-sm font-medium text-slate-200">
-                      로그인하면 기록과 랭킹을 더 편하게 사용할 수 있어요.
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <Link href={getLocalizedPath('/auth/login')} className="btn-primary flex-1">
-                        로그인
-                      </Link>
-                      <Link href={getLocalizedPath('/guide')} className="btn-ghost">
-                        플레이 방법
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
+            )}
+            <button
+              type="button"
+              onClick={handleCheckIn}
+              disabled={isCheckedIn || isCheckingIn}
+              className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold ${
+                isCheckedIn ? 'bg-slate-800 text-slate-400' : 'bg-teal-500 text-slate-950 hover:bg-teal-400'
+              }`}
+            >
+              {isCheckingIn ? t.home.checkInProcessing : isCheckedIn ? t.home.checkInComplete : t.home.checkInButton}
+            </button>
+          </div>
         </section>
       </div>
     </main>
   );
+
 }
 

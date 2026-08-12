@@ -53,6 +53,8 @@ export type Problem = {
   created_at: string;
   updated_at: string;
   user_id?: string;
+  /** draft | pending | published | featured | archived */
+  status?: string | null;
   hints?: string[] | null; // 최대 3개의 힌트
   explanation?: string | null; // 해설/배경지식 (AdSense 품질 강화용)
   /** Optional investigation fields (JSON columns or client-side; missing = safe fallback) */

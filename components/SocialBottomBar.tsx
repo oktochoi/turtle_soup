@@ -31,9 +31,9 @@ export default function SocialBottomBar() {
   ];
 
   const legalLinks = [
-    { href: `/${lang}/guide`, label: '소개' },
     { href: `/${lang}/guide`, label: '가이드' },
     { href: `/${lang}/faq`, label: 'FAQ' },
+    { href: `/${lang}/community-guidelines`, label: '커뮤니티 가이드' },
     { href: `/${lang}/privacy`, label: '개인정보' },
     { href: `/${lang}/terms`, label: '이용약관' },
     { href: `/${lang}/contact`, label: '문의' },
@@ -45,7 +45,7 @@ export default function SocialBottomBar() {
         <div className="flex flex-col items-center gap-6">
           <div className="text-center">
             <p className="text-lg font-semibold text-white">바다거북스프</p>
-            <p className="mt-1 text-sm text-slate-400">질문으로 진실을 밝혀내는 추리 놀이터</p>
+            <p className="mt-1 text-sm text-slate-400">AI와 함께 사건의 진실을 추리하는 미스터리 게임</p>
           </div>
 
           <div className="flex items-center justify-center gap-3 sm:gap-5">
@@ -66,7 +66,7 @@ export default function SocialBottomBar() {
 
           <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-slate-400">
             {legalLinks.map((link) => (
-              <Link key={link.label} href={link.href} className="hover:text-white transition-colors">
+              <Link key={link.href} href={link.href} className="hover:text-white transition-colors">
                 {link.label}
               </Link>
             ))}

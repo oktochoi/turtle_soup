@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getMessages, type Locale, isValidLocale, defaultLocale } from '@/lib/i18n';
 import { notFound } from 'next/navigation';
+import { SITE_LAST_UPDATED, getSiteUrl, getContactEmail } from '@/lib/site-config';
 
 export async function generateMetadata({
   params,
@@ -9,7 +10,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang } = await params;
   const locale = isValidLocale(lang) ? lang : defaultLocale;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://turtle-soup-rust.vercel.app';
+  const siteUrl = getSiteUrl();
   const baseUrl = `${siteUrl}/${locale}/privacy`;
 
   return {
@@ -46,9 +47,9 @@ export default async function PrivacyPage({
   }
   const locale = lang as Locale;
   const isKo = locale === 'ko';
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://turtle-soup-rust.vercel.app';
-  const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'okto0914@gmail.com';
-  const lastUpdated = '2025-01-17';
+  const siteUrl = getSiteUrl();
+  const contactEmail = getContactEmail();
+  const lastUpdated = SITE_LAST_UPDATED;
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">

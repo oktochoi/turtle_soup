@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getMessages, type Locale, isValidLocale, defaultLocale } from '@/lib/i18n';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { getSiteUrl } from '@/lib/site-config';
 
 export async function generateMetadata({
   params,
@@ -10,14 +11,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang } = await params;
   const locale = isValidLocale(lang) ? lang : defaultLocale;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://turtle-soup-rust.vercel.app';
+  const siteUrl = getSiteUrl();
   const baseUrl = `${siteUrl}/${locale}/guide`;
 
   return {
     title: locale === 'ko' ? '게임 이용 가이드' : 'Game Guide',
     description: locale === 'ko'
-      ? '바다거북스프 게임 플레이 방법을 자세히 알아보세요. 멀티플레이어와 오프라인 모드 모두 지원합니다.'
-      : 'Learn how to play Turtle Soup Riddle in detail. Both multiplayer and offline modes are supported.',
+      ? 'AI 수사 모드, 수사 파일(Dossier), 멀티플레이어까지 — 바다거북스프 플레이·제작·검수 가이드.'
+      : 'AI Investigation mode, Investigation Dossier, multiplayer — full Turtle Soup guide.',
     alternates: {
       canonical: baseUrl,
       languages: {
@@ -57,7 +58,7 @@ export default async function GuidePage({
   }
   const locale = lang as Locale;
   const isKo = locale === 'ko';
-  const lastUpdated = '2025-01-17';
+  const lastUpdated = '2026-08-12';
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">
@@ -71,6 +72,38 @@ export default async function GuidePage({
           </p>
 
           <div className="prose prose-invert max-w-none space-y-8 text-fog">
+            <section className="rounded-xl border border-teal-500/30 bg-teal-500/10 p-6">
+              <h2 className="text-2xl font-bold text-teal-200 mb-4">
+                {isKo ? 'AI 수사 모드 (CASE V2)' : 'AI Investigation Mode (CASE V2)'}
+              </h2>
+              <p className="mb-4">
+                {isKo
+                  ? '각 사건 페이지에서 AI와 1:1 채팅형 수사를 진행할 수 있습니다. 예/아니요/상관없음 질문으로 진실을 좁혀 가고, 가설을 세운 뒤 최종 추리를 제출하면 CASE CLOSED 화면에서 정답·해설·배운 수사법을 확인합니다.'
+                  : 'On each case page, conduct 1:1 chat-style investigation with AI. Narrow down the truth with yes/no/irrelevant questions, submit your final hypothesis, and view the answer, explanation, and learned techniques on the CASE CLOSED screen.'}
+              </p>
+              <ol className="list-decimal pl-6 space-y-2 text-sm">
+                <li>{isKo ? '브리핑: 사건 상황을 읽고 수사를 시작합니다.' : 'Briefing: Read the situation and start investigating.'}</li>
+                <li>{isKo ? '수사: AI에게 질문하고, 힌트(최대 3회)와 가설 점검을 활용합니다.' : 'Investigation: Ask AI questions, use hints (up to 3) and hypothesis checks.'}</li>
+                <li>{isKo ? '종결: 추리를 제출하고 정확도·해설·수사법을 확인합니다.' : 'Closed: Submit your theory and review accuracy, explanation, and techniques.'}</li>
+              </ol>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-bold text-brass mb-4">
+                {isKo ? '수사 파일 (Investigation Dossier)' : 'Investigation Dossier'}
+              </h2>
+              <p className="mb-4">
+                {isKo
+                  ? '각 사건 하단에는 스포일러 없이 읽을 수 있는 「수사 파일」이 제공됩니다. 사건 개요, 유형별 수사법, 추천 질문, AI 수사 방식 설명이 포함되어 있어 처음 접하는 분도 방향을 잡기 쉽습니다. 수사 완료 후에는 CASE CLOSED 화면과 접힌 해설 섹션에서 반전 포인트를 확인할 수 있습니다.'
+                  : 'Each case includes an Investigation Dossier at the bottom—readable without spoilers. It covers overview, category-specific techniques, starter questions, and AI investigation method.'}
+              </p>
+              <p className="text-sm text-fog/80">
+                {isKo
+                  ? '사건을 직접 만드는 경우, 「공개 해설」 필드를 작성하면 다른 수사관과 검색·AdSense 품질 모두에 도움이 됩니다. UGC 사건은 운영팀 검수(pending) 후 공개됩니다.'
+                  : 'When creating cases, fill in the optional public explanation. UGC cases are published after admin review (pending status).'}
+              </p>
+            </section>
+
             <section>
               <h2 className="text-2xl font-bold text-brass mb-4">
                 {isKo ? '게임 소개' : 'Game Introduction'}

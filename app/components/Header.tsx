@@ -120,10 +120,9 @@ export default function Header() {
   };
 
   const navLinks = [
-    { href: '/problems', label: '문제' },
-    { href: '/rooms', label: t.nav.multiplayer },
-    { href: '/ranking', label: t.nav.ranking },
-    { href: '/guide', label: t.nav.tutorial },
+    { href: '/problems', label: '사건' },
+    { href: '/ranking', label: '랭킹' },
+    { href: '/create-problem', label: '사건 만들기' },
   ];
 
   return (

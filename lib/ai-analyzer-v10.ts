@@ -319,6 +319,14 @@ async function runNLI(premise: string, hypothesis: string): Promise<NLIScores> {
   return scores;
 }
 
+/** Public NLI scores for V11 Case Knowledge pipeline (does not decide YES/NO alone). */
+export async function runNLIScores(
+  premise: string,
+  hypothesis: string
+): Promise<{ entailment: number; contradiction: number; neutral: number }> {
+  return runNLI(premise, hypothesis);
+}
+
 // ─── Decision policy ─────────────────────────────────────────
 
 function decideLabel(args: {

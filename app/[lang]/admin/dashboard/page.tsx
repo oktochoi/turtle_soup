@@ -26,6 +26,7 @@ type DashboardStats = {
     created_week: number;
     total_likes: number;
     total_views: number;
+    pending: number;
   };
   events: {
     total: number;
@@ -139,7 +140,8 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
       ]);
 
       // 문제 통계
-      const [problemsTotal, problemsToday, problemsWeek, problemsLikes, problemsViews] = await Promise.all([
+      const [problemsTotal, problemsToday, problemsWeek, problemsLikes, problemsViews, problemsPending] =
+        await Promise.all([
         supabase.from('problems').select('id', { count: 'exact', head: true }),
         supabase
           .from('problems')
@@ -151,6 +153,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
           .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
         supabase.from('problems').select('like_count'),
         supabase.from('problems').select('view_count'),
+        supabase.from('problems').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       ]);
 
       const totalLikes = problemsLikes.data?.reduce((sum, p) => sum + (p.like_count || 0), 0) || 0;
@@ -391,6 +394,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
           created_week: problemsWeek.count || 0,
           total_likes: totalLikes,
           total_views: totalViews,
+          pending: problemsPending.count || 0,
         },
         events: {
           total: eventsTotal.count || 0,
@@ -453,7 +457,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
   const displayStats = stats || {
     users: { total: 0, registered: 0, active_today: 0, active_week: 0, active_month: 0 },
     rooms: { total: 0, active: 0, created_today: 0, created_week: 0 },
-    problems: { total: 0, created_today: 0, created_week: 0, total_likes: 0, total_views: 0 },
+    problems: { total: 0, created_today: 0, created_week: 0, total_likes: 0, total_views: 0, pending: 0 },
     events: { total: 0, today: 0, week: 0, conversion_rate: 0 },
     ai_learning: { total_reports: 0, valid_for_learning: 0, patterns_found: 0, patterns_applied: 0 },
     bug_reports: { total: 0, pending: 0, reviewed: 0, fixed: 0, rejected: 0 },
@@ -566,6 +570,12 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
                 <span className="text-xl font-semibold">{displayStats.problems.created_week.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-fog">{lang === 'ko' ? '검수 대기' : 'Pending Review'}</span>
+                <span className="text-xl font-semibold text-yellow-400">
+                  {displayStats.problems.pending.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-fog">{lang === 'ko' ? '총 좋아요' : 'Total Likes'}</span>
                 <span className="text-xl font-semibold text-pink-400">{displayStats.problems.total_likes.toLocaleString()}</span>
               </div>
@@ -574,6 +584,22 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
                 <span className="text-xl font-semibold text-brass">{displayStats.problems.total_views.toLocaleString()}</span>
               </div>
             </div>
+            {displayStats.problems.pending > 0 && (
+              <div className="mt-4 p-3 bg-teal-500/10 border border-teal-500/30 rounded-lg">
+                <p className="text-sm text-teal-300">
+                  <i className="ri-file-search-line mr-2"></i>
+                  {lang === 'ko'
+                    ? `${displayStats.problems.pending}개의 UGC 사건이 검수 대기 중입니다.`
+                    : `${displayStats.problems.pending} UGC cases are pending review.`}
+                </p>
+                <a
+                  href={`/${lang}/admin/problems`}
+                  className="mt-2 inline-block text-xs text-teal-200 underline hover:text-teal-100"
+                >
+                  {lang === 'ko' ? '사건 검수 페이지 →' : 'Go to Case Review →'}
+                </a>
+              </div>
+            )}
           </div>
 
           {/* 이벤트 통계 */}
@@ -760,11 +786,16 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
               )}
             </a>
             <a
-              href={`/${lang}/admin/dashboard`}
-              className="p-4 bg-ink-600/50 hover:bg-brass/20 border border-brass/25 hover:border-brass/50 rounded-lg transition-all text-center group"
+              href={`/${lang}/admin/problems`}
+              className="p-4 bg-ink-600/50 hover:bg-teal-500/20 border border-brass/25 hover:border-teal-500/50 rounded-lg transition-all text-center group"
             >
-              <i className="ri-dashboard-line text-3xl mb-2 block text-brass group-hover:scale-110 transition-transform"></i>
-              <span className="text-sm font-semibold">{lang === 'ko' ? '대시보드' : 'Dashboard'}</span>
+              <i className="ri-file-search-line text-3xl mb-2 block text-teal-400 group-hover:scale-110 transition-transform"></i>
+              <span className="text-sm font-semibold">{lang === 'ko' ? '사건 검수' : 'Case Review'}</span>
+              {displayStats.problems.pending > 0 && (
+                <span className="block mt-1 text-xs text-yellow-400">
+                  {displayStats.problems.pending} {lang === 'ko' ? '대기중' : 'pending'}
+                </span>
+              )}
             </a>
             <a
               href={`/${lang}`}

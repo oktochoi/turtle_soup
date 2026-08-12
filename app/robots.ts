@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next';
+import { getSiteUrl } from '@/lib/site-config';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://turtle-soup-rust.vercel.app';
+const siteUrl = getSiteUrl();
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -18,6 +19,7 @@ export default function robots(): MetadataRoute.Robots {
           '/turtle_room/',
           '/room/',
           '/play/',
+          '/_next/',
         ],
       },
     ],

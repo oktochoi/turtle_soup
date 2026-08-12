@@ -5,6 +5,8 @@ import ToastContainer from "@/components/Toast";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AnalyticsGate } from "@/components/AnalyticsGate";
 import SocialBottomBar from "@/components/SocialBottomBar";
+import MobileBottomNav from "@/components/nav/MobileBottomNav";
+import { getSiteUrl } from "@/lib/site-config";
 import { getMessages, type Locale, isValidLocale, defaultLocale } from "@/lib/i18n";
 import { notFound } from "next/navigation";
 import { measurePageLoad, monitorMemoryUsage } from "@/lib/performance-monitor";
@@ -14,11 +16,11 @@ export async function generateMetadata({
 }: {
   params: Promise<{ lang: string }>;
 }): Promise<Metadata> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://turtle-soup-rust.vercel.app";
+  const siteUrl = getSiteUrl();
   const baseUrl = `${siteUrl}/ko`;
 
-  const title = "바다거북스프 | 추리 퀴즈 문제 모음";
-  const description = "바다거북스프 문제를 풀어보세요. 레전드 문제, 어려운 문제, 공포·반전 문제까지 다양한 추리 퀴즈를 즐길 수 있습니다. 멀티플레이, 오늘의 문제, 랭킹까지.";
+  const title = "바다거북스프 | AI 사건 수사 추리 게임";
+  const description = "AI에게 자유롭게 질문하며 사건의 진실을 밝혀내세요. 레전드·공포·반전 CASE와 싱글 수사, 랭킹까지.";
   const ogImage = `${siteUrl}/og.png`;
 
   return {
@@ -80,7 +82,7 @@ export default async function LangLayout({
 
   const locale = lang as Locale;
   const messages = getMessages(locale);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://turtle-soup-rust.vercel.app";
+  const siteUrl = getSiteUrl();
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -106,10 +108,11 @@ export default async function LangLayout({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
 
-      <div className="flex flex-col min-h-screen bg-transparent">
+      <div className="flex flex-col min-h-screen bg-transparent pb-16 md:pb-0">
         <Header />
         <main className="flex-1">{children}</main>
         <SocialBottomBar />
+        <MobileBottomNav />
       </div>
 
       <ToastContainer />

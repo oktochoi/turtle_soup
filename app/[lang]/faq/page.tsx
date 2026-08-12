@@ -2,6 +2,9 @@ import type { Metadata } from 'next';
 import { getMessages, type Locale, isValidLocale, defaultLocale } from '@/lib/i18n';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import JsonLdServer from '@/components/JsonLdServer';
+import { buildFaqPageJsonLd } from '@/lib/seo/problem-structured-data';
+import { SITE_LAST_UPDATED, getSiteUrl } from '@/lib/site-config';
 
 export async function generateMetadata({
   params,
@@ -10,14 +13,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang } = await params;
   const locale = isValidLocale(lang) ? lang : defaultLocale;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://turtle-soup-rust.vercel.app';
+  const siteUrl = getSiteUrl();
   const baseUrl = `${siteUrl}/${locale}/faq`;
 
   return {
     title: locale === 'ko' ? '자주 묻는 질문' : 'FAQ',
     description: locale === 'ko'
-      ? '바다거북스프 게임에 대한 자주 묻는 질문과 답변을 확인하세요.'
-      : 'Check frequently asked questions and answers about Turtle Soup Riddle.',
+      ? 'AI 수사 모드, 수사 파일, UGC 검수, AdSense·개인정보 등 바다거북스프 FAQ.'
+      : 'AI Investigation, Dossier, UGC moderation, privacy — Turtle Soup FAQ.',
     alternates: {
       canonical: baseUrl,
       languages: {
@@ -59,6 +62,24 @@ export default async function FAQPage({
   const isKo = locale === 'ko';
 
   const faqs = [
+    {
+      question: isKo ? 'AI 수사 모드는 어떻게 플레이하나요?' : 'How do I play AI Investigation mode?',
+      answer: isKo
+        ? '사건 페이지에서 「수사 시작」을 누르면 AI와 채팅형으로 예/아니요/상관없음 질문을 할 수 있습니다. 가설을 세우고 「진실을 알 것 같아요」로 중간 점검한 뒤, 최종 추리를 제출하면 CASE CLOSED 화면에서 정답·해설·배운 수사법을 확인합니다. 힌트는 사건당 최대 3회 사용할 수 있습니다.'
+        : 'On a case page, tap "Start Investigation" to ask yes/no/irrelevant questions via chat with AI. Submit your final theory on CASE CLOSED to see the answer, explanation, and techniques learned. Up to 3 hints per case.',
+    },
+    {
+      question: isKo ? '수사 파일(Investigation Dossier)이란?' : 'What is an Investigation Dossier?',
+      answer: isKo
+        ? '각 사건 하단에 있는 SSR 수사 가이드입니다. 스포일러 없이 사건 개요, 유형별 수사법, 추천 질문, AI 수사 방식을 제공합니다. 검색엔진과 AdSense 심사에서도 읽을 거리로 인식되도록 설계되었습니다. 작성자가 공개 해설을 작성한 경우, 수사 전에는 접힌 상태로 스포일러를 방지합니다.'
+        : 'An SSR investigation guide at the bottom of each case page—overview, category techniques, starter questions, and AI method without spoilers.',
+    },
+    {
+      question: isKo ? '내가 만든 사건은 언제 공개되나요?' : 'When is my submitted case published?',
+      answer: isKo
+        ? 'UGC 사건은 제출 즉시 pending(검수 대기) 상태로 저장됩니다. 운영팀이 커뮤니티 가이드라인과 콘텐츠 품질을 확인한 뒤 승인(published) 또는 거절(archived)합니다. 보통 24시간 이내 처리되며, 승인 전에는 작성자와 관리자만 미리볼 수 있습니다. 사건 신고 기능으로 부적절한 콘텐츠를 제보할 수 있습니다.'
+        : 'UGC cases are saved as pending on submit. Admins review within ~24 hours and approve or reject. Only author and admins can preview before approval.',
+    },
     {
       question: isKo ? '게임을 시작하려면 로그인이 필요한가요?' : 'Do I need to log in to start playing?',
       answer: isKo
@@ -122,6 +143,8 @@ export default async function FAQPage({
   ];
 
   return (
+    <>
+      <JsonLdServer data={buildFaqPageJsonLd(faqs)} />
     <main className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 max-w-4xl">
         <div className="bg-ink-700/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 lg:p-10 border border-brass/20 shadow-xl">
@@ -130,6 +153,8 @@ export default async function FAQPage({
           </h1>
           <p className="text-fog text-sm mb-8">
             {isKo ? '게임 이용 중 궁금한 점을 확인하세요' : 'Find answers to your questions about using the game'}
+            {' · '}
+            {isKo ? '최종 업데이트' : 'Last updated'}: {SITE_LAST_UPDATED}
           </p>
 
           <div className="space-y-6">
@@ -165,6 +190,7 @@ export default async function FAQPage({
         </div>
       </div>
     </main>
+    </>
   );
 }
 

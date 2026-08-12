@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development next dev -H 0.0.0.0 -p 3000",
     "build": "next build",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:v11": "npx --yes tsx scripts/v11-regression.ts",
+    "test:v11:e2e": "npx --yes tsx scripts/v11-e2e.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",

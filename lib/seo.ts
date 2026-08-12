@@ -1,6 +1,8 @@
 // SEO 메타데이터 헬퍼 함수 — 한국어 단일 언어
 
-const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://turtle-soup-rust.vercel.app';
+import { getSiteUrl } from '@/lib/site-config';
+
+const baseUrl = getSiteUrl();
 const twitterHandle = '@turtlesoup';
 
 export type Locale = 'ko';

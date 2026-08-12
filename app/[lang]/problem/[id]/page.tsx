@@ -1,8 +1,15 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { canViewNonPublicProblem, PUBLIC_PROBLEM_STATUSES } from '@/lib/problems/public';
 import { generateMetadataForProblem } from './metadata';
 import ProblemClient from './ProblemClient';
+import CaseDossier from '@/components/case/CaseDossier';
+import JsonLdServer from '@/components/JsonLdServer';
+import {
+  buildProblemArticleJsonLd,
+  buildProblemFaqJsonLd,
+} from '@/lib/seo/problem-structured-data';
 import type { Problem } from '@/lib/types';
 
 async function getRelatedProblems(currentId: string, lang: 'ko', difficulty: string) {
@@ -13,6 +20,7 @@ async function getRelatedProblems(currentId: string, lang: 'ko', difficulty: str
       .select('id, title, difficulty')
       .eq('lang', lang)
       .eq('difficulty', difficulty)
+      .in('status', [...PUBLIC_PROBLEM_STATUSES])
       .neq('id', currentId)
       .order('like_count', { ascending: false })
       .limit(4);
@@ -93,11 +101,29 @@ async function getProblem(problemId: string, requestLang: 'ko'): Promise<Problem
 
   if (!data) return null;
 
-  const row = data as any;
-  const problemLang = (row.lang ?? row.language ?? 'ko') === 'ko' ? 'ko' : null;
+  const row = data as Problem & { status?: string; user_id?: string; lang?: string; language?: string };
+  const problemLang = (row.lang ?? (row as { language?: string }).language ?? 'ko') === 'ko' ? 'ko' : null;
   if (problemLang !== requestLang) return null;
 
-  return data as Problem;
+  const status = row.status || 'published';
+  if (!canViewNonPublicProblem({ status, authorUserId: row.user_id })) {
+    const { data: { user } } = await supabase.auth.getUser();
+    let viewerIsAdmin = false;
+    if (user) {
+      const { data: u } = await supabase.from('users').select('is_admin').eq('id', user.id).maybeSingle();
+      viewerIsAdmin = u?.is_admin === true;
+    }
+    if (!canViewNonPublicProblem({
+      status,
+      authorUserId: row.user_id,
+      viewerUserId: user?.id,
+      viewerIsAdmin,
+    })) {
+      return null;
+    }
+  }
+
+  return row as Problem;
 }
 
 async function getQuizContent(problemId: string, quizType: string): Promise<any> {
@@ -123,15 +149,24 @@ export default async function ProblemPage({ params }: Props) {
 
   const difficulty = (problem as any).difficulty || 'medium';
   const relatedProblems = await getRelatedProblems(id, locale, difficulty);
+  const isSoup =
+    (problem as Problem & { type?: string }).type === 'soup' ||
+    !(problem as Problem & { type?: string }).type;
 
   return (
     <>
+      <JsonLdServer data={buildProblemArticleJsonLd(problem, locale)} />
+      {isSoup && <JsonLdServer data={buildProblemFaqJsonLd(problem)} />}
       <ProblemClient
         initialProblem={problem}
         initialQuizContent={quizContent}
         lang={locale}
         problemId={id}
       />
+      {(problem as Problem & { type?: string }).type === 'soup' ||
+      !(problem as Problem & { type?: string }).type ? (
+        <CaseDossier problem={problem} lang={locale} />
+      ) : null}
       {relatedProblems.length > 0 && (
         <RelatedProblems problems={relatedProblems} lang={locale} difficulty={difficulty} />
       )}
