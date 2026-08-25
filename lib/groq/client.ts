@@ -15,11 +15,12 @@ export function getGroqClient(): Groq {
 
 /** Prefer a model that reliably returns JSON/tool args on Groq free tier. */
 export function getGroqModel(): string {
-  return process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
+  // 70B is still fast on Groq and follows few-shot style better than 8B
+  return process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 }
 
 export function getGroqJudgeModel(): string {
-  return process.env.GROQ_JUDGE_MODEL || process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
+  return process.env.GROQ_JUDGE_MODEL || process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 }
 
 function sleep(ms: number) {
