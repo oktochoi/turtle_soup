@@ -3,29 +3,18 @@ import { assertAdminAuth } from '@/lib/auth/route-secrets';
 import { runPuzzleGenerationPipeline } from '@/lib/content/threads-puzzle/pipeline';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 120;
 
 /**
- * Manual generation → pending review queue (no auto Threads).
+ * Manual generation → one pending puzzle.
  * Authorization: Bearer ADMIN_SECRET
- * Body JSON (optional): { "batchSize": 8 }
  */
 export async function POST(request: NextRequest) {
   const denied = assertAdminAuth(request);
   if (denied) return denied;
 
-  let batchSize = 8;
   try {
-    const body = (await request.json()) as { batchSize?: number; skipThreads?: boolean };
-    if (typeof body?.batchSize === 'number' && Number.isFinite(body.batchSize)) {
-      batchSize = Math.max(1, Math.min(15, Math.floor(body.batchSize)));
-    }
-  } catch {
-    /* empty body ok */
-  }
-
-  try {
-    const result = await runPuzzleGenerationPipeline({ batchSize });
+    const result = await runPuzzleGenerationPipeline({ batchSize: 1 });
     return NextResponse.json(
       {
         success: result.ok,

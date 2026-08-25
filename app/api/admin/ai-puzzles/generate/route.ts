@@ -3,28 +3,15 @@ import { requireAdminSession } from '@/lib/auth/require-admin-session';
 import { runPuzzleGenerationPipeline } from '@/lib/content/threads-puzzle/pipeline';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 120;
 
-/**
- * Session-admin: generate multiple pending AI puzzles for review.
- * Body: { "batchSize"?: number }  // default 8, max 15
- */
+/** Session-admin: generate exactly one pending AI puzzle. */
 export async function POST(request: NextRequest) {
   const auth = await requireAdminSession();
   if (!auth.ok) return auth.response;
 
-  let batchSize = 8;
   try {
-    const body = (await request.json()) as { batchSize?: number };
-    if (typeof body?.batchSize === 'number' && Number.isFinite(body.batchSize)) {
-      batchSize = Math.max(1, Math.min(15, Math.floor(body.batchSize)));
-    }
-  } catch {
-    /* empty body */
-  }
-
-  try {
-    const result = await runPuzzleGenerationPipeline({ batchSize });
+    const result = await runPuzzleGenerationPipeline({ batchSize: 1 });
     return NextResponse.json(
       {
         success: result.ok,

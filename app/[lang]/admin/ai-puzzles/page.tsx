@@ -53,7 +53,6 @@ export default function AdminAiPuzzlesPage({ params }: { params: Promise<{ lang:
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
-  const [batchSize, setBatchSize] = useState(5);
   const [message, setMessage] = useState<string | null>(null);
 
   const selected = items.find((i) => i.id === selectedId) || null;
@@ -166,25 +165,21 @@ export default function AdminAiPuzzlesPage({ params }: { params: Promise<{ lang:
     }
   };
 
-  const generateMore = async () => {
+  const generateOne = async () => {
     setGenBusy(true);
     setMessage(null);
     try {
       const res = await fetch('/api/admin/ai-puzzles/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ batchSize }),
+        body: JSON.stringify({}),
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
         throw new Error(json.error || '생성 실패');
       }
-      const n = json.count || json.saved?.length || 0;
-      setMessage(
-        n > 0
-          ? `${n}개 후보가 검수 대기열에 추가됨. 골라서 수락하면 공개됩니다.`
-          : '저장에 성공한 후보가 없습니다. 다시 눌러 주세요.'
-      );
+      const title = json.saved?.[0]?.title;
+      setMessage(title ? `「${title}」 검수 대기열에 추가됨` : '후보 1개가 추가됨');
       await loadData();
     } catch (e) {
       handleError(e, 'AI 후보 생성', true);
@@ -199,59 +194,22 @@ export default function AdminAiPuzzlesPage({ params }: { params: Promise<{ lang:
         <div>
           <h1 className="text-2xl font-semibold text-white">AI 문제 검수</h1>
           <p className="mt-1 text-sm text-slate-400">
-            Hobby·Groq 무료 한도(~8k TPM) 때문에 프롬프트를 작게 보냅니다. 한 번에 5개 권장. 수락한 것만 공개됩니다.
+            「만들기」를 누르면 후보 1개가 대기열에 쌓입니다. 수락한 것만 공개됩니다.
           </p>
         </div>
-        <Link href={`/${lang}/admin/dashboard`} className="btn-ghost !text-xs self-start">
-          대시보드
-        </Link>
-      </div>
-
-      <div className="mb-6 rounded-xl border border-brass/30 bg-ink-700/40 p-4">
-        <p className="text-sm font-medium text-white mb-3">한번에 후보 만들기</p>
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          {[5, 8, 10, 12].map((n) => (
-            <button
-              key={n}
-              type="button"
-              disabled={genBusy}
-              onClick={() => setBatchSize(n)}
-              className={`rounded-lg px-3 py-1.5 text-xs border ${
-                batchSize === n
-                  ? 'border-brass bg-brass/20 text-brass'
-                  : 'border-slate-600 text-slate-300 hover:border-slate-400'
-              }`}
-            >
-              {n}개
-            </button>
-          ))}
-          <label className="text-xs text-slate-400 flex items-center gap-2 ml-1">
-            직접
-            <input
-              type="number"
-              min={1}
-              max={15}
-              value={batchSize}
-              onChange={(e) => setBatchSize(Math.min(15, Math.max(1, Number(e.target.value) || 8)))}
-              className="w-14 rounded border border-slate-600 bg-slate-900 px-2 py-1 text-sm"
-            />
-          </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="btn-primary !py-2 !px-4 text-sm font-semibold"
+            disabled={genBusy}
+            onClick={generateOne}
+          >
+            {genBusy ? '생성 중…' : '문제 1개 만들기'}
+          </button>
+          <Link href={`/${lang}/admin/dashboard`} className="btn-ghost !text-xs">
+            대시보드
+          </Link>
         </div>
-        <button
-          type="button"
-          className="btn-primary !py-2.5 !px-5 text-sm font-semibold"
-          disabled={genBusy}
-          onClick={generateMore}
-        >
-          {genBusy
-            ? `${batchSize}개 생성 중… (1~3분 걸릴 수 있음)`
-            : `${batchSize}개 한번에 만들기`}
-        </button>
-        {genBusy && (
-          <p className="mt-2 text-xs text-slate-400">
-            Groq로 후보 생성·품질검사 중입니다. 페이지를 닫지 마세요.
-          </p>
-        )}
       </div>
 
       {message && (
@@ -267,7 +225,7 @@ export default function AdminAiPuzzlesPage({ params }: { params: Promise<{ lang:
           <aside className="space-y-2 max-h-[70vh] overflow-y-auto">
             {items.length === 0 ? (
               <p className="text-sm text-slate-400">
-                대기 중인 AI 문제가 없습니다. 위에서 「한번에 만들기」를 눌러 주세요.
+                대기 중인 AI 문제가 없습니다. 「문제 1개 만들기」를 눌러 주세요.
               </p>
             ) : (
               items.map((p) => (
