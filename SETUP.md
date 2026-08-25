@@ -36,11 +36,12 @@ supabase/migrations/072_problem_moderation.sql   # 아직이면
 
 ```env
 GROQ_API_KEY=gsk_...
-GROQ_MODEL=llama-3.3-70b-versatile
-GROQ_JUDGE_MODEL=llama-3.3-70b-versatile
+GROQ_MODEL=openai/gpt-oss-20b
+GROQ_JUDGE_MODEL=openai/gpt-oss-20b
 ```
 
-> few-shot 품질용으로 `llama-3.3-70b-versatile` 권장. `gpt-oss-20b`는 JSON이 자주 깨집니다.
+> 이 프로젝트 Groq 계정은 `llama-*`에 접근이 없습니다. `openai/gpt-oss-20b`를 쓰고, 코드는 **json_schema/json_object를 쓰지 않습니다**(그 모드가 400을 냅니다).
+
 ---
 
 ## 3. Meta Developers에서 가져올 값

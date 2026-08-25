@@ -3,32 +3,41 @@ import { formatThreadsPost } from './format';
 import { LTP_FEW_SHOTS } from './few-shot';
 import type { PerformanceSummary, PuzzleCandidate, RecentProblemBrief } from './types';
 
-const SYSTEM = `너는 한국어 「바다거북스프」 출제자다. 장르는 상황 수수께끼(LTP/수평사고)다.
+const SYSTEM = `너는 한국어 「바다거북스프」(상황 수수께끼 / LTP) 출제자다.
 
-목표: 예1~예5와 같은 「짧은 표면 + 착각 하나 이면」을 NEW로 만든다.
-복제 금지: 예시에 나온 직소/뷔페/세차/엘리베이터/하트쿠키/원조 바다거북수프/성냥사막/바텐더 총 등 유명작.
+아래 예1~예5의 질감만 배워라. 내용·정답은 절대 베끼지 마라.
 
-표면(content):
-- 1~3문장. 누가·어디서·무엇을 했고 이상한 결과만.
-- 감정 묘사·수사 보고서·장황한 배경 금지.
-- 끝에 "왜 그랬을까?" 넣지 말 것.
+${LTP_FEW_SHOTS}
 
-이면(answer):
-- 2~4문장. 핵심 착각을 깨는 전말.
-- 표면의 이상한 점을 모두 설명.
-- 정답에만 새 인물/직업을 갑자기 넣지 말 것.
+# 반드시 지킬 형식
+표면(content): 1~3문장의 건조한 사실. "왜?"만 남긴다. 퀴즈 설명문·문제 해설체 금지.
+이면(answer): 착각 하나를 뒤집으면 표면이 전부 설명되는 전말 (2~4문장). 현대 기술·로봇·시스템으로 때우지 말 것.
+title: 한국어 짧은 명사구만 (영어 제목 금지).
+difficulty: easy | medium | hard 중 하나(영어만).
+coreTrick: 착각 유형 한 줄.
 
-착각 유형(coreTrick) 예: 대상 착각, 목적 착각, 규칙 착각, 신체 조건, 시간 착각, 관계 착각
+# 금지
+- 예시(직소/뷔페/세차/엘리베이터/하트쿠키) 및 원조 바다거북수프 복제
+- 꿈/촬영/게임이었다, 사람이 아니었다
+- 말장난·동음이의만으로 끝나는 문제
+- "이 상황에서 ~이유는?" 같은 시험문제 말투
+- 장황한 감성 소설
 
-금지: 꿈/촬영/게임이었다, 사람이 아니었다, 말장난만, 클릭베이트 제목, 지나친 잔혹.
-
-submit_turtle_soup 도구로만 제출.
-difficulty는 easy|medium|hard.
-
-${LTP_FEW_SHOTS}`;
+최종 출력은 JSON 객체 하나.`;
 
 function asString(v: unknown): string {
   return typeof v === 'string' ? v : v == null ? '' : String(v);
+}
+
+function mapDifficulty(
+  raw: string,
+  fallback: PuzzleCandidate['difficulty']
+): PuzzleCandidate['difficulty'] {
+  const s = raw.toLowerCase().trim();
+  if (['easy', '초급', '쉬움', '하'].includes(s)) return 'easy';
+  if (['hard', '고급', '어려움', '상'].includes(s)) return 'hard';
+  if (['medium', '중급', '보통', '중'].includes(s)) return 'medium';
+  return fallback;
 }
 
 function hardBanReason(c: PuzzleCandidate): string | null {
@@ -37,23 +46,27 @@ function hardBanReason(c: PuzzleCandidate): string | null {
     [/꿈이(었|였)다/, '꿈이었다'],
     [/영화\s*촬영|연극이(었|였)다|게임\s*속이(었|였)다/, '촬영/게임'],
     [/사실\s*.*사람이\s*아니/, '사람이 아니었다'],
-    [/99%\s*가?\s*못\s*맞|천재\s*테스트|충격적인\s*반전/, '클릭베이트'],
-    // Classic clones (surface keywords)
+    [/99%\s*가?\s*못\s*맞|천재\s*테스트/, '클릭베이트'],
     [/바다거북\s*수프/, '원조 복제'],
-    [/직소|직쏘|퍼즐\s*상자/, '하늘/직소 복제'],
-    [/뷔페/, '식당/뷔페 복제'],
-    [/세차/, '5분/세차 복제'],
-    [/엘리베이터.*12\s*층|12\s*층.*엘리베이터|키가\s*작/, '엘리베이터 복제'],
+    [/직소|직쏘\s*퍼즐/, '하늘/직소 복제'],
+    [/뷔페/, '뷔페 복제'],
+    [/세차/, '세차 복제'],
+    [/엘리베이터.*12\s*층|키가\s*작아/, '엘리베이터 복제'],
     [/하트\s*쿠키|발렌타인/, '하트쿠키 복제'],
   ] as const;
   for (const [re, label] of banned) {
     if (re.test(blob)) return label;
   }
   if (!c.title.trim()) return '제목 없음';
+  if (!/[\uac00-\ud7a3]/.test(c.title)) return '제목이 한국어가 아님';
   if (c.content.trim().length < 18) return '표면 너무 짧음';
   if (c.answer.trim().length < 20) return '이면 너무 짧음';
-  // Too novel-like
-  if (c.content.length > 280) return '표면이 너무 김(1~3문장으로)';
+  if (c.content.length > 320) return '표면이 너무 김';
+  if (/로봇|자동\s*주차|AI|가상현실|나노/.test(blob)) return '과도한 기술 설정';
+  // Exam-style prompts are not LTP surfaces
+  if (/이유는\s*무엇|무엇인가요\s*\?|정답은\s*무엇/.test(c.content)) {
+    return '시험문제 말투';
+  }
   return null;
 }
 
@@ -61,16 +74,11 @@ function normalizeCandidate(
   raw: Record<string, unknown>,
   fallbackDifficulty: PuzzleCandidate['difficulty']
 ): { ok: true; candidate: PuzzleCandidate } | { ok: false; reason: string } {
-  const difficultyRaw = asString(raw.difficulty).toLowerCase();
-  const difficulty = (['easy', 'medium', 'hard'].includes(difficultyRaw)
-    ? difficultyRaw
-    : fallbackDifficulty) as PuzzleCandidate['difficulty'];
-
   let content = asString(raw.content).trim().replace(/\s*왜 그랬을까\??\s*$/u, '').trim();
   let title = asString(raw.title).trim();
   const answer = asString(raw.answer).trim();
 
-  if (content.length > 280) content = content.slice(0, 280).trim();
+  if (content.length > 300) content = content.slice(0, 300).trim();
   if (title.length > 24) title = title.slice(0, 24).trim();
 
   const c: PuzzleCandidate = {
@@ -78,7 +86,7 @@ function normalizeCandidate(
     content,
     answer,
     explanation: asString(raw.explanation || raw.whyInteresting).trim() || answer.slice(0, 140),
-    difficulty,
+    difficulty: mapDifficulty(asString(raw.difficulty), fallbackDifficulty),
     coreTrick: asString(raw.coreTrick || raw.core_trick).trim() || '착각 반전',
     place: asString(raw.place).trim() || '일상',
     characterRelation:
@@ -103,44 +111,39 @@ export async function generatePuzzleCandidates(args: {
     .join('\n');
 
   const seed = [
-    '편의점',
+    '세탁소',
     '도서관',
     '지하철',
     '주차장',
-    '세탁소',
     '병원 대기실',
-    '학교 급식',
-    '놀이공원',
-    '카페 와이파이',
-    '택배 상자',
+    '학교 급식실',
+    '카페',
+    '택배함',
     '헬스장',
     '노래방',
     '박물관',
-    '야구장',
     '버스 정류장',
+    '편의점',
+    '수영장 탈의실',
+    '사무실 프린터',
   ][Math.floor(Math.random() * 15)];
-
-  const mode = args.explore
-    ? `실험: 「${seed}」를 배경으로, 예1~5와 같은 짧은 LTP를 새로.`
-    : `표준: 「${seed}」근처 일상에서, 예1~5 톤의 새 LTP.`;
 
   let lastReason = '';
 
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const user = `위 예1~5와 같은 질감으로 새 문제 1개.
-유명작·예시 복제 금지.
-${mode}
+    const user = `예1~예5와 같은 「짧은 표면 + 착각 하나」로 새 문제 1개.
+배경 힌트: ${seed}
 최근 제목(피함): ${recentBrief || '없음'}
-권장 난이도: ${args.performance.recommendedDifficulty}
-${lastReason ? `이전 실패: ${lastReason}. 다른 착각으로.` : ''}
-도구로 제출.`;
+난이도: ${args.performance.recommendedDifficulty}
+${lastReason ? `이전 실패 사유: ${lastReason}. 완전히 다른 착각으로.` : ''}
+시험문제처럼 "이유는?"으로 묻지 말고, 상황만 서술하라.`;
 
     const raw = await groqPuzzleCompletion({
       model: getGroqModel(),
       system: SYSTEM,
       user,
-      temperature: 0.8 + (attempt - 1) * 0.08,
-      maxTokens: 1200,
+      temperature: 0.75 + (attempt - 1) * 0.1,
+      maxTokens: 2500,
     });
 
     const payload =
