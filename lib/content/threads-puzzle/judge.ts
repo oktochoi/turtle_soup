@@ -34,8 +34,20 @@ const judgeSchema = {
   ],
 } as const;
 
-const SYSTEM = `바다거북스프 심사관. pass=true는 score>=7.5이고 불리언 전부 true.
-꿈/촬영/사람이아니었다→notAbsurd=false. 정답만 새설정→noForcedSetup=false. 최근과 같은트릭→notDuplicate=false.
+const SYSTEM = `당신은 바다거북스프(상황 수수께끼/LTP) 심사관이다. 추리소설 심사관이 아니다.
+
+pass=true 조건 (모두):
+- score>=7.5
+- storyNatural: 표면이 짧고 건조한 「사실」 나열인가 (소설체·수사체면 false)
+- vividScene: 상황이 한 장면으로 잡히는가 (장황한 서사면 false)
+- curiosity: 「왜?」가 남고 예/아니요로 파고들 여지가 있는가
+- answerExplainsAll: 이면이 표면의 이상한 점을 모두 설명하는가
+- noForcedSetup: 정답에서만 새 설정/인물/직업을 억지로 넣지 않았는가
+- notAbsurd: 꿈/촬영/사람이아니었다 등 금지 반전이 아닌가 + 착각 반전이 논리적인가
+- notDuplicate: 최근 문제·유명 고전 복제가 아닌가
+- commentWorthy: Threads에서 「혹시 ~인가요?」식 추측 댓글이 나올 만한가
+
+감동 사연·탐정 미스터리면 pass=false.
 reasons/hints는 짧게.`;
 
 export async function judgePuzzleCandidate(args: {
@@ -47,10 +59,11 @@ export async function judgePuzzleCandidate(args: {
     .map((r) => `- ${r.title}`)
     .join('\n');
 
-  const user = `제목:${args.candidate.title}
-본문:${args.candidate.content.slice(0, 500)}
-정답:${args.candidate.answer.slice(0, 280)}
-트릭:${args.candidate.coreTrick.slice(0, 80)}
+  const user = `심사 (LTP / 상황 수수께끼 기준):
+제목:${args.candidate.title}
+표면:${args.candidate.content.slice(0, 450)}
+이면:${args.candidate.answer.slice(0, 350)}
+착각유형:${args.candidate.coreTrick.slice(0, 80)}
 
 최근제목:
 ${recent || '(없음)'}
@@ -63,7 +76,7 @@ JSON 심사.`;
     user,
     schemaName: 'turtle_soup_judge',
     schema: judgeSchema as unknown as Record<string, unknown>,
-    temperature: 0.2,
+    temperature: 0.15,
     maxTokens: 700,
   });
 
