@@ -15,8 +15,8 @@ const judgeSchema = {
     notAbsurd: { type: 'boolean' },
     notDuplicate: { type: 'boolean' },
     commentWorthy: { type: 'boolean' },
-    reasons: { type: 'array', items: { type: 'string' } },
-    improvementHints: { type: 'array', items: { type: 'string' } },
+    reasons: { type: 'array', items: { type: 'string' }, maxItems: 3 },
+    improvementHints: { type: 'array', items: { type: 'string' }, maxItems: 2 },
   },
   required: [
     'pass',
@@ -34,33 +34,28 @@ const judgeSchema = {
   ],
 } as const;
 
-const SYSTEM = `당신은 바다거북스프 품질 심사관이다.
-pass=true 조건: score>=7.5 이고 핵심 불리언(storyNatural, vividScene, curiosity, answerExplainsAll, noForcedSetup, notAbsurd, notDuplicate, commentWorthy)이 모두 true.
-꿈/촬영/사람이 아니었다 류면 notAbsurd=false.
-정답에서만 새 설정을 넣으면 noForcedSetup=false.
-최근 문제와 같은 트릭이면 notDuplicate=false.
-엄격하되 합리적 스토리형 문제는 통과시켜라.`;
+const SYSTEM = `바다거북스프 심사관. pass=true는 score>=7.5이고 불리언 전부 true.
+꿈/촬영/사람이아니었다→notAbsurd=false. 정답만 새설정→noForcedSetup=false. 최근과 같은트릭→notDuplicate=false.
+reasons/hints는 짧게.`;
 
 export async function judgePuzzleCandidate(args: {
   candidate: PuzzleCandidate;
   recent: RecentProblemBrief[];
 }): Promise<JudgeResult> {
   const recent = args.recent
-    .slice(0, 10)
-    .map((r) => `- ${r.title}: ${r.answer.slice(0, 80)}`)
+    .slice(0, 6)
+    .map((r) => `- ${r.title}`)
     .join('\n');
 
-  const user = `심사 대상:
-제목: ${args.candidate.title}
-본문: ${args.candidate.content}
-정답: ${args.candidate.answer}
-해설: ${args.candidate.explanation}
-핵심트릭: ${args.candidate.coreTrick}
+  const user = `제목:${args.candidate.title}
+본문:${args.candidate.content.slice(0, 500)}
+정답:${args.candidate.answer.slice(0, 280)}
+트릭:${args.candidate.coreTrick.slice(0, 80)}
 
-최근 문제:
+최근제목:
 ${recent || '(없음)'}
 
-위 체크리스트로 JSON 심사를 반환하라.`;
+JSON 심사.`;
 
   const result = await groqJsonCompletion<JudgeResult>({
     model: getGroqJudgeModel(),
@@ -69,7 +64,7 @@ ${recent || '(없음)'}
     schemaName: 'turtle_soup_judge',
     schema: judgeSchema as unknown as Record<string, unknown>,
     temperature: 0.2,
-    maxTokens: 1500,
+    maxTokens: 700,
   });
 
   const flags = [

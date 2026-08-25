@@ -9,7 +9,7 @@ const candidateSchema = {
     candidates: {
       type: 'array',
       minItems: 3,
-      maxItems: 5,
+      maxItems: 3,
       items: {
         type: 'object',
         additionalProperties: false,
@@ -41,26 +41,11 @@ const candidateSchema = {
   required: ['candidates'],
 } as const;
 
-const SYSTEM = `당신은 한국어 바다거북스프(수평적 사고) 미스터리 작가다.
-목표: Threads에 올릴 짧은 미스터리 스토리형 문제를 만든다.
-
-좋은 문제:
-- 평범한 상황 → 이상한 행동/사건 → 이유가 궁금 → 숨겨진 사정 → 정답을 보면 "아 그래서 그랬구나"
-- 인물, 장소, 상황, 행동, 이상한 사건, 숨겨진 사정이 자연스럽게 들어간다
-- 본문 3~7문장, 짧은 영화 한 장면처럼
-- 제목은 짧고 분위기만 (정답 노출·클릭베이트 금지)
-
-금지:
-- 단순 말장난/중의성
-- 아무 단서 없이 정답에서만 새 설정 추가
-- "사실 사람이 아니었다", "꿈이었다", "게임/영화/연극 촬영이었다" 남발
-- 유명 고전 퍼즐 복제
-- 지나친 잔혹·선정적·전문지식 필수
-- 논리적으로 설명되지 않는 정답
-- 클릭베이트 제목 (99%가 못 맞히는, 천재 테스트, 충격적인 반전 등)
-
-정답은 본문에 나온 핵심 행동을 모두 설명해야 한다.
-본문 끝에 "왜 그랬을까?"를 넣지 마라 (게시 포맷터에서 붙인다).`;
+const SYSTEM = `한국어 바다거북스프 미스터리 작가.
+구조: 평범한 상황→이상한 행동→궁금증→숨겨진 사정→정답 시 "아 그래서".
+본문 3~7문장. 제목은 짧고 분위기만(정답·클릭베이트 금지).
+금지: 말장난, 꿈/촬영/사람이 아니었다, 고전 복제, 잔혹·선정, 정답에서만 새 설정.
+본문 끝에 "왜 그랬을까?" 넣지 마라.`;
 
 function bannedContent(c: PuzzleCandidate): string | null {
   const blob = `${c.title}\n${c.content}\n${c.answer}`;
@@ -81,35 +66,42 @@ function bannedContent(c: PuzzleCandidate): string | null {
   return null;
 }
 
+function compactPerformance(p: PerformanceSummary): string {
+  return [
+    `강점: ${p.strongPatterns.slice(0, 3).join(' / ')}`,
+    `약점: ${p.weakPatterns.slice(0, 2).join(' / ')}`,
+    `댓글구조: ${p.highReplyStructures.slice(0, 2).join(' / ')}`,
+    `반복소재(피함): ${[...p.repeatedThemes, ...p.avoidThemes].slice(0, 6).join(', ') || '-'}`,
+    `권장난이도: ${p.recommendedDifficulty}`,
+  ].join('\n');
+}
+
 export async function generatePuzzleCandidates(args: {
   recent: RecentProblemBrief[];
   performance: PerformanceSummary;
   explore?: boolean;
 }): Promise<PuzzleCandidate[]> {
+  // Keep prompt small for Groq ~8k TPM free tier
   const recentBrief = args.recent
-    .slice(0, 15)
+    .slice(0, 8)
     .map(
       (r, i) =>
-        `${i + 1}. 제목: ${r.title}\n본문: ${r.content.slice(0, 180)}\n정답요약: ${r.answer.slice(0, 120)}\n트릭: ${r.coreTrick || '-'}`
+        `${i + 1}. ${r.title} | ${(r.coreTrick || r.answer).slice(0, 60)}`
     )
-    .join('\n\n');
+    .join('\n');
 
   const mode = args.explore
-    ? '이번 생성은 실험 모드(약 25%): 새로운 장소·관계·직업·사건을 시도하되 품질 규칙은 지켜라.'
-    : '이번 생성은 성과 원칙 활용 모드(약 75%): 잘 된 구조를 새 이야기로 재해석하되, 소재를 복제하지 마라.';
+    ? '실험모드: 새 장소·관계·사건을 시도하되 품질 규칙은 유지.'
+    : '성과원칙 활용: 잘 된 구조를 새 이야기로. 소재 복제 금지.';
 
-  const user = `최근 성과 요약:
-${JSON.stringify(args.performance, null, 2)}
+  const user = `${compactPerformance(args.performance)}
 
-최근 문제 (중복 금지):
+최근(중복금지):
 ${recentBrief || '(없음)'}
 
 ${mode}
 
-권장 난이도: ${args.performance.recommendedDifficulty}
-
-서로 다른 핵심 트릭을 가진 후보 3~5개를 JSON으로 생성하라.
-각 후보는 제목/본문/정답/해설/난이도/coreTrick/place/characterRelation/whyInteresting를 포함한다.`;
+서로 다른 트릭의 후보 정확히 3개 JSON 생성.`;
 
   const result = await groqJsonCompletion<{ candidates: PuzzleCandidate[] }>({
     model: getGroqModel(),
@@ -118,7 +110,7 @@ ${mode}
     schemaName: 'turtle_soup_candidates',
     schema: candidateSchema as unknown as Record<string, unknown>,
     temperature: args.explore ? 0.9 : 0.75,
-    maxTokens: 5000,
+    maxTokens: 2200,
   });
 
   const cleaned: PuzzleCandidate[] = [];

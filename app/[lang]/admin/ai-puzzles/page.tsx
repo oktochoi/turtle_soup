@@ -53,7 +53,7 @@ export default function AdminAiPuzzlesPage({ params }: { params: Promise<{ lang:
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
-  const [batchSize, setBatchSize] = useState(8);
+  const [batchSize, setBatchSize] = useState(5);
   const [message, setMessage] = useState<string | null>(null);
 
   const selected = items.find((i) => i.id === selectedId) || null;
@@ -199,7 +199,7 @@ export default function AdminAiPuzzlesPage({ params }: { params: Promise<{ lang:
         <div>
           <h1 className="text-2xl font-semibold text-white">AI 문제 검수</h1>
           <p className="mt-1 text-sm text-slate-400">
-            Hobby는 cron이 하루 1회라, 생성은 여기서 한 번에 여러 개 만듭니다. 수락한 것만 공개됩니다.
+            Hobby·Groq 무료 한도(~8k TPM) 때문에 프롬프트를 작게 보냅니다. 한 번에 5개 권장. 수락한 것만 공개됩니다.
           </p>
         </div>
         <Link href={`/${lang}/admin/dashboard`} className="btn-ghost !text-xs self-start">

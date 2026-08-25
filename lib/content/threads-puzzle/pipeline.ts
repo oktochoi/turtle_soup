@@ -7,9 +7,13 @@ import { buildPerformanceSummary } from './performance';
 import type { BatchPipelineResult, PuzzleCandidate } from './types';
 
 const MAX_ROUNDS = 6;
-const DEFAULT_BATCH = 8;
+const DEFAULT_BATCH = 5;
 const AI_AUTHOR = '바다거북스프 AI';
 const AI_TAGS = ['바다거북 스프', 'Threads', 'AI', '검수대기'];
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 async function savePendingProblem(
   candidate: PuzzleCandidate,
@@ -82,7 +86,8 @@ export async function runPuzzleGenerationPipeline(options?: {
   const target = Math.max(1, Math.min(options?.batchSize ?? DEFAULT_BATCH, 15));
   const exploreChance = options?.exploreChance ?? 0.25;
 
-  const recent = await fetchRecentProblems(40);
+  // Fewer recent rows → smaller Groq prompts (free tier ~8k TPM)
+  const recent = await fetchRecentProblems(20);
   const performance = await buildPerformanceSummary();
   const saved: BatchPipelineResult['saved'] = [];
   const seenTitles = new Set(recent.map((r) => r.title.trim().toLowerCase()));
@@ -95,6 +100,8 @@ export async function runPuzzleGenerationPipeline(options?: {
     const explore = Math.random() < exploreChance;
 
     try {
+      if (rounds > 1) await sleep(8000);
+
       const candidates = await generatePuzzleCandidates({
         recent: [
           ...recent,
@@ -121,6 +128,7 @@ export async function runPuzzleGenerationPipeline(options?: {
         const fmtErr = validateThreadsFormat(threadsText);
         if (fmtErr) continue;
 
+        await sleep(2500);
         const judgment = await judgePuzzleCandidate({ candidate: c, recent });
         if (!judgment.pass) continue;
 
@@ -148,6 +156,10 @@ export async function runPuzzleGenerationPipeline(options?: {
         status: 'error',
         detail: { rounds, error: lastError },
       });
+      // TPM cooldown then retry next round
+      if (/rate_limit|TPM|Request too large|413|429/i.test(lastError)) {
+        await sleep(15_000);
+      }
     }
   }
 
