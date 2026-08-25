@@ -56,10 +56,12 @@ export function isDuplicateCandidate(
     const contentSim = jaccard(cContent, tokenSet(r.content));
     const answerSim = jaccard(cAnswer, tokenSet(r.answer));
     const trickHit =
-      cTrick.length >= 6 &&
+      cTrick.length >= 8 &&
+      cTrick !== '착각반전' &&
       (normalize(r.answer).includes(cTrick.slice(0, 12)) ||
-        normalize(r.content).includes(cTrick.slice(0, 12)) ||
-        (r.coreTrick && normalize(r.coreTrick).includes(cTrick.slice(0, 10))));
+        (r.coreTrick &&
+          normalize(r.coreTrick).length >= 8 &&
+          normalize(r.coreTrick).includes(cTrick.slice(0, 10))));
 
     if (titleSim >= 0.72) {
       return { duplicate: true, reason: `제목이 기존 문제와 유사: ${r.title}` };

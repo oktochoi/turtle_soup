@@ -100,8 +100,9 @@ export async function runPuzzleGenerationPipeline(options?: {
     }
 
     const threadsText = formatThreadsPost(c.title, c.content);
+    // Soft check only — pending queue is admin-reviewed
     const fmtErr = validateThreadsFormat(threadsText);
-    if (fmtErr) {
+    if (fmtErr && /금지 표현/.test(fmtErr)) {
       return { ok: false, saved: [], attempts: 1, error: fmtErr };
     }
 

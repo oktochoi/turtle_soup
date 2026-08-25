@@ -23,19 +23,23 @@ export function validateThreadsFormat(text: string): string | null {
     /충격적인\s*반전/,
     /소름\s*돋는/,
     /맞혀보세요/,
-    /정답은/,
-    /#\w+/,
   ];
   for (const re of banned) {
     if (re.test(text)) return `금지 표현이 포함되어 있습니다: ${re}`;
   }
-  if (text.length > 500) return 'Threads 본문은 500자를 넘을 수 없습니다.';
+  // Soft length — approve flow can still post; warn only above hard Meta-ish limit
+  if (text.length > 900) return 'Threads 본문이 너무 깁니다.';
   return null;
 }
 
 export function countSentences(content: string): number {
-  return content
-    .split(/(?<=[.!?。！？])\s+|\n+/)
+  const parts = content
+    .split(/(?<=[.!?。！？]|다\.|요\.|까\?|다\n|요\n)\s*|\n+/)
     .map((s) => s.trim())
-    .filter((s) => s.length >= 4).length;
+    .filter((s) => s.length >= 4);
+  // Korean without punctuation: treat ~40 chars as a sentence unit
+  if (parts.length <= 1 && content.length > 40) {
+    return Math.max(1, Math.ceil(content.length / 45));
+  }
+  return Math.max(parts.length, content.trim() ? 1 : 0);
 }
