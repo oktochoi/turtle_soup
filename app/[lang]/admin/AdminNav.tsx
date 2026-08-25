@@ -10,6 +10,8 @@ export default function AdminNav() {
 
   const navItems = [
     { href: `${base}/dashboard`, icon: 'ri-dashboard-line', labelKo: '대시보드', labelEn: 'Dashboard' },
+    { href: `${base}/ai-puzzles`, icon: 'ri-sparkling-line', labelKo: 'AI 문제 검수', labelEn: 'AI Review' },
+    { href: `${base}/problems`, icon: 'ri-file-list-3-line', labelKo: 'UGC 검수', labelEn: 'UGC Review' },
     { href: `${base}/bug-reports`, icon: 'ri-bug-line', labelKo: '버그 리포트', labelEn: 'Bug Reports' },
     { href: `${base}/reports`, icon: 'ri-flag-line', labelKo: '사용자 신고', labelEn: 'User Reports' },
   ];

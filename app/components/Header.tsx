@@ -229,6 +229,13 @@ export default function Header() {
                         대시보드
                       </Link>
                       <Link
+                        href={getLocalizedPath('/admin/ai-puzzles')}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="nav-link"
+                      >
+                        AI 문제 검수
+                      </Link>
+                      <Link
                         href={getLocalizedPath('/admin/reports')}
                         onClick={() => setIsMobileMenuOpen(false)}
                         className="nav-link"

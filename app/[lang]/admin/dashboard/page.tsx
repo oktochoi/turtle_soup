@@ -589,15 +589,23 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
                 <p className="text-sm text-teal-300">
                   <i className="ri-file-search-line mr-2"></i>
                   {lang === 'ko'
-                    ? `${displayStats.problems.pending}개의 UGC 사건이 검수 대기 중입니다.`
-                    : `${displayStats.problems.pending} UGC cases are pending review.`}
+                    ? `${displayStats.problems.pending}개의 사건이 검수 대기 중입니다.`
+                    : `${displayStats.problems.pending} cases are pending review.`}
                 </p>
-                <a
-                  href={`/${lang}/admin/problems`}
-                  className="mt-2 inline-block text-xs text-teal-200 underline hover:text-teal-100"
-                >
-                  {lang === 'ko' ? '사건 검수 페이지 →' : 'Go to Case Review →'}
-                </a>
+                <div className="mt-2 flex flex-wrap gap-3">
+                  <a
+                    href={`/${lang}/admin/ai-puzzles`}
+                    className="text-xs text-teal-200 underline hover:text-teal-100"
+                  >
+                    {lang === 'ko' ? 'AI 문제 검수 →' : 'AI Review →'}
+                  </a>
+                  <a
+                    href={`/${lang}/admin/problems`}
+                    className="text-xs text-teal-200 underline hover:text-teal-100"
+                  >
+                    {lang === 'ko' ? 'UGC 사건 검수 →' : 'UGC Review →'}
+                  </a>
+                </div>
               </div>
             )}
           </div>
@@ -786,16 +794,23 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
               )}
             </a>
             <a
-              href={`/${lang}/admin/problems`}
-              className="p-4 bg-ink-600/50 hover:bg-teal-500/20 border border-brass/25 hover:border-teal-500/50 rounded-lg transition-all text-center group"
+              href={`/${lang}/admin/ai-puzzles`}
+              className="p-4 bg-ink-600/50 hover:bg-cyan-500/20 border border-brass/25 hover:border-cyan-500/50 rounded-lg transition-all text-center group"
             >
-              <i className="ri-file-search-line text-3xl mb-2 block text-teal-400 group-hover:scale-110 transition-transform"></i>
-              <span className="text-sm font-semibold">{lang === 'ko' ? '사건 검수' : 'Case Review'}</span>
+              <i className="ri-sparkling-line text-3xl mb-2 block text-cyan-400 group-hover:scale-110 transition-transform"></i>
+              <span className="text-sm font-semibold">{lang === 'ko' ? 'AI 문제 검수' : 'AI Review'}</span>
               {displayStats.problems.pending > 0 && (
                 <span className="block mt-1 text-xs text-yellow-400">
                   {displayStats.problems.pending} {lang === 'ko' ? '대기중' : 'pending'}
                 </span>
               )}
+            </a>
+            <a
+              href={`/${lang}/admin/problems`}
+              className="p-4 bg-ink-600/50 hover:bg-teal-500/20 border border-brass/25 hover:border-teal-500/50 rounded-lg transition-all text-center group"
+            >
+              <i className="ri-file-search-line text-3xl mb-2 block text-teal-400 group-hover:scale-110 transition-transform"></i>
+              <span className="text-sm font-semibold">{lang === 'ko' ? 'UGC 검수' : 'UGC Review'}</span>
             </a>
             <a
               href={`/${lang}`}
