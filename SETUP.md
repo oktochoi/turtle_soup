@@ -36,10 +36,11 @@ supabase/migrations/072_problem_moderation.sql   # 아직이면
 
 ```env
 GROQ_API_KEY=gsk_...
-GROQ_MODEL=openai/gpt-oss-20b
-GROQ_JUDGE_MODEL=openai/gpt-oss-20b
+GROQ_MODEL=llama-3.1-8b-instant
+GROQ_JUDGE_MODEL=llama-3.1-8b-instant
 ```
 
+> `openai/gpt-oss-20b`는 JSON/tool 응답이 자주 깨집니다. 생성에는 `llama-3.1-8b-instant` 권장.
 ---
 
 ## 3. Meta Developers에서 가져올 값

@@ -13,46 +13,169 @@ export function getGroqClient(): Groq {
   return client;
 }
 
+/** Prefer a model that reliably returns JSON/tool args on Groq free tier. */
 export function getGroqModel(): string {
-  return process.env.GROQ_MODEL || 'openai/gpt-oss-20b';
+  return process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
 }
 
 export function getGroqJudgeModel(): string {
-  return process.env.GROQ_JUDGE_MODEL || process.env.GROQ_MODEL || 'openai/gpt-oss-20b';
+  return process.env.GROQ_JUDGE_MODEL || process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
 }
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-function isRetryableError(e: unknown): boolean {
-  const msg = e instanceof Error ? e.message : String(e);
-  return /rate_limit|tokens|Request too large|TPM|413|429|json_validate|Failed to validate JSON|empty content/i.test(
-    msg
-  );
-}
+function extractJsonObject(text: string): Record<string, unknown> | null {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
 
-function parseJsonContent<T>(content: string): T {
-  const trimmed = content.trim();
-  try {
-    return JSON.parse(trimmed) as T;
-  } catch {
-    const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-    if (fence?.[1]) {
-      return JSON.parse(fence[1].trim()) as T;
+  const tryParse = (s: string) => {
+    try {
+      return JSON.parse(s) as Record<string, unknown>;
+    } catch {
+      return null;
     }
-    const match = trimmed.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('Groq response is not valid JSON');
-    return JSON.parse(match[0]) as T;
+  };
+
+  let parsed = tryParse(trimmed);
+  if (parsed) return parsed;
+
+  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence?.[1]) {
+    parsed = tryParse(fence[1].trim());
+    if (parsed) return parsed;
   }
+
+  // Find outermost { ... } even if model added prose before/after
+  const start = trimmed.indexOf('{');
+  const end = trimmed.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    parsed = tryParse(trimmed.slice(start, end + 1));
+    if (parsed) return parsed;
+  }
+
+  return null;
 }
 
-type ResponseMode = 'json_object' | 'json_schema' | 'none';
+function messageToObject(message: {
+  content?: string | null;
+  tool_calls?: Array<{
+    function?: { name?: string; arguments?: string };
+  }> | null;
+}): Record<string, unknown> {
+  const toolArgs = message.tool_calls?.[0]?.function?.arguments;
+  if (toolArgs) {
+    const fromTool = extractJsonObject(toolArgs);
+    if (fromTool) return fromTool;
+  }
+
+  const content = message.content || '';
+  const fromContent = extractJsonObject(content);
+  if (fromContent) return fromContent;
+
+  const preview = (toolArgs || content || '(empty)').slice(0, 160).replace(/\s+/g, ' ');
+  throw new Error(`Groq response is not valid JSON: ${preview}`);
+}
+
+const PUZZLE_TOOL = {
+  type: 'function' as const,
+  function: {
+    name: 'submit_turtle_soup',
+    description: 'Submit one Korean turtle-soup (situation puzzle) candidate',
+    parameters: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        content: { type: 'string' },
+        answer: { type: 'string' },
+        explanation: { type: 'string' },
+        difficulty: { type: 'string', enum: ['easy', 'medium', 'hard'] },
+        coreTrick: { type: 'string' },
+        place: { type: 'string' },
+        characterRelation: { type: 'string' },
+        whyInteresting: { type: 'string' },
+      },
+      required: [
+        'title',
+        'content',
+        'answer',
+        'explanation',
+        'difficulty',
+        'coreTrick',
+        'place',
+        'characterRelation',
+        'whyInteresting',
+      ],
+    },
+  },
+};
 
 /**
- * Prefer json_object — gpt-oss strict json_schema often returns empty failed_generation.
- * Optional schema kept for callers but not required by the API path.
+ * Structured puzzle generation via tool_call (most reliable on Groq).
+ * Falls back to json_object if the model ignores tools.
  */
+export async function groqPuzzleCompletion(args: {
+  model?: string;
+  system: string;
+  user: string;
+  temperature?: number;
+  maxTokens?: number;
+}): Promise<Record<string, unknown>> {
+  const groq = getGroqClient();
+  const model = args.model || getGroqModel();
+  const maxTokens = Math.min(args.maxTokens ?? 1400, 2000);
+
+  // Attempt 1: tool calling
+  try {
+    const completion = await groq.chat.completions.create({
+      model,
+      temperature: args.temperature ?? 0.7,
+      max_tokens: maxTokens,
+      messages: [
+        { role: 'system', content: args.system },
+        { role: 'user', content: args.user },
+      ],
+      tools: [PUZZLE_TOOL],
+      tool_choice: {
+        type: 'function',
+        function: { name: 'submit_turtle_soup' },
+      },
+    });
+
+    const message = completion.choices[0]?.message;
+    if (message) {
+      return messageToObject(message);
+    }
+  } catch {
+    /* fall through */
+  }
+
+  // Attempt 2: json_object
+  await sleep(400);
+  const completion = await groq.chat.completions.create({
+    model,
+    temperature: args.temperature ?? 0.7,
+    max_tokens: maxTokens,
+    messages: [
+      {
+        role: 'system',
+        content: `${args.system}\n\nOutput a single JSON object only.`,
+      },
+      {
+        role: 'user',
+        content: `${args.user}\n\nJSON keys: title,content,answer,explanation,difficulty,coreTrick,place,characterRelation,whyInteresting`,
+      },
+    ],
+    response_format: { type: 'json_object' },
+  });
+
+  const message = completion.choices[0]?.message;
+  if (!message) throw new Error('Groq returned empty message');
+  return messageToObject(message);
+}
+
+/** Generic JSON helper (judge / misc) — json_object + parse. */
 export async function groqJsonCompletion<T>(args: {
   model?: string;
   system: string;
@@ -65,54 +188,37 @@ export async function groqJsonCompletion<T>(args: {
 }): Promise<T> {
   const groq = getGroqClient();
   const model = args.model || getGroqModel();
-  const maxTokens = Math.min(args.maxTokens ?? 1600, 2500);
-  const retries = args.retries ?? 2;
-
-  const systemWithJson = args.system.includes('JSON')
-    ? args.system
-    : `${args.system}\n\nRespond with a single JSON object only.`;
-
-  const modes: ResponseMode[] = ['json_object', 'none'];
+  const maxTokens = Math.min(args.maxTokens ?? 1200, 2000);
+  const retries = args.retries ?? 1;
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
-    const mode = modes[Math.min(attempt, modes.length - 1)];
     try {
       const completion = await groq.chat.completions.create({
         model,
-        temperature: args.temperature ?? 0.7,
+        temperature: args.temperature ?? 0.5,
         max_tokens: maxTokens,
         messages: [
-          { role: 'system', content: systemWithJson },
           {
-            role: 'user',
-            content:
-              mode === 'none'
-                ? `${args.user}\n\nReturn ONLY valid JSON (no markdown).`
-                : args.user,
+            role: 'system',
+            content: args.system.includes('JSON')
+              ? args.system
+              : `${args.system}\nRespond with JSON only.`,
           },
+          { role: 'user', content: args.user },
         ],
-        ...(mode === 'json_object'
-          ? { response_format: { type: 'json_object' as const } }
-          : {}),
+        response_format: { type: 'json_object' },
       });
 
-      const content = completion.choices[0]?.message?.content;
-      if (!content?.trim()) {
-        throw new Error('Groq returned empty content');
+      const content = completion.choices[0]?.message?.content || '';
+      const obj = extractJsonObject(content);
+      if (!obj) {
+        throw new Error(`Groq response is not valid JSON: ${content.slice(0, 160)}`);
       }
-      return parseJsonContent<T>(content);
+      return obj as T;
     } catch (e) {
       lastError = e;
-      if (attempt < retries && isRetryableError(e)) {
-        await sleep(1500 + attempt * 1500);
-        continue;
-      }
-      if (attempt < retries) {
-        await sleep(800);
-        continue;
-      }
-      throw e;
+      if (attempt < retries) await sleep(1000);
     }
   }
 

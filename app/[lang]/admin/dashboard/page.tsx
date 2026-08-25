@@ -215,26 +215,8 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
         console.warn('이벤트 통계를 가져올 수 없습니다:', err);
       }
 
-      // 전환율 RPC는 환경에 따라 없어 400이 남 — 조용히 스킵
-      let conversionRate = 0;
-      try {
-        const { data: conversionData, error: conversionError } = await supabase.rpc(
-          'get_conversion_funnel',
-          {}
-        );
-        if (
-          !conversionError &&
-          Array.isArray(conversionData) &&
-          conversionData.length > 0
-        ) {
-          const lastStep = conversionData[conversionData.length - 1] as {
-            conversion_rate?: number;
-          };
-          conversionRate = Number(lastStep?.conversion_rate) || 0;
-        }
-      } catch {
-        conversionRate = 0;
-      }
+      // 전환율 RPC는 프로젝트에 없어 400만 남기므로 호출하지 않음
+      const conversionRate = 0;
 
       // AI 학습 통계 (테이블이 있는 경우에만)
       let aiReportsTotal = { count: 0 };

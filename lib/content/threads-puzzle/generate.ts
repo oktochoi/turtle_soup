@@ -1,20 +1,14 @@
-import { groqJsonCompletion, getGroqModel } from '@/lib/groq/client';
+import { groqPuzzleCompletion, getGroqModel } from '@/lib/groq/client';
 import { countSentences, formatThreadsPost, validateThreadsFormat } from './format';
 import type { PerformanceSummary, PuzzleCandidate, RecentProblemBrief } from './types';
 
-/**
- * Authentic 바다거북스프 = Situation / Lateral Thinking Puzzle
- */
 const SYSTEM = `당신은 한국어 바다거북스프(상황 수수께끼/LTP) 출제자다.
 
 표면(content): 2~5문장의 짧은 기묘한 사실. 소설체·수사체·감동사연 금지.
 이면(answer): 독자의 「착각 하나」를 뒤집는 전말. 예/아니요로 재구성 가능해야 함.
 금지: 꿈/촬영/사람이아니었다, 고전 복제, 말장난만, 클릭베이트 제목, 정답에서만 새 설정.
+submit_turtle_soup 도구로만 제출. content 끝에 "왜 그랬을까?"를 넣지 마라.`;
 
-반드시 아래 키를 가진 JSON 객체 하나만 출력:
-title, content, answer, explanation, difficulty, coreTrick, place, characterRelation, whyInteresting
-difficulty는 easy|medium|hard 중 하나.
-content 끝에 "왜 그랬을까?"를 넣지 마라.`;
 
 function bannedContent(c: PuzzleCandidate): string | null {
   const blob = `${c.title}\n${c.content}\n${c.answer}`;
@@ -101,13 +95,12 @@ ${mode}
 
 JSON 한 개만 생성.`;
 
-  const raw = await groqJsonCompletion<Record<string, unknown>>({
+  const raw = await groqPuzzleCompletion({
     model: getGroqModel(),
     system: SYSTEM,
     user,
     temperature: args.explore ? 0.85 : 0.7,
     maxTokens: 1400,
-    retries: 2,
   });
 
   // Some models wrap as { candidate: {...} } or { puzzle: {...} }
@@ -119,7 +112,7 @@ JSON 한 개만 생성.`;
 
   const normalized = normalizeCandidate(payload, args.performance.recommendedDifficulty);
   if (!normalized) {
-    throw new Error('Groq가 유효한 상황 수수께끼 JSON을 만들지 못했습니다');
+    throw new Error('Groq가 유효한 상황 수수께끼를 만들지 못했습니다. 다시 시도해 주세요.');
   }
   return [normalized];
 }
