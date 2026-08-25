@@ -9,14 +9,14 @@ interface Props {
 
 /**
  * Server-rendered editorial layer — maps game CASE → readable investigation guide.
- * Visible in HTML for crawlers; complements the interactive game above/below.
+ * Shown above the interactive play UI so readers see the dossier first.
  */
 export default function CaseDossier({ problem, lang }: Props) {
   const d = buildCaseDossier(problem);
   const editorialNote = buildEditorialNote(d);
 
   return (
-    <article className="border-t border-slate-800 bg-slate-950/40">
+    <article className="border-b border-slate-800 bg-slate-950/40">
       <div className="page-shell max-w-4xl py-10 sm:py-12 space-y-10">
         <header>
           <p className="text-[11px] tracking-[0.22em] text-teal-300/90">INVESTIGATION DOSSIER</p>
@@ -111,6 +111,9 @@ export default function CaseDossier({ problem, lang }: Props) {
         )}
 
         <nav className="flex flex-wrap gap-3 pt-4 border-t border-slate-800">
+          <a href="#case-play" className="btn-primary !text-xs !py-1.5">
+            이 사건 수사 시작 ↓
+          </a>
           <Link href={`/${lang}/guide`} className="btn-ghost !text-xs">
             수사 가이드 전체
           </Link>

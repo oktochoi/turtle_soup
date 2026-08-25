@@ -21,9 +21,10 @@ Supabase SQL Editor에서 적용:
 
 ```text
 supabase/migrations/074_threads_automation.sql
+supabase/migrations/072_problem_moderation.sql   # 아직이면
 ```
 
-(아직이면 기존 `072`, `073`도 적용)
+목록·설명: `supabase/migrations/README.md`
 
 ---
 

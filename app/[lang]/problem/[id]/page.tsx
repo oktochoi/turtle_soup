@@ -157,16 +157,13 @@ export default async function ProblemPage({ params }: Props) {
     <>
       <JsonLdServer data={buildProblemArticleJsonLd(problem, locale)} />
       {isSoup && <JsonLdServer data={buildProblemFaqJsonLd(problem)} />}
+      {isSoup ? <CaseDossier problem={problem} lang={locale} /> : null}
       <ProblemClient
         initialProblem={problem}
         initialQuizContent={quizContent}
         lang={locale}
         problemId={id}
       />
-      {(problem as Problem & { type?: string }).type === 'soup' ||
-      !(problem as Problem & { type?: string }).type ? (
-        <CaseDossier problem={problem} lang={locale} />
-      ) : null}
       {relatedProblems.length > 0 && (
         <RelatedProblems problems={relatedProblems} lang={locale} difficulty={difficulty} />
       )}

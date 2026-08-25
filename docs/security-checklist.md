@@ -9,7 +9,7 @@
 - ✅ RLS (Row Level Security) 활성화
 
 ### 2. 데이터베이스 보안
-- ✅ RLS 정책 강화 (`034_security_enhancements.sql`)
+- ✅ RLS 정책 강화 (과거 `034_security_enhancements.sql` — 이미 적용됨, 저장소에서는 히스토리 정리로 제거)
   - 방 생성: 로그인한 사용자만 가능
   - 방 수정: 호스트만 가능
   - 사용자 정보: 공개 정보만 조회 가능

@@ -1861,7 +1861,7 @@ export default function ProblemClient({
   const quizType = (problem as any)?.type || 'soup' as QuizType;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">
+    <div id="case-play" className="min-h-screen scroll-mt-4 bg-gradient-to-br from-ink-800 via-ink-700 to-ink-800 text-white">
   
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-3 sm:py-4 lg:py-6 xl:py-8 max-w-4xl">
         {/* 뒤로가기 */}
