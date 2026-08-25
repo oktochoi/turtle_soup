@@ -43,6 +43,21 @@ function threadsPreview(title: string, content: string) {
   return `${title.trim()}\n\n${body}\n\n왜 그랬을까?`;
 }
 
+async function readApiJson(res: Response): Promise<Record<string, unknown>> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    if (res.status === 504 || res.status === 503) {
+      throw new Error(
+        '서버 시간 초과(504). Vercel Hobby는 약 10초 제한입니다. 잠시 후 다시 눌러 주세요.'
+      );
+    }
+    throw new Error(text.slice(0, 180) || `요청 실패 (${res.status})`);
+  }
+}
+
+
 export default function AdminAiPuzzlesPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = use(params);
   const router = useRouter();
@@ -135,9 +150,9 @@ export default function AdminAiPuzzlesPage({ params }: { params: Promise<{ lang:
           },
         }),
       });
-      const json = await res.json();
+      const json = await readApiJson(res);
       if (!res.ok || !json.success) {
-        throw new Error(json.error || '처리 실패');
+        throw new Error(String(json.error || '처리 실패'));
       }
 
       if (action === 'save') {
@@ -174,11 +189,12 @@ export default function AdminAiPuzzlesPage({ params }: { params: Promise<{ lang:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
-      const json = await res.json();
+      const json = await readApiJson(res);
       if (!res.ok || !json.success) {
-        throw new Error(json.error || '생성 실패');
+        throw new Error(String(json.error || '생성 실패'));
       }
-      const title = json.saved?.[0]?.title;
+      const saved = json.saved as Array<{ title?: string }> | undefined;
+      const title = saved?.[0]?.title;
       setMessage(title ? `「${title}」 검수 대기열에 추가됨` : '후보 1개가 추가됨');
       await loadData();
     } catch (e) {

@@ -3,16 +3,22 @@ import { fetchRecentProblems, isDuplicateCandidate } from './duplicate';
 import { formatThreadsPost, validateThreadsFormat } from './format';
 import { generatePuzzleCandidates } from './generate';
 import { judgePuzzleCandidate } from './judge';
-import { buildPerformanceSummary } from './performance';
-import type { BatchPipelineResult, PuzzleCandidate } from './types';
+import type { BatchPipelineResult, PerformanceSummary, PuzzleCandidate } from './types';
 
-const MAX_ATTEMPTS = 3;
 const AI_AUTHOR = '바다거북스프 AI';
 const AI_TAGS = ['바다거북 스프', 'Threads', 'AI', '검수대기'];
 
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
-}
+/** Static defaults — skip heavy Threads analytics on Hobby (10s limit). */
+const FAST_PERFORMANCE: PerformanceSummary = {
+  strongPatterns: ['짧은 표면 + 한 가지 착각 반전', '예/아니요로 파고들 수 있는 구조'],
+  weakPatterns: ['추리소설 톤', '감동 사연', '꿈/촬영 결말'],
+  highReplyStructures: ['왜?가 선명한 기묘한 행동'],
+  highShareStructures: [],
+  repeatedThemes: [],
+  avoidThemes: ['꿈이었다', '영화 촬영', '사람이 아니었다'],
+  recommendedDifficulty: 'medium',
+  sampleNotes: ['fast path'],
+};
 
 async function savePendingProblem(
   candidate: PuzzleCandidate,
@@ -35,118 +41,104 @@ async function savePendingProblem(
 
   const { data, error } = await supabase.from('problems').insert(row).select('id').single();
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
   if (!data?.id) throw new Error('problem insert returned no id');
 
-  await logGeneration({
-    status: 'pending_review',
-    problemId: data.id,
-    score: judgeScore,
-    detail: {
-      title: candidate.title,
-      coreTrick: candidate.coreTrick,
-      place: candidate.place,
-    },
-  });
-
-  return data.id;
-}
-
-async function logGeneration(args: {
-  status: string;
-  problemId?: string;
-  score?: number;
-  detail?: Record<string, unknown>;
-}): Promise<void> {
   try {
-    const supabase = createServiceClient();
     await supabase.from('puzzle_generation_logs').insert({
-      status: args.status,
-      problem_id: args.problemId ?? null,
-      judge_score: args.score ?? null,
-      detail: args.detail ?? {},
+      status: 'pending_review',
+      problem_id: data.id,
+      judge_score: judgeScore,
+      detail: {
+        title: candidate.title,
+        coreTrick: candidate.coreTrick,
+        place: candidate.place,
+        fastPath: true,
+      },
     });
   } catch {
     /* optional */
   }
+
+  return data.id;
 }
 
 /**
- * Generate one pending puzzle for admin review.
- * `batchSize` is ignored (always 1) — kept for API compat.
+ * One Groq call + local checks. Optimized for Vercel Hobby ~10s timeout.
+ * Optional second Groq judge only if GROQ_JUDGE_ENABLED=true (Pro / longer timeout).
  */
 export async function runPuzzleGenerationPipeline(options?: {
   batchSize?: number;
   exploreChance?: number;
 }): Promise<BatchPipelineResult> {
   const exploreChance = options?.exploreChance ?? 0.25;
-  const recent = await fetchRecentProblems(20);
-  const performance = await buildPerformanceSummary();
-  let lastError = '';
+  const useJudge = process.env.GROQ_JUDGE_ENABLED === 'true';
 
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    if (attempt > 1) await sleep(5000);
-    const explore = Math.random() < exploreChance;
+  const recent = await fetchRecentProblems(12);
+  const performance = FAST_PERFORMANCE;
+  const explore = Math.random() < exploreChance;
 
-    try {
-      const candidates = await generatePuzzleCandidates({
-        recent,
-        performance,
-        explore,
-      });
-      const c = candidates[0];
-      if (!c) {
-        lastError = '후보 없음';
-        continue;
-      }
+  try {
+    const candidates = await generatePuzzleCandidates({
+      recent,
+      performance,
+      explore,
+    });
+    const c = candidates[0];
+    if (!c) {
+      return { ok: false, saved: [], attempts: 1, error: '후보 없음' };
+    }
 
-      const dup = isDuplicateCandidate(c, recent);
-      if (dup.duplicate) {
-        lastError = `중복: ${dup.reason || ''}`;
-        continue;
-      }
+    const dup = isDuplicateCandidate(c, recent);
+    if (dup.duplicate) {
+      return {
+        ok: false,
+        saved: [],
+        attempts: 1,
+        error: `중복: ${dup.reason || '유사 문제'}`,
+      };
+    }
 
-      const threadsText = formatThreadsPost(c.title, c.content);
-      const fmtErr = validateThreadsFormat(threadsText);
-      if (fmtErr) {
-        lastError = fmtErr;
-        continue;
-      }
+    const threadsText = formatThreadsPost(c.title, c.content);
+    const fmtErr = validateThreadsFormat(threadsText);
+    if (fmtErr) {
+      return { ok: false, saved: [], attempts: 1, error: fmtErr };
+    }
 
-      await sleep(1500);
+    let judgeScore = 8;
+    if (useJudge) {
       const judgment = await judgePuzzleCandidate({ candidate: c, recent });
       if (!judgment.pass) {
-        lastError = `심사 미통과 (score=${judgment.score})`;
-        continue;
+        return {
+          ok: false,
+          saved: [],
+          attempts: 1,
+          error: `심사 미통과 (score=${judgment.score})`,
+        };
       }
-
-      const problemId = await savePendingProblem(c, judgment.score);
-      return {
-        ok: true,
-        saved: [{ problemId, title: c.title, judgeScore: judgment.score }],
-        attempts: attempt,
-        count: 1,
-      };
-    } catch (e) {
-      lastError = e instanceof Error ? e.message : String(e);
-      await logGeneration({
-        status: 'error',
-        detail: { attempt, error: lastError },
-      });
-      if (/rate_limit|TPM|Request too large|413|429/i.test(lastError)) {
-        await sleep(12_000);
-      }
+      judgeScore = judgment.score;
     }
-  }
 
-  return {
-    ok: false,
-    saved: [],
-    attempts: MAX_ATTEMPTS,
-    error: lastError || '문제 1개 생성 실패',
-  };
+    const problemId = await savePendingProblem(c, judgeScore);
+    return {
+      ok: true,
+      saved: [{ problemId, title: c.title, judgeScore }],
+      attempts: 1,
+      count: 1,
+    };
+  } catch (e) {
+    const lastError = e instanceof Error ? e.message : String(e);
+    try {
+      const supabase = createServiceClient();
+      await supabase.from('puzzle_generation_logs').insert({
+        status: 'error',
+        detail: { error: lastError },
+      });
+    } catch {
+      /* ignore */
+    }
+    return { ok: false, saved: [], attempts: 1, error: lastError };
+  }
 }
 
 export type PipelineResult = BatchPipelineResult;

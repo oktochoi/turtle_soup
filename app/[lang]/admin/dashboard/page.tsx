@@ -215,46 +215,25 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ lang:
         console.warn('이벤트 통계를 가져올 수 없습니다:', err);
       }
 
-      // 전환율 계산 (함수가 있는 경우에만)
+      // 전환율 RPC는 환경에 따라 없어 400이 남 — 조용히 스킵
       let conversionRate = 0;
       try {
-        // 함수는 DATE 타입을 받지만, Supabase RPC는 파라미터를 명시적으로 전달해야 함
-        // 빈 객체로 호출하면 기본값(NULL)이 사용됨
-        const { data: conversionData, error: conversionError } = await supabase.rpc('get_conversion_funnel', {});
-        
-        if (conversionError) {
-          // 400 에러는 함수가 없거나 파라미터 문제일 수 있음
-          if (conversionError.code === 'PGRST116' || conversionError.code === '42883') {
-            // 함수가 없거나 찾을 수 없음 - 무시
-            if (process.env.NODE_ENV === 'development') {
-              console.log('전환율 함수를 사용할 수 없습니다 (함수가 없거나 권한 없음)');
-            }
-          } else {
-            console.warn('전환율 계산 함수 오류:', conversionError);
-          }
-        } else if (conversionData && conversionData.length > 0) {
-          // 마지막 단계(정답 제출)의 전환율 사용
-          const lastStep = conversionData[conversionData.length - 1];
+        const { data: conversionData, error: conversionError } = await supabase.rpc(
+          'get_conversion_funnel',
+          {}
+        );
+        if (
+          !conversionError &&
+          Array.isArray(conversionData) &&
+          conversionData.length > 0
+        ) {
+          const lastStep = conversionData[conversionData.length - 1] as {
+            conversion_rate?: number;
+          };
           conversionRate = Number(lastStep?.conversion_rate) || 0;
-          
-          if (process.env.NODE_ENV === 'development') {
-            console.log('전환율 데이터:', conversionData, '최종 전환율:', conversionRate);
-          }
-        } else {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('전환율 데이터가 없습니다 (이벤트 데이터 없음)');
-          }
         }
-      } catch (err: any) {
-        // 네트워크 오류나 기타 예외 처리
-        if (err?.code === 'PGRST116' || err?.message?.includes('function') || err?.message?.includes('not found')) {
-          // 함수가 없음 - 무시
-          if (process.env.NODE_ENV === 'development') {
-            console.log('전환율 함수를 사용할 수 없습니다 (함수 없음)');
-          }
-        } else {
-          console.warn('전환율 계산 함수를 사용할 수 없습니다:', err);
-        }
+      } catch {
+        conversionRate = 0;
       }
 
       // AI 학습 통계 (테이블이 있는 경우에만)

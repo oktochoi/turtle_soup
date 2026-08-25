@@ -3,7 +3,9 @@ import { requireAdminSession } from '@/lib/auth/require-admin-session';
 import { runPuzzleGenerationPipeline } from '@/lib/content/threads-puzzle/pipeline';
 
 export const runtime = 'nodejs';
-export const maxDuration = 120;
+/** Hobby plan hard-caps ~10s; keep pipeline to a single Groq call. */
+export const maxDuration = 60;
+
 
 /** Session-admin: generate exactly one pending AI puzzle. */
 export async function POST(request: NextRequest) {
