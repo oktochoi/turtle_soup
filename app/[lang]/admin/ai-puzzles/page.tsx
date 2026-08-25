@@ -164,11 +164,18 @@ export default function AdminAiPuzzlesPage({ params }: { params: Promise<{ lang:
         setDraft(null);
         await loadData();
       } else {
-        setMessage(
-          opts?.publishThreads === false
-            ? '사이트에만 공개됨 (Threads 생략)'
-            : `승인 · 사이트 공개 + Threads 게시${json.permalink ? `: ${json.permalink}` : ''}`
-        );
+        const threadsError = json.threadsError ? String(json.threadsError) : '';
+        if (opts?.publishThreads === false) {
+          setMessage('사이트에만 공개됨 (Threads 생략)');
+        } else if (threadsError) {
+          setMessage(
+            `사이트는 공개됨. Threads 게시 실패: ${threadsError} (THREADS_USER_ID는 숫자 id여야 함 — 핸들 funzip.1.7 불가)`
+          );
+        } else {
+          setMessage(
+            `승인 · 사이트 공개 + Threads 게시${json.permalink ? `: ${json.permalink}` : ''}`
+          );
+        }
         setSelectedId(null);
         setDraft(null);
         await loadData();

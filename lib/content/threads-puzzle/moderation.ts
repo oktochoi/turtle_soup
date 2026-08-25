@@ -129,21 +129,29 @@ export async function approveAiPuzzle(
 
   let threadsMediaId: string | undefined;
   let permalink: string | null | undefined;
+  let threadsError: string | undefined;
   const publishThreads = options?.publishThreads !== false;
 
   if (publishThreads) {
-    const published = await publishThreadsText(threadsText);
-    threadsMediaId = published.mediaId;
-    permalink = published.permalink;
+    try {
+      const published = await publishThreadsText(threadsText);
+      threadsMediaId = published.mediaId;
+      permalink = published.permalink;
 
-    const { error: tpErr } = await supabase.from('threads_posts').insert({
-      problem_id: problemId,
-      threads_media_id: published.mediaId,
-      post_text: threadsText,
-      permalink: published.permalink ?? null,
-      published_at: new Date().toISOString(),
-    });
-    if (tpErr) throw new Error(`threads_posts insert failed: ${tpErr.message}`);
+      const { error: tpErr } = await supabase.from('threads_posts').insert({
+        problem_id: problemId,
+        threads_media_id: published.mediaId,
+        post_text: threadsText,
+        permalink: published.permalink ?? null,
+        published_at: new Date().toISOString(),
+      });
+      if (tpErr) {
+        threadsError = `threads_posts 저장 실패: ${tpErr.message}`;
+      }
+    } catch (e) {
+      // Site is already published — don't roll back on Threads failure
+      threadsError = e instanceof Error ? e.message : String(e);
+    }
   }
 
   return {
@@ -153,5 +161,6 @@ export async function approveAiPuzzle(
     threadsMediaId,
     permalink,
     threadsText,
+    threadsError,
   };
 }
